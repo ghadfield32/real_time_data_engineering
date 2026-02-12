@@ -1,0 +1,27 @@
+{
+  "type": "record",
+  "name": "TaxiTrip",
+  "namespace": "com.nyctaxi.events",
+  "doc": "NYC Yellow Taxi trip record. Field names match the raw parquet source exactly.",
+  "fields": [
+    {"name": "VendorID", "type": ["null", "long"], "default": null, "doc": "TPEP provider: 1=Creative Mobile Technologies, 2=VeriFone Inc."},
+    {"name": "tpep_pickup_datetime", "type": {"type": "long", "logicalType": "timestamp-micros"}, "doc": "Meter engaged timestamp"},
+    {"name": "tpep_dropoff_datetime", "type": {"type": "long", "logicalType": "timestamp-micros"}, "doc": "Meter disengaged timestamp"},
+    {"name": "passenger_count", "type": ["null", "long"], "default": null, "doc": "Number of passengers (driver-entered)"},
+    {"name": "trip_distance", "type": ["null", "double"], "default": null, "doc": "Trip distance in miles from taximeter"},
+    {"name": "RatecodeID", "type": ["null", "long"], "default": null, "doc": "Rate code: 1=Standard, 2=JFK, 3=Newark, 4=Nassau/Westchester, 5=Negotiated, 6=Group"},
+    {"name": "store_and_fwd_flag", "type": ["null", "string"], "default": null, "doc": "Y=stored then forwarded, N=not a store-and-forward trip"},
+    {"name": "PULocationID", "type": ["null", "long"], "default": null, "doc": "TLC Taxi Zone pickup location ID"},
+    {"name": "DOLocationID", "type": ["null", "long"], "default": null, "doc": "TLC Taxi Zone dropoff location ID"},
+    {"name": "payment_type", "type": ["null", "long"], "default": null, "doc": "Payment method: 1=Credit, 2=Cash, 3=No charge, 4=Dispute, 5=Unknown, 6=Voided"},
+    {"name": "fare_amount", "type": ["null", "double"], "default": null, "doc": "Time-and-distance fare in dollars"},
+    {"name": "extra", "type": ["null", "double"], "default": null, "doc": "Misc extras and surcharges"},
+    {"name": "mta_tax", "type": ["null", "double"], "default": null, "doc": "MTA tax ($0.50 auto-triggered based on metered rate)"},
+    {"name": "tip_amount", "type": ["null", "double"], "default": null, "doc": "Tip amount (auto-populated for credit card, cash tips not included)"},
+    {"name": "tolls_amount", "type": ["null", "double"], "default": null, "doc": "Total tolls paid during trip"},
+    {"name": "improvement_surcharge", "type": ["null", "double"], "default": null, "doc": "$0.30 improvement surcharge"},
+    {"name": "total_amount", "type": ["null", "double"], "default": null, "doc": "Total amount charged to passengers (excludes cash tips)"},
+    {"name": "congestion_surcharge", "type": ["null", "double"], "default": null, "doc": "NYC congestion surcharge ($2.50 for yellow taxi)"},
+    {"name": "Airport_fee", "type": ["null", "double"], "default": null, "doc": "$1.25 for pickups at LaGuardia and JFK"}
+  ]
+}

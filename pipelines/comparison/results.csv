@@ -1,0 +1,1 @@
+pipeline_id,pipeline_name,ingestion,processing,storage,dbt_adapter,ingestion_throughput_eps,processing_time_s,dbt_build_time_s,total_e2e_time_s,startup_time_s,peak_memory_gb,peak_cpu_pct,service_count,row_count,row_match,timestamp

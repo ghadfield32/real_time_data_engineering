@@ -1,0 +1,37 @@
+# Python / uv
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+dist/
+build/
+
+# dbt
+nyc_taxi_dbt/target/
+nyc_taxi_dbt/logs/
+nyc_taxi_dbt/dbt_packages/
+
+# dbt profiles (contains local paths)
+nyc_taxi_dbt/profiles.yml
+
+# DuckDB database files
+*.duckdb
+*.duckdb.wal
+
+# Downloaded data
+data/
+
+# External materialization exports
+exports/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.claude
+.github
+nul

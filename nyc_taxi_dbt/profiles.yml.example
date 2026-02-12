@@ -1,0 +1,25 @@
+# Copy this file to profiles.yml and adjust paths for your system.
+# profiles.yml is gitignored -- do NOT commit it.
+#
+# Usage (from nyc_taxi_dbt/ directory):
+#   uv run dbt debug --profiles-dir .
+#   uv run dbt run --profiles-dir .
+#
+# Or set the env var once per session:
+#   set DBT_PROFILES_DIR=.          (Windows cmd)
+#   $env:DBT_PROFILES_DIR = "."     (PowerShell)
+#   export DBT_PROFILES_DIR=.       (bash/zsh)
+
+nyc_taxi_dbt:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: "../dev.duckdb"
+      schema: main
+      threads: 4
+      extensions:
+        - httpfs
+        - parquet
+      settings:
+        memory_limit: "4GB"

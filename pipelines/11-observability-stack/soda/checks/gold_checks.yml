@@ -1,0 +1,18 @@
+# Gold layer data quality checks
+checks for mart_daily_revenue:
+  - row_count = 31:
+      name: "31 days in January"
+  - min(total_revenue) > 0:
+      name: "All days have positive revenue"
+  - min(total_trips) > 1000:
+      name: "All days have at least 1000 trips"
+
+checks for fct_trips:
+  - row_count > 2500000:
+      name: "Fact table has expected volume"
+
+checks for dim_locations:
+  - row_count > 200:
+      name: "Location dimension is populated"
+  - duplicate_count(location_id) = 0:
+      name: "No duplicate location IDs"

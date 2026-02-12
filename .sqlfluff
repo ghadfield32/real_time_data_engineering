@@ -1,0 +1,36 @@
+[sqlfluff]
+templater = dbt
+dialect = duckdb
+max_line_length = 120
+indent_unit = space
+tab_space_size = 4
+
+[sqlfluff:templater:dbt]
+project_dir = nyc_taxi_dbt
+profiles_dir = nyc_taxi_dbt
+
+[sqlfluff:indentation]
+indented_joins = false
+indented_using_on = true
+template_blocks_indent = true
+
+[sqlfluff:rules:capitalisation.keywords]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.identifiers]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.functions]
+capitalisation_policy = lower
+
+[sqlfluff:rules:capitalisation.literals]
+capitalisation_policy = lower
+
+[sqlfluff:rules:aliasing.table]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.column]
+aliasing = explicit
+
+[sqlfluff:rules:aliasing.length]
+min_alias_length = 1

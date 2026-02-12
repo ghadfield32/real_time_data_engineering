@@ -1,0 +1,101 @@
+unit_tests:
+  - name: test_stg_trips_renames_and_casts
+    description: "Raw columns are renamed to snake_case and financial values are properly cast"
+    model: stg_yellow_trips
+    given:
+      - input: source('raw_nyc_taxi', 'raw_yellow_trips')
+        format: sql
+        rows: |
+          SELECT
+            2 AS "VendorID",
+            1 AS "RatecodeID",
+            161 AS "PULocationID",
+            237 AS "DOLocationID",
+            1 AS payment_type,
+            TIMESTAMP '2024-01-15 10:00:00' AS tpep_pickup_datetime,
+            TIMESTAMP '2024-01-15 10:30:00' AS tpep_dropoff_datetime,
+            2 AS passenger_count,
+            5.5 AS trip_distance,
+            'N' AS store_and_fwd_flag,
+            20.50 AS fare_amount,
+            1.00 AS extra,
+            0.50 AS mta_tax,
+            4.00 AS tip_amount,
+            0.00 AS tolls_amount,
+            0.30 AS improvement_surcharge,
+            26.30 AS total_amount,
+            2.50 AS congestion_surcharge,
+            1.25 AS "Airport_fee"
+    expect:
+      rows:
+        - {vendor_id: 2, rate_code_id: 1, pickup_location_id: 161,
+           dropoff_location_id: 237, payment_type_id: 1, passenger_count: 2,
+           trip_distance_miles: 5.5, fare_amount: 20.50, tip_amount: 4.00,
+           total_amount: 26.30, airport_fee: 1.25}
+
+  - name: test_stg_trips_filters_nulls_and_bad_data
+    description: "Rows with null timestamps, negative fares, or out-of-range dates are excluded"
+    model: stg_yellow_trips
+    given:
+      - input: source('raw_nyc_taxi', 'raw_yellow_trips')
+        format: sql
+        rows: |
+          -- Valid row (should pass all filters)
+          SELECT
+            1 AS "VendorID", NULL AS "RatecodeID", 161 AS "PULocationID",
+            237 AS "DOLocationID", NULL AS payment_type,
+            TIMESTAMP '2024-01-15 10:00:00' AS tpep_pickup_datetime,
+            TIMESTAMP '2024-01-15 10:30:00' AS tpep_dropoff_datetime,
+            NULL AS passenger_count, 5.0 AS trip_distance, NULL AS store_and_fwd_flag,
+            20.0 AS fare_amount, NULL AS extra, NULL AS mta_tax, NULL AS tip_amount,
+            NULL AS tolls_amount, NULL AS improvement_surcharge, 25.0 AS total_amount,
+            NULL AS congestion_surcharge, NULL AS "Airport_fee"
+          UNION ALL
+          -- Null pickup timestamp (filtered)
+          SELECT
+            2, NULL, 100, 200, NULL,
+            NULL, TIMESTAMP '2024-01-15 10:30:00',
+            NULL, 3.0, NULL,
+            15.0, NULL, NULL, NULL,
+            NULL, NULL, 18.0,
+            NULL, NULL
+          UNION ALL
+          -- Null dropoff timestamp (filtered)
+          SELECT
+            2, NULL, 100, 200, NULL,
+            TIMESTAMP '2024-01-15 10:00:00', NULL,
+            NULL, 3.0, NULL,
+            15.0, NULL, NULL, NULL,
+            NULL, NULL, 18.0,
+            NULL, NULL
+          UNION ALL
+          -- Negative fare adjustment (filtered)
+          SELECT
+            1, NULL, 100, 200, NULL,
+            TIMESTAMP '2024-01-15 11:00:00', TIMESTAMP '2024-01-15 11:30:00',
+            NULL, 5.0, NULL,
+            -10.0, NULL, NULL, NULL,
+            NULL, NULL, -8.0,
+            NULL, NULL
+          UNION ALL
+          -- Before January 2024 (filtered)
+          SELECT
+            1, NULL, 100, 200, NULL,
+            TIMESTAMP '2023-12-31 23:50:00', TIMESTAMP '2024-01-01 00:10:00',
+            NULL, 5.0, NULL,
+            20.0, NULL, NULL, NULL,
+            NULL, NULL, 25.0,
+            NULL, NULL
+          UNION ALL
+          -- After January 2024 (filtered)
+          SELECT
+            1, NULL, 100, 200, NULL,
+            TIMESTAMP '2024-02-01 00:05:00', TIMESTAMP '2024-02-01 00:25:00',
+            NULL, 5.0, NULL,
+            20.0, NULL, NULL, NULL,
+            NULL, NULL, 25.0,
+            NULL, NULL
+    expect:
+      rows:
+        - {vendor_id: 1, pickup_location_id: 161, dropoff_location_id: 237,
+           fare_amount: 20.0}

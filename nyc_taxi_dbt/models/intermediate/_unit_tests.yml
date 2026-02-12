@@ -1,0 +1,86 @@
+unit_tests:
+  - name: test_trip_metrics_calculations
+    description: "Verifies duration, speed, cost/mile, tip%, and time dimension derivations"
+    model: int_trip_metrics
+    given:
+      - input: ref('stg_yellow_trips')
+        rows:
+          # 10 miles in 30 min, $25 fare, $5 tip, Monday Jan 15 at 10am
+          - {trip_id: 'trip_1', pickup_datetime: '2024-01-15 10:00:00',
+             dropoff_datetime: '2024-01-15 10:30:00', trip_distance_miles: 10.0,
+             fare_amount: 25.0, tip_amount: 5.0, vendor_id: 1, rate_code_id: 1,
+             pickup_location_id: 161, dropoff_location_id: 237, payment_type_id: 1}
+    expect:
+      rows:
+        - {trip_id: 'trip_1', trip_duration_minutes: 30, avg_speed_mph: 20.0,
+           cost_per_mile: 2.5, tip_percentage: 20.0, pickup_date: '2024-01-15',
+           pickup_hour: 10, pickup_day_of_week: 'Monday', is_weekend: false}
+
+  - name: test_trip_metrics_weekend_flag
+    description: "Saturday and Sunday are flagged as weekend; weekdays are not"
+    model: int_trip_metrics
+    given:
+      - input: ref('stg_yellow_trips')
+        rows:
+          # Monday Jan 15, 2024
+          - {trip_id: 'mon', pickup_datetime: '2024-01-15 10:00:00',
+             dropoff_datetime: '2024-01-15 10:15:00', trip_distance_miles: 3.0,
+             fare_amount: 15.0, vendor_id: 1}
+          # Saturday Jan 13, 2024
+          - {trip_id: 'sat', pickup_datetime: '2024-01-13 10:00:00',
+             dropoff_datetime: '2024-01-13 10:15:00', trip_distance_miles: 3.0,
+             fare_amount: 15.0, vendor_id: 1}
+          # Sunday Jan 14, 2024
+          - {trip_id: 'sun', pickup_datetime: '2024-01-14 10:00:00',
+             dropoff_datetime: '2024-01-14 10:15:00', trip_distance_miles: 3.0,
+             fare_amount: 15.0, vendor_id: 1}
+    expect:
+      rows:
+        - {trip_id: 'mon', is_weekend: false, pickup_day_of_week: 'Monday'}
+        - {trip_id: 'sat', is_weekend: true, pickup_day_of_week: 'Saturday'}
+        - {trip_id: 'sun', is_weekend: true, pickup_day_of_week: 'Sunday'}
+
+  - name: test_trip_metrics_filters_impossible_trips
+    description: "Trips with duration <1min, >720min, or speed >100mph are filtered out"
+    model: int_trip_metrics
+    given:
+      - input: ref('stg_yellow_trips')
+        rows:
+          # Valid: 15 min, 20 mph
+          - {trip_id: 'valid', pickup_datetime: '2024-01-15 10:00:00',
+             dropoff_datetime: '2024-01-15 10:15:00', trip_distance_miles: 5.0,
+             fare_amount: 20.0, vendor_id: 1}
+          # Zero duration (0 min) - filtered by duration < 1
+          - {trip_id: 'zero_dur', pickup_datetime: '2024-01-15 10:00:00',
+             dropoff_datetime: '2024-01-15 10:00:00', trip_distance_miles: 1.0,
+             fare_amount: 10.0, vendor_id: 1}
+          # Too long: 780 min (13 hours) - filtered by duration > 720
+          - {trip_id: 'too_long', pickup_datetime: '2024-01-15 00:00:00',
+             dropoff_datetime: '2024-01-15 13:00:00', trip_distance_miles: 50.0,
+             fare_amount: 200.0, vendor_id: 1}
+          # Too fast: 200 miles in 60 min = 200 mph - filtered by speed > 100
+          - {trip_id: 'too_fast', pickup_datetime: '2024-01-15 10:00:00',
+             dropoff_datetime: '2024-01-15 11:00:00', trip_distance_miles: 200.0,
+             fare_amount: 500.0, vendor_id: 1}
+    expect:
+      rows:
+        - {trip_id: 'valid'}
+
+  - name: test_trip_metrics_null_on_zero_divisor
+    description: "Zero distance gives null cost_per_mile; zero fare gives null tip_percentage"
+    model: int_trip_metrics
+    given:
+      - input: ref('stg_yellow_trips')
+        rows:
+          # Zero distance: cost_per_mile should be null, tip% = 20.0
+          - {trip_id: 'zero_dist', pickup_datetime: '2024-01-15 10:00:00',
+             dropoff_datetime: '2024-01-15 10:15:00', trip_distance_miles: 0.0,
+             fare_amount: 10.0, tip_amount: 2.0, vendor_id: 1}
+          # Zero fare: tip_percentage should be null, cost/mile = 0.0
+          - {trip_id: 'zero_fare', pickup_datetime: '2024-01-15 10:00:00',
+             dropoff_datetime: '2024-01-15 10:15:00', trip_distance_miles: 5.0,
+             fare_amount: 0.0, tip_amount: 0.0, vendor_id: 1}
+    expect:
+      rows:
+        - {trip_id: 'zero_dist', cost_per_mile: null, tip_percentage: 20.0}
+        - {trip_id: 'zero_fare', cost_per_mile: 0.0, tip_percentage: null}

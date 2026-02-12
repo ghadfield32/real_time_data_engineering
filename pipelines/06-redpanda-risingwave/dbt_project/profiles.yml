@@ -1,0 +1,12 @@
+nyc_taxi_pipeline_06:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: risingwave
+      port: 4566
+      user: root
+      password: ""
+      dbname: dev
+      schema: public
+      threads: 1

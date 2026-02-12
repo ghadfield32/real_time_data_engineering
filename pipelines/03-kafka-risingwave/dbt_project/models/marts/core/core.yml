@@ -1,0 +1,77 @@
+version: 2
+
+models:
+  - name: fct_trips
+    description: "Fact table with fully enriched trip records."
+    columns:
+      - name: trip_id
+        tests: [not_null, unique]
+      - name: vendor_id
+      - name: rate_code_id
+      - name: payment_type_id
+      - name: pickup_location_id
+      - name: dropoff_location_id
+      - name: pickup_datetime
+        tests: [not_null]
+      - name: dropoff_datetime
+      - name: pickup_date
+      - name: pickup_hour
+      - name: pickup_day_of_week
+      - name: is_weekend
+      - name: passenger_count
+      - name: trip_distance_miles
+      - name: trip_duration_minutes
+      - name: avg_speed_mph
+      - name: cost_per_mile
+      - name: fare_amount
+      - name: extra_amount
+      - name: mta_tax
+      - name: tip_amount
+      - name: tip_percentage
+      - name: tolls_amount
+      - name: improvement_surcharge
+      - name: total_amount
+        tests: [not_null]
+      - name: congestion_surcharge
+      - name: airport_fee
+      - name: pickup_borough
+      - name: pickup_zone
+      - name: dropoff_borough
+      - name: dropoff_zone
+
+  - name: dim_locations
+    description: "Location dimension"
+    columns:
+      - name: location_id
+        tests: [unique, not_null]
+      - name: borough
+        tests: [not_null]
+      - name: zone_name
+        tests: [not_null]
+      - name: service_zone
+
+  - name: dim_dates
+    description: "Date dimension for January 2024"
+    columns:
+      - name: date_key
+        tests: [unique, not_null]
+      - name: year
+      - name: month
+      - name: day_of_month
+      - name: day_of_week_num
+      - name: day_of_week_name
+        tests: [not_null]
+      - name: month_name
+      - name: week_of_year
+      - name: is_weekend
+        tests: [not_null]
+      - name: is_holiday
+        tests: [not_null]
+
+  - name: dim_payment_types
+    description: "Payment type dimension"
+    columns:
+      - name: payment_type_id
+        tests: [unique, not_null]
+      - name: payment_type_name
+        tests: [not_null]

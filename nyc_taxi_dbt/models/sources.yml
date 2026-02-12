@@ -1,0 +1,57 @@
+version: 2
+
+sources:
+  - name: raw_nyc_taxi
+    description: "NYC TLC Yellow Taxi trip data loaded from parquet via dbt-duckdb external sources"
+    schema: main
+    freshness:
+      warn_after: {count: 60, period: day}
+      error_after: {count: 90, period: day}
+    loaded_at_field: "tpep_pickup_datetime"
+    tables:
+      - name: raw_yellow_trips
+        description: "Raw yellow taxi trip records for January 2024 (~3M rows)"
+        config:
+          external_location: "read_parquet('../data/yellow_tripdata_2024-01.parquet')"
+        meta:
+          source_format: parquet
+          source_url: "https://d37ci6vzurychx.cloudfront.net/trip-data/yellow_tripdata_2024-01.parquet"
+        columns:
+          - name: VendorID
+            description: "TPEP provider: 1=Creative Mobile Technologies, 2=VeriFone Inc."
+          - name: tpep_pickup_datetime
+            description: "Meter engaged timestamp"
+          - name: tpep_dropoff_datetime
+            description: "Meter disengaged timestamp"
+          - name: passenger_count
+            description: "Number of passengers (driver-entered)"
+          - name: trip_distance
+            description: "Trip distance in miles from taximeter"
+          - name: RatecodeID
+            description: "Rate code: 1=Standard, 2=JFK, 3=Newark, 4=Nassau/Westchester, 5=Negotiated, 6=Group"
+          - name: store_and_fwd_flag
+            description: "Y=stored then forwarded, N=not a store-and-forward trip"
+          - name: PULocationID
+            description: "TLC Taxi Zone pickup location ID"
+          - name: DOLocationID
+            description: "TLC Taxi Zone dropoff location ID"
+          - name: payment_type
+            description: "Payment method: 1=Credit, 2=Cash, 3=No charge, 4=Dispute, 5=Unknown, 6=Voided"
+          - name: fare_amount
+            description: "Time-and-distance fare in dollars"
+          - name: extra
+            description: "Misc extras and surcharges ($0.50 rush hour, $1 overnight)"
+          - name: mta_tax
+            description: "MTA tax ($0.50 auto-triggered based on metered rate)"
+          - name: tip_amount
+            description: "Tip amount (auto-populated for credit card, cash tips not included)"
+          - name: tolls_amount
+            description: "Total tolls paid during trip"
+          - name: improvement_surcharge
+            description: "$0.30 improvement surcharge"
+          - name: total_amount
+            description: "Total amount charged to passengers (excludes cash tips)"
+          - name: congestion_surcharge
+            description: "NYC congestion surcharge ($2.50 for yellow taxi)"
+          - name: Airport_fee
+            description: "$1.25 for pickups at LaGuardia and JFK"

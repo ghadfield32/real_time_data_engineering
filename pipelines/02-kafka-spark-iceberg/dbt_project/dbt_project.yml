@@ -1,0 +1,32 @@
+name: 'nyc_taxi_pipeline_02'
+version: '1.0.0'
+config-version: 2
+
+profile: 'pipeline_02'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+seeds:
+  nyc_taxi_pipeline_02:
+    +schema: main
+
+models:
+  nyc_taxi_pipeline_02:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      core:
+        +materialized: table
+      analytics:
+        +materialized: table

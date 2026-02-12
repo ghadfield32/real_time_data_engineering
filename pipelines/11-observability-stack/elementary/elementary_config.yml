@@ -1,0 +1,14 @@
+# Elementary data observability configuration
+# Monitors dbt test results, freshness, schema changes, and volume anomalies
+
+schema_changes:
+  enabled: true
+
+volume_anomalies:
+  enabled: true
+
+freshness_anomalies:
+  enabled: true
+
+test_results:
+  enabled: true

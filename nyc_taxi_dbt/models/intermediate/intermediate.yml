@@ -1,0 +1,83 @@
+version: 2
+
+models:
+  - name: int_trip_metrics
+    description: >
+      Trip records enriched with calculated metrics: duration, speed,
+      cost per mile, tip percentage, and time dimensions. Filters out
+      impossible trips (duration < 1 min or > 12 hours, speed > 100 mph).
+    columns:
+      - name: trip_id
+        description: "Surrogate key from staging"
+        tests:
+          - not_null
+      - name: trip_duration_minutes
+        description: "Duration between pickup and dropoff in minutes"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 720
+      - name: avg_speed_mph
+        description: "Average trip speed in mph (null if duration is zero)"
+      - name: cost_per_mile
+        description: "Fare amount divided by trip distance (null if zero distance)"
+      - name: tip_percentage
+        description: "Tip as percentage of fare (null if zero fare)"
+      - name: pickup_date
+        description: "Date of pickup (truncated from timestamp)"
+        tests:
+          - not_null
+      - name: pickup_hour
+        description: "Hour of pickup (0-23)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 23
+      - name: is_weekend
+        description: "True if pickup was on Saturday or Sunday"
+        tests:
+          - not_null
+
+  - name: int_daily_summary
+    description: "Daily aggregated trip counts, revenue, and average metrics"
+    columns:
+      - name: pickup_date
+        description: "Calendar date"
+        tests:
+          - unique
+          - not_null
+      - name: total_trips
+        description: "Number of trips on this day"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: total_revenue
+        description: "Sum of total_amount for all trips"
+        tests:
+          - not_null
+
+  - name: int_hourly_patterns
+    description: "Hourly trip aggregations by date for demand pattern analysis"
+    columns:
+      - name: pickup_date
+        description: "Calendar date"
+        tests:
+          - not_null
+      - name: pickup_hour
+        description: "Hour of day (0-23)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 23
+      - name: total_trips
+        description: "Number of trips in this hour"
+        tests:
+          - not_null

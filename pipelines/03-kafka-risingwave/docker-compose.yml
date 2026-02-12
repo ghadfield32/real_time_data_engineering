@@ -1,0 +1,118 @@
+version: "3.9"
+
+# Pipeline 03 - Kafka + RisingWave (Simplest Streaming Pipeline)
+# No MinIO needed — RisingWave manages its own storage.
+
+services:
+  # ── Kafka (KRaft mode, single node) ───────────────────────
+  kafka:
+    image: apache/kafka:latest
+    container_name: p03-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft mode (no ZooKeeper)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Cluster
+      CLUSTER_ID: "p03-kafka-risingwave-cluster"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - pipeline-net
+
+  # ── RisingWave (streaming database, playground mode) ──────
+  risingwave:
+    image: risingwavelabs/risingwave:latest
+    container_name: p03-risingwave
+    hostname: risingwave
+    command: playground
+    ports:
+      - "4566:4566"   # PostgreSQL-compatible SQL port
+      - "5691:5691"   # Dashboard UI
+    volumes:
+      - risingwave-data:/risingwave
+      - ./risingwave/sql:/risingwave/sql:ro
+    healthcheck:
+      test: pg_isready -h localhost -p 4566 -U root || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+
+  # ── Data Generator ────────────────────────────────────────
+  data-generator:
+    build:
+      context: ../../shared/data-generator/
+      dockerfile: Dockerfile
+    container_name: p03-data-generator
+    environment:
+      BROKER_URL: kafka:9092
+      TOPIC: taxi.raw_trips
+      MODE: burst
+      DATA_PATH: /data/yellow_tripdata_2024-01.parquet
+      MAX_EVENTS: 0
+    volumes:
+      - ../../data:/data:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+    profiles:
+      - generate
+
+  # ── dbt (PostgreSQL adapter for RisingWave) ───────────────
+  dbt:
+    build:
+      context: .
+      dockerfile: ../../shared/docker/dbt.Dockerfile
+      args:
+        DBT_ADAPTER: dbt-postgres
+        DBT_ADAPTER_VERSION: ">=1.8"
+    container_name: p03-dbt
+    volumes:
+      - ./dbt_project:/dbt
+    working_dir: /dbt
+    environment:
+      DBT_PROFILES_DIR: /dbt
+    depends_on:
+      risingwave:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+    profiles:
+      - dbt
+
+volumes:
+  kafka-data:
+  risingwave-data:
+
+networks:
+  pipeline-net:
+    driver: bridge

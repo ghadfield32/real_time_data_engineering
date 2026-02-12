@@ -1,0 +1,196 @@
+###############################################################################
+# Pipeline 05: Redpanda + Spark + Iceberg
+#
+# Spark-centric streaming pipeline.
+# Redpanda -> Spark Structured Streaming -> Iceberg (MinIO) -> dbt (DuckDB)
+###############################################################################
+
+services:
+
+  # ---------------------------------------------------------------------------
+  # Redpanda (Kafka-compatible streaming)
+  # ---------------------------------------------------------------------------
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: p05-redpanda
+    hostname: redpanda
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 1G
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
+    ports:
+      - "19092:19092"
+      - "18081:18081"
+      - "18082:18082"
+      - "9644:9644"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO (S3-compatible storage for Iceberg)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: p05-minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ["CMD", "mc", "ready", "local"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO Client — create warehouse bucket on startup
+  # ---------------------------------------------------------------------------
+  mc-init:
+    image: minio/mc:latest
+    container_name: p05-mc-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin &&
+      mc mb --ignore-existing myminio/warehouse &&
+      echo 'Bucket warehouse created (or already exists)' &&
+      exit 0
+      "
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Spark Master
+  # ---------------------------------------------------------------------------
+  spark-master:
+    image: bitnami/spark:3.5
+    container_name: p05-spark-master
+    ports:
+      - "8080:8080"
+      - "7077:7077"
+    environment:
+      SPARK_MODE: master
+      SPARK_MASTER_HOST: spark-master
+      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
+      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
+      SPARK_SSL_ENABLED: "no"
+      BROKER_URL: "redpanda:9092"
+    volumes:
+      - ./spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
+      - ./spark/jobs:/opt/spark-jobs:ro
+    healthcheck:
+      test: curl -f http://localhost:8080/ || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Spark Worker
+  # ---------------------------------------------------------------------------
+  spark-worker:
+    image: bitnami/spark:3.5
+    container_name: p05-spark-worker
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    environment:
+      SPARK_MODE: worker
+      SPARK_MASTER_URL: spark://spark-master:7077
+      SPARK_WORKER_MEMORY: 2g
+      SPARK_WORKER_CORES: 2
+      SPARK_RPC_AUTHENTICATION_ENABLED: "no"
+      SPARK_RPC_ENCRYPTION_ENABLED: "no"
+      SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED: "no"
+      SPARK_SSL_ENABLED: "no"
+      BROKER_URL: "redpanda:9092"
+    volumes:
+      - ./spark/conf/spark-defaults.conf:/opt/bitnami/spark/conf/spark-defaults.conf:ro
+      - ./spark/jobs:/opt/spark-jobs:ro
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # dbt (DuckDB with Iceberg scan)
+  # ---------------------------------------------------------------------------
+  dbt:
+    build:
+      context: ./dbt_project
+      dockerfile: Dockerfile
+    container_name: p05-dbt
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ENDPOINT_URL: http://minio:9000
+      AWS_REGION: us-east-1
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - ./dbt_project:/usr/src/dbt
+      - minio-data:/minio-data:ro
+    working_dir: /usr/src/dbt
+    entrypoint: ["tail", "-f", "/dev/null"]
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Data Generator
+  # ---------------------------------------------------------------------------
+  data-generator:
+    build:
+      context: ../../shared/data-generator/
+    container_name: p05-data-generator
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    environment:
+      BROKER_URL: redpanda:9092
+      TOPIC: taxi.raw_trips
+      MODE: burst
+      MAX_EVENTS: "0"
+    volumes:
+      - ../../data:/data:ro
+      - ./benchmark_results:/benchmarks
+    profiles:
+      - generate
+    networks:
+      - pipeline-net
+
+# =============================================================================
+volumes:
+  redpanda-data:
+  minio-data:
+
+networks:
+  pipeline-net:
+    driver: bridge

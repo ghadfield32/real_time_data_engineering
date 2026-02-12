@@ -1,0 +1,53 @@
+name: 'nyc_taxi_pipeline_00'
+version: '1.0.0'
+config-version: 2
+
+profile: 'nyc_taxi_pipeline_00'
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+dispatch:
+  - macro_namespace: nyc_taxi_dbt
+    search_order:
+      - nyc_taxi_pipeline_00
+      - nyc_taxi_dbt
+
+seeds:
+  nyc_taxi_pipeline_00:
+    taxi_zone_lookup:
+      +column_types:
+        LocationID: integer
+        Borough: varchar
+        Zone: varchar
+        service_zone: varchar
+    payment_type_lookup:
+      +column_types:
+        payment_type_id: integer
+        payment_type_name: varchar
+    rate_code_lookup:
+      +column_types:
+        rate_code_id: integer
+        rate_code_name: varchar
+
+models:
+  nyc_taxi_pipeline_00:
+    staging:
+      +materialized: view
+      stg_yellow_trips:
+        +materialized: table
+    intermediate:
+      +materialized: view
+    marts:
+      core:
+        +materialized: table
+      analytics:
+        +materialized: table

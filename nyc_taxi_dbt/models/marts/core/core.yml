@@ -1,0 +1,202 @@
+version: 2
+
+models:
+  - name: fct_trips
+    description: >
+      Fact table with fully enriched trip records. Joins trip metrics
+      with location dimensions to provide borough and zone names for
+      both pickup and dropoff. Materialized as a table.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: trip_id
+        data_type: varchar
+        description: "Surrogate trip key"
+        tests:
+          - not_null
+          - unique
+      - name: vendor_id
+        data_type: integer
+        description: "TPEP provider ID"
+      - name: rate_code_id
+        data_type: integer
+        description: "Rate code ID"
+      - name: payment_type_id
+        data_type: integer
+        description: "Payment method ID"
+      - name: pickup_location_id
+        data_type: integer
+        description: "TLC Taxi Zone ID for pickup"
+      - name: dropoff_location_id
+        data_type: integer
+        description: "TLC Taxi Zone ID for dropoff"
+      - name: pickup_datetime
+        data_type: timestamp
+        description: "Meter engaged timestamp"
+        tests:
+          - not_null
+      - name: dropoff_datetime
+        data_type: timestamp
+        description: "Meter disengaged timestamp"
+      - name: pickup_date
+        data_type: date
+        description: "Pickup date (day truncated)"
+      - name: pickup_hour
+        data_type: bigint
+        description: "Hour of pickup (0-23)"
+      - name: pickup_day_of_week
+        data_type: varchar
+        description: "Day name for pickup"
+      - name: is_weekend
+        data_type: boolean
+        description: "True for Saturday/Sunday pickups"
+      - name: passenger_count
+        data_type: integer
+        description: "Number of passengers"
+      - name: trip_distance_miles
+        data_type: double
+        description: "Trip distance in miles"
+      - name: trip_duration_minutes
+        data_type: bigint
+        description: "Trip duration in minutes"
+      - name: avg_speed_mph
+        data_type: double
+        description: "Average speed in mph"
+      - name: cost_per_mile
+        data_type: double
+        description: "Fare per mile"
+      - name: fare_amount
+        data_type: "decimal(10,2)"
+        description: "Time-and-distance fare"
+      - name: extra_amount
+        data_type: "decimal(10,2)"
+        description: "Extra charges"
+      - name: mta_tax
+        data_type: "decimal(10,2)"
+        description: "MTA tax"
+      - name: tip_amount
+        data_type: "decimal(10,2)"
+        description: "Tip amount"
+      - name: tip_percentage
+        data_type: double
+        description: "Tip as percentage of fare"
+      - name: tolls_amount
+        data_type: "decimal(10,2)"
+        description: "Tolls amount"
+      - name: improvement_surcharge
+        data_type: "decimal(10,2)"
+        description: "Improvement surcharge"
+      - name: total_amount
+        data_type: "decimal(10,2)"
+        description: "Total amount charged"
+        tests:
+          - not_null
+      - name: congestion_surcharge
+        data_type: "decimal(10,2)"
+        description: "Congestion surcharge"
+      - name: airport_fee
+        data_type: "decimal(10,2)"
+        description: "Airport pickup fee"
+      - name: pickup_borough
+        data_type: varchar
+        description: "Borough name for pickup location (from dim_locations)"
+      - name: pickup_zone
+        data_type: varchar
+        description: "Zone name for pickup location"
+      - name: dropoff_borough
+        data_type: varchar
+        description: "Borough name for dropoff location (from dim_locations)"
+      - name: dropoff_zone
+        data_type: varchar
+        description: "Zone name for dropoff location"
+
+  - name: dim_locations
+    description: "Dimension table mapping TLC Taxi Zone IDs to borough and zone names"
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: location_id
+        data_type: integer
+        description: "Unique taxi zone identifier"
+        tests:
+          - unique
+          - not_null
+      - name: borough
+        data_type: varchar
+        description: "NYC borough (Manhattan, Brooklyn, Queens, Bronx, Staten Island, EWR)"
+        tests:
+          - not_null
+      - name: zone_name
+        data_type: varchar
+        description: "Specific zone/neighborhood name"
+        tests:
+          - not_null
+      - name: service_zone
+        data_type: varchar
+        description: "Service zone classification"
+
+  - name: dim_dates
+    description: "Date dimension for January 2024 with day-of-week, weekend, and holiday flags"
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: date_key
+        data_type: date
+        description: "Calendar date (YYYY-MM-DD)"
+        tests:
+          - unique
+          - not_null
+      - name: year
+        data_type: bigint
+        description: "Calendar year"
+      - name: month
+        data_type: bigint
+        description: "Month number (1-12)"
+      - name: day_of_month
+        data_type: bigint
+        description: "Day of month (1-31)"
+      - name: day_of_week_num
+        data_type: bigint
+        description: "Day of week number (0=Sunday, 6=Saturday)"
+      - name: day_of_week_name
+        data_type: varchar
+        description: "Day name (Monday, Tuesday, etc.)"
+        tests:
+          - not_null
+      - name: month_name
+        data_type: varchar
+        description: "Month name (January, February, etc.)"
+      - name: week_of_year
+        data_type: bigint
+        description: "ISO week number"
+      - name: is_weekend
+        data_type: boolean
+        description: "True for Saturday and Sunday"
+        tests:
+          - not_null
+      - name: is_holiday
+        data_type: boolean
+        description: "True for known US holidays (New Year's Day, MLK Day)"
+        tests:
+          - not_null
+
+  - name: dim_payment_types
+    description: "Dimension table mapping payment type IDs to names"
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: payment_type_id
+        data_type: integer
+        description: "Payment type identifier (1-6)"
+        tests:
+          - unique
+          - not_null
+      - name: payment_type_name
+        data_type: varchar
+        description: "Human-readable name (Credit card, Cash, etc.)"
+        tests:
+          - not_null

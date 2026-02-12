@@ -1,0 +1,71 @@
+id: taxi-pipeline
+namespace: nyc.taxi
+description: "NYC Taxi streaming pipeline orchestrated by Kestra"
+
+triggers:
+  - id: manual
+    type: io.kestra.plugin.core.trigger.Flow
+    description: "Manual trigger"
+
+tasks:
+  - id: create_topics
+    type: io.kestra.plugin.scripts.shell.Script
+    description: "Create Kafka topics"
+    runner: DOCKER
+    docker:
+      image: apache/kafka:latest
+      networkMode: p07-pipeline-net
+    commands:
+      - /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --if-not-exists --topic taxi.raw_trips --partitions 3 --replication-factor 1
+
+  - id: generate_events
+    type: io.kestra.plugin.scripts.shell.Script
+    description: "Generate taxi trip events"
+    runner: DOCKER
+    docker:
+      image: p07-data-generator
+      networkMode: p07-pipeline-net
+    commands:
+      - python /app/generator.py
+    env:
+      BROKER_URL: kafka:9092
+      TOPIC: taxi.raw_trips
+      MODE: burst
+
+  - id: submit_flink_bronze
+    type: io.kestra.plugin.scripts.shell.Script
+    description: "Submit Flink Bronze layer SQL"
+    runner: DOCKER
+    docker:
+      image: flink:1.20-java17
+      networkMode: p07-pipeline-net
+    commands:
+      - /opt/flink/bin/sql-client.sh embedded -f /opt/flink/sql/01-create-kafka-source.sql
+      - /opt/flink/bin/sql-client.sh embedded -f /opt/flink/sql/02-create-iceberg-catalog.sql
+      - /opt/flink/bin/sql-client.sh embedded -f /opt/flink/sql/03-bronze-raw-trips.sql
+
+  - id: submit_flink_silver
+    type: io.kestra.plugin.scripts.shell.Script
+    description: "Submit Flink Silver layer SQL"
+    runner: DOCKER
+    docker:
+      image: flink:1.20-java17
+      networkMode: p07-pipeline-net
+    commands:
+      - /opt/flink/bin/sql-client.sh embedded -f /opt/flink/sql/04-silver-cleaned-trips.sql
+
+  - id: wait_for_processing
+    type: io.kestra.plugin.core.flow.Pause
+    description: "Wait for Flink to process all events"
+    delay: PT60S
+
+  - id: dbt_build
+    type: io.kestra.plugin.scripts.shell.Script
+    description: "Run dbt build"
+    runner: DOCKER
+    docker:
+      image: p07-dbt
+      networkMode: p07-pipeline-net
+    commands:
+      - dbt deps --profiles-dir .
+      - dbt build --profiles-dir .

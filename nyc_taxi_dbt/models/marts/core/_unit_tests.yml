@@ -1,0 +1,32 @@
+unit_tests:
+  - name: test_fct_trips_location_enrichment
+    description: "Trips are enriched with borough/zone; unknown location IDs produce nulls via left join"
+    model: fct_trips
+    overrides:
+      macros:
+        is_incremental: false
+    given:
+      - input: ref('int_trip_metrics')
+        rows:
+          # Both locations known
+          - {trip_id: 'known', pickup_location_id: 161, dropoff_location_id: 237}
+          # Both locations unknown (not in dim_locations)
+          - {trip_id: 'unknown', pickup_location_id: 999, dropoff_location_id: 998}
+          # Mixed: known pickup, unknown dropoff
+          - {trip_id: 'mixed', pickup_location_id: 161, dropoff_location_id: 999}
+      - input: ref('dim_locations')
+        rows:
+          - {location_id: 161, borough: 'Manhattan', zone_name: 'Midtown Center',
+             service_zone: 'Yellow Zone'}
+          - {location_id: 237, borough: 'Manhattan', zone_name: 'Upper East Side South',
+             service_zone: 'Yellow Zone'}
+    expect:
+      rows:
+        - {trip_id: 'known', pickup_borough: 'Manhattan',
+           pickup_zone: 'Midtown Center', dropoff_borough: 'Manhattan',
+           dropoff_zone: 'Upper East Side South'}
+        - {trip_id: 'unknown', pickup_borough: null, pickup_zone: null,
+           dropoff_borough: null, dropoff_zone: null}
+        - {trip_id: 'mixed', pickup_borough: 'Manhattan',
+           pickup_zone: 'Midtown Center', dropoff_borough: null,
+           dropoff_zone: null}

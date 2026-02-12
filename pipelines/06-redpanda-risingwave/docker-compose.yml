@@ -1,0 +1,114 @@
+version: "3.9"
+
+# Pipeline 06 - Redpanda + RisingWave (Simplest Streaming Pipeline)
+# Fork of Pipeline 03 with Redpanda replacing Kafka.
+# No MinIO needed — RisingWave manages its own storage.
+
+services:
+  # ── Redpanda (Kafka-compatible streaming platform) ──────
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: p06-redpanda
+    hostname: redpanda
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 1G
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
+    ports:
+      - "19092:19092"
+      - "18081:18081"
+      - "18082:18082"
+      - "9644:9644"
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    networks:
+      - pipeline-net
+
+  # ── RisingWave (streaming database, playground mode) ──────
+  risingwave:
+    image: risingwavelabs/risingwave:latest
+    container_name: p06-risingwave
+    hostname: risingwave
+    command: playground
+    ports:
+      - "4566:4566"   # PostgreSQL-compatible SQL port
+      - "5691:5691"   # Dashboard UI
+    volumes:
+      - risingwave-data:/risingwave
+      - ./risingwave/sql:/risingwave/sql:ro
+    healthcheck:
+      test: pg_isready -h localhost -p 4566 -U root || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+
+  # ── Data Generator ────────────────────────────────────────
+  data-generator:
+    build:
+      context: ../../shared/data-generator/
+      dockerfile: Dockerfile
+    container_name: p06-data-generator
+    environment:
+      BROKER_URL: redpanda:9092
+      TOPIC: taxi.raw_trips
+      MODE: burst
+      DATA_PATH: /data/yellow_tripdata_2024-01.parquet
+      MAX_EVENTS: 0
+    volumes:
+      - ../../data:/data:ro
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+    profiles:
+      - generate
+
+  # ── dbt (PostgreSQL adapter for RisingWave) ───────────────
+  dbt:
+    build:
+      context: .
+      dockerfile: ../../shared/docker/dbt.Dockerfile
+      args:
+        DBT_ADAPTER: dbt-postgres
+        DBT_ADAPTER_VERSION: ">=1.8"
+    container_name: p06-dbt
+    volumes:
+      - ./dbt_project:/dbt
+    working_dir: /dbt
+    environment:
+      DBT_PROFILES_DIR: /dbt
+    depends_on:
+      risingwave:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+    profiles:
+      - dbt
+
+volumes:
+  redpanda-data:
+  risingwave-data:
+
+networks:
+  pipeline-net:
+    driver: bridge

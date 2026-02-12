@@ -1,0 +1,186 @@
+version: 2
+
+models:
+  - name: mart_daily_revenue
+    description: >
+      Daily revenue metrics joined with date dimension. Includes
+      running cumulative revenue and day-over-day change for trend analysis.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: date_key
+        data_type: date
+        description: "Calendar date"
+        tests:
+          - unique
+          - not_null
+      - name: day_of_week_name
+        data_type: varchar
+        description: "Day name (Monday, Tuesday, etc.)"
+      - name: is_weekend
+        data_type: boolean
+        description: "True for Saturday/Sunday"
+      - name: is_holiday
+        data_type: boolean
+        description: "True for US holidays"
+      - name: week_of_year
+        data_type: bigint
+        description: "ISO week number"
+      - name: total_trips
+        data_type: bigint
+        description: "Number of trips on this day"
+      - name: total_passengers
+        data_type: hugeint
+        description: "Total passenger count"
+      - name: total_fare_revenue
+        data_type: "decimal(38,2)"
+        description: "Sum of fare amounts"
+      - name: total_tip_revenue
+        data_type: "decimal(38,2)"
+        description: "Sum of tip amounts"
+      - name: total_revenue
+        data_type: "decimal(38,2)"
+        description: "Sum of total_amount for all trips on this day"
+        tests:
+          - not_null
+      - name: avg_trip_revenue
+        data_type: double
+        description: "Average revenue per trip"
+      - name: avg_tip_percentage
+        data_type: double
+        description: "Average tip as percentage of fare"
+      - name: credit_card_trips
+        data_type: bigint
+        description: "Number of credit card trips"
+      - name: cash_trips
+        data_type: bigint
+        description: "Number of cash trips"
+      - name: avg_trip_distance
+        data_type: double
+        description: "Average trip distance in miles"
+      - name: avg_trip_duration_min
+        data_type: double
+        description: "Average trip duration in minutes"
+      - name: cumulative_revenue
+        data_type: "decimal(38,2)"
+        description: "Running total of revenue from start of month"
+      - name: revenue_change_vs_prior_day
+        data_type: "decimal(38,2)"
+        description: "Revenue difference compared to previous day (null for first day)"
+
+  - name: mart_location_performance
+    description: >
+      Per-zone performance summary showing total pickups, revenue,
+      average metrics, most common dropoff, and peak hour.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: pickup_location_id
+        data_type: integer
+        description: "TLC Taxi Zone ID"
+        tests:
+          - unique
+          - not_null
+      - name: pickup_borough
+        data_type: varchar
+        description: "Borough name for this pickup zone"
+      - name: pickup_zone
+        data_type: varchar
+        description: "Zone name for this pickup location"
+      - name: total_pickups
+        data_type: bigint
+        description: "Total number of trip pickups from this zone"
+        tests:
+          - not_null
+      - name: avg_trip_distance
+        data_type: double
+        description: "Average trip distance from this zone"
+      - name: avg_trip_duration_min
+        data_type: double
+        description: "Average trip duration from this zone"
+      - name: total_revenue
+        data_type: "decimal(38,2)"
+        description: "Total revenue generated from pickups in this zone"
+      - name: avg_revenue_per_trip
+        data_type: double
+        description: "Average revenue per trip from this zone"
+      - name: avg_tip_pct
+        data_type: double
+        description: "Average tip percentage for trips from this zone"
+      - name: avg_passengers
+        data_type: double
+        description: "Average passengers per trip from this zone"
+      - name: most_common_dropoff_zone
+        data_type: varchar
+        description: "Most frequent dropoff zone name for trips from this pickup zone"
+      - name: peak_pickup_hour
+        data_type: bigint
+        description: "Hour of day with most pickups at this zone"
+
+  - name: mart_hourly_demand
+    description: >
+      Hourly demand patterns averaged across the month, split by
+      weekday and weekend. Shows typical trip volumes and revenue by hour.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: pickup_hour
+        data_type: bigint
+        description: "Hour of day (0-23)"
+        tests:
+          - not_null
+      - name: is_weekend
+        data_type: boolean
+        description: "True for Saturday/Sunday aggregations"
+        tests:
+          - not_null
+      - name: days_observed
+        data_type: bigint
+        description: "Number of distinct days observed"
+      - name: avg_trips_per_period
+        data_type: double
+        description: "Average number of trips per hour across observed days"
+      - name: avg_distance
+        data_type: double
+        description: "Average trip distance for this hour"
+      - name: avg_duration_min
+        data_type: double
+        description: "Average trip duration for this hour"
+      - name: avg_revenue_per_period
+        data_type: double
+        description: "Average revenue per hour across observed days"
+      - name: total_trips_all_days
+        data_type: hugeint
+        description: "Total trips across all observed days for this hour"
+
+  - name: export_daily_revenue
+    description: >
+      External materialization: daily revenue data exported as parquet file
+      to ../exports/daily_revenue.parquet. Creates a view backed by the
+      parquet file for DAG integration. Demonstrates dbt-duckdb's external
+      materialization feature.
+    columns:
+      - name: date_key
+        description: "Calendar date"
+        tests:
+          - unique
+          - not_null
+
+  - name: anomaly_daily_trips
+    description: >
+      Python model: Anomaly detection on daily trip volumes and revenue.
+      Uses z-score and IQR methods to flag unusual days (holidays, weather,
+      data quality issues). Demonstrates dbt-duckdb Python model support.
+    columns:
+      - name: pickup_date
+        description: "Calendar date"
+        tests:
+          - unique
+          - not_null
+      - name: is_anomaly
+        description: "True if day is flagged by any anomaly detection method"
+        tests:
+          - not_null

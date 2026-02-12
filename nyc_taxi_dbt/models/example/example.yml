@@ -1,0 +1,26 @@
+version: 2
+
+models:
+  - name: my_first_model
+    description: "Week 1 starter model with hardcoded taxi trip data"
+    columns:
+      - name: trip_id
+        description: "Unique trip identifier"
+        tests:
+          - unique
+          - not_null
+
+  - name: my_second_model
+    description: "Week 1 model demonstrating ref() - categorizes trips by fare"
+    columns:
+      - name: trip_id
+        description: "Trip identifier from my_first_model"
+        tests:
+          - unique
+          - not_null
+      - name: trip_category
+        description: "Trip category based on fare amount: short/medium/long"
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['short', 'medium', 'long']

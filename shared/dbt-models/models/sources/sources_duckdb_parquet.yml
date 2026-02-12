@@ -1,0 +1,11 @@
+version: 2
+
+sources:
+  - name: raw_nyc_taxi
+    description: "NYC TLC Yellow Taxi data - DuckDB parquet source"
+    schema: main
+    tables:
+      - name: raw_yellow_trips
+        description: "Raw yellow taxi trip records for January 2024"
+        config:
+          external_location: "read_parquet('../data/yellow_tripdata_2024-01.parquet')"

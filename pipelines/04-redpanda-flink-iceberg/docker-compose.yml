@@ -1,0 +1,217 @@
+# =============================================================================
+# Pipeline 04: Redpanda + Flink + Iceberg
+# =============================================================================
+# Architecture: Redpanda → Flink SQL → Iceberg (on MinIO) → dbt (DuckDB)
+# Fork of Pipeline 01 with Redpanda replacing Kafka + Schema Registry.
+# =============================================================================
+
+x-flink-common: &flink-common
+  image: flink:1.20-java17
+  environment: &flink-env
+    FLINK_PROPERTIES: |
+      jobmanager.rpc.address: flink-jobmanager
+      taskmanager.numberOfTaskSlots: 4
+      parallelism.default: 2
+      state.backend: hashmap
+      state.checkpoints.dir: file:///tmp/flink-checkpoints
+      execution.checkpointing.interval: 30s
+      rest.flamegraph.enabled: true
+  networks:
+    - pipeline-net
+
+services:
+  # ---------------------------------------------------------------------------
+  # Redpanda (single node - replaces Kafka + Schema Registry)
+  # ---------------------------------------------------------------------------
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: p04-redpanda
+    hostname: redpanda
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 1G
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
+    ports:
+      - "19092:19092"  # Kafka API
+      - "18081:18081"  # Schema Registry
+      - "18082:18082"  # Pandaproxy
+      - "9644:9644"    # Admin API
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO (S3-compatible object storage for Iceberg warehouse)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: p04-minio
+    hostname: minio
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: mc ready local || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - minio-data:/data
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO Client Init (create warehouse bucket)
+  # ---------------------------------------------------------------------------
+  mc-init:
+    image: minio/mc:latest
+    container_name: p04-mc-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin &&
+      mc mb myminio/warehouse --ignore-existing &&
+      mc anonymous set download myminio/warehouse &&
+      echo 'Bucket warehouse created successfully'
+      "
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Flink JobManager
+  # ---------------------------------------------------------------------------
+  flink-jobmanager:
+    <<: *flink-common
+    container_name: p04-flink-jobmanager
+    hostname: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"
+    volumes:
+      - ./flink/sql:/opt/flink/sql:ro
+      - ./flink/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml:ro
+      - flink-checkpoints:/tmp/flink-checkpoints
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      mc-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: curl -f http://localhost:8081/overview || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    environment:
+      <<: *flink-env
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_REGION: us-east-1
+
+  # ---------------------------------------------------------------------------
+  # Flink TaskManager
+  # ---------------------------------------------------------------------------
+  flink-taskmanager:
+    <<: *flink-common
+    container_name: p04-flink-taskmanager
+    hostname: flink-taskmanager
+    command: taskmanager
+    volumes:
+      - flink-checkpoints:/tmp/flink-checkpoints
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      <<: *flink-env
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_REGION: us-east-1
+
+  # ---------------------------------------------------------------------------
+  # dbt (DuckDB adapter - reads Iceberg tables from MinIO)
+  # ---------------------------------------------------------------------------
+  dbt:
+    build:
+      context: .
+      dockerfile: ../../shared/docker/dbt.Dockerfile
+      args:
+        DBT_ADAPTER: dbt-duckdb
+    container_name: p04-dbt
+    volumes:
+      - ./dbt_project:/dbt
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ENDPOINT_URL: http://minio:9000
+      AWS_REGION: us-east-1
+      DBT_PROFILES_DIR: /dbt
+    depends_on:
+      minio:
+        condition: service_healthy
+    profiles:
+      - dbt
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Data Generator (reads parquet, produces to Redpanda)
+  # ---------------------------------------------------------------------------
+  data-generator:
+    build:
+      context: ../../shared/data-generator/
+      dockerfile: Dockerfile
+    container_name: p04-data-generator
+    volumes:
+      - ../../data:/data:ro
+    environment:
+      BROKER_URL: redpanda:9092
+      TOPIC: taxi.raw_trips
+      MODE: burst
+      DATA_PATH: /data/yellow_tripdata_2024-01.parquet
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    profiles:
+      - generator
+    networks:
+      - pipeline-net
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  minio-data:
+    driver: local
+  flink-checkpoints:
+    driver: local
+  redpanda-data:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  pipeline-net:
+    name: p04-pipeline-net
+    driver: bridge

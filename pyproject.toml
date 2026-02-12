@@ -1,0 +1,22 @@
+[project]
+name = "dbt-master"
+version = "0.1.0"
+description = "A 4-week dbt learning project using DuckDB and NYC Taxi data"
+readme = "README.md"
+requires-python = ">=3.10"
+
+dependencies = [
+    "dbt-core>=1.8,<2.0",
+    "dbt-duckdb>=1.8,<2.0",
+    "duckdb>=1.1.0",
+    "requests>=2.31.0",
+    "pyarrow>=14.0.0",
+    "pandas>=2.0.0",
+]
+
+[dependency-groups]
+dev = [
+    "sqlfluff>=3.0.0",
+    "sqlfluff-templater-dbt>=3.0.0",
+    "pre-commit>=3.6.0",
+]

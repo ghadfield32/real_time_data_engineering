@@ -1,0 +1,31 @@
+version: 2
+
+exposures:
+  - name: nyc_taxi_analytics_dashboard
+    description: >
+      Executive dashboard showing daily revenue trends, hourly demand
+      patterns, and top-performing pickup zones for NYC yellow taxi service.
+    type: dashboard
+    maturity: medium
+    owner:
+      name: Data Analytics Team
+      email: analytics@example.com
+    depends_on:
+      - ref('mart_daily_revenue')
+      - ref('mart_hourly_demand')
+      - ref('mart_location_performance')
+
+  - name: trip_detail_report
+    description: >
+      Operational report for trip-level analysis. Used by operations
+      team to investigate individual trips and location patterns.
+    type: analysis
+    maturity: low
+    owner:
+      name: Operations Team
+      email: ops@example.com
+    depends_on:
+      - ref('fct_trips')
+      - ref('dim_locations')
+      - ref('dim_dates')
+      - ref('dim_payment_types')

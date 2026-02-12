@@ -1,0 +1,14 @@
+# Silver layer data quality checks
+checks for silver_cleaned_trips:
+  - row_count between 2500000 and 3100000:
+      name: "Silver row count in expected range"
+  - duplicate_count(trip_id) = 0:
+      name: "No duplicate trip IDs"
+  - avg(fare_amount) between 10 and 25:
+      name: "Average fare in reasonable range"
+  - invalid_percent(trip_duration_minutes) < 1%:
+      name: "Less than 1% invalid trip durations"
+  - max(trip_duration_minutes) <= 720:
+      name: "No trips longer than 12 hours"
+  - min(fare_amount) >= 0:
+      name: "No negative fares"

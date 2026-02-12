@@ -1,0 +1,22 @@
+# Pipeline 02: dbt-duckdb profile reading Silver Iceberg tables from MinIO
+#
+# DuckDB can read Iceberg tables via iceberg_scan() using the httpfs + iceberg
+# extensions. The source definition uses external_location with iceberg_scan().
+
+pipeline_02:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /usr/src/dbt/pipeline_02.duckdb
+      threads: 4
+      extensions:
+        - httpfs
+        - iceberg
+      settings:
+        s3_region: us-east-1
+        s3_endpoint: minio:9000
+        s3_access_key_id: minioadmin
+        s3_secret_access_key: minioadmin
+        s3_use_ssl: false
+        s3_url_style: path

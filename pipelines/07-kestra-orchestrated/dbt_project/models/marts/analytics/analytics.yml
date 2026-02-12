@@ -1,0 +1,105 @@
+version: 2
+
+models:
+  - name: mart_daily_revenue
+    description: "Daily revenue metrics with running totals."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: date_key
+        data_type: date
+        tests: [unique, not_null]
+      - name: day_of_week_name
+        data_type: varchar
+      - name: is_weekend
+        data_type: boolean
+      - name: is_holiday
+        data_type: boolean
+      - name: week_of_year
+        data_type: bigint
+      - name: total_trips
+        data_type: bigint
+      - name: total_passengers
+        data_type: hugeint
+      - name: total_fare_revenue
+        data_type: "decimal(38,2)"
+      - name: total_tip_revenue
+        data_type: "decimal(38,2)"
+      - name: total_revenue
+        data_type: "decimal(38,2)"
+        tests: [not_null]
+      - name: avg_trip_revenue
+        data_type: double
+      - name: avg_tip_percentage
+        data_type: double
+      - name: credit_card_trips
+        data_type: bigint
+      - name: cash_trips
+        data_type: bigint
+      - name: avg_trip_distance
+        data_type: double
+      - name: avg_trip_duration_min
+        data_type: double
+      - name: cumulative_revenue
+        data_type: "decimal(38,2)"
+      - name: revenue_change_vs_prior_day
+        data_type: "decimal(38,2)"
+
+  - name: mart_location_performance
+    description: "Per-zone performance summary."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: pickup_location_id
+        data_type: integer
+        tests: [unique, not_null]
+      - name: pickup_borough
+        data_type: varchar
+      - name: pickup_zone
+        data_type: varchar
+      - name: total_pickups
+        data_type: bigint
+        tests: [not_null]
+      - name: avg_trip_distance
+        data_type: double
+      - name: avg_trip_duration_min
+        data_type: double
+      - name: total_revenue
+        data_type: "decimal(38,2)"
+      - name: avg_revenue_per_trip
+        data_type: double
+      - name: avg_tip_pct
+        data_type: double
+      - name: avg_passengers
+        data_type: double
+      - name: most_common_dropoff_zone
+        data_type: varchar
+      - name: peak_pickup_hour
+        data_type: bigint
+
+  - name: mart_hourly_demand
+    description: "Hourly demand patterns."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: pickup_hour
+        data_type: bigint
+        tests: [not_null]
+      - name: is_weekend
+        data_type: boolean
+        tests: [not_null]
+      - name: days_observed
+        data_type: bigint
+      - name: avg_trips_per_period
+        data_type: double
+      - name: avg_distance
+        data_type: double
+      - name: avg_duration_min
+        data_type: double
+      - name: avg_revenue_per_period
+        data_type: double
+      - name: total_trips_all_days
+        data_type: hugeint

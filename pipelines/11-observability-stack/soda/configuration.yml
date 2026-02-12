@@ -1,0 +1,3 @@
+data_source nyc_taxi:
+  type: duckdb
+  path: /dbt/warehouse.duckdb

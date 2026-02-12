@@ -1,0 +1,129 @@
+version: 2
+
+models:
+  - name: stg_yellow_trips
+    description: "Cleaned and renamed yellow taxi trip records. Filters out nulls and negative fares/distances."
+    columns:
+      - name: trip_id
+        description: "Surrogate key generated from VendorID + timestamps + locations + fare/total amounts"
+        tests:
+          - not_null
+          - unique
+      - name: vendor_id
+        description: "TPEP provider: 1=Creative Mobile Technologies, 2=VeriFone Inc., 6=Unknown/Other"
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [1, 2, 6]
+              config:
+                severity: warn
+      - name: rate_code_id
+        description: "Rate code: 1=Standard, 2=JFK, 3=Newark, 4=Nassau/Westchester, 5=Negotiated, 6=Group"
+        tests:
+          - accepted_values:
+              arguments:
+                values: [1, 2, 3, 4, 5, 6, 99]
+              config:
+                severity: warn
+      - name: pickup_location_id
+        description: "TLC Taxi Zone ID for pickup"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_taxi_zones')
+                field: location_id
+              config:
+                severity: warn
+      - name: dropoff_location_id
+        description: "TLC Taxi Zone ID for dropoff"
+        tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_taxi_zones')
+                field: location_id
+              config:
+                severity: warn
+      - name: payment_type_id
+        description: "Payment method: 1=Credit, 2=Cash, 3=No charge, 4=Dispute, 5=Unknown, 6=Voided"
+        tests:
+          - accepted_values:
+              arguments:
+                values: [0, 1, 2, 3, 4, 5, 6]
+              config:
+                severity: warn
+      - name: pickup_datetime
+        description: "Meter engaged timestamp"
+        tests:
+          - not_null
+      - name: dropoff_datetime
+        description: "Meter disengaged timestamp"
+        tests:
+          - not_null
+      - name: passenger_count
+        description: "Number of passengers (driver-entered)"
+      - name: trip_distance_miles
+        description: "Trip distance in miles from taximeter"
+        tests:
+          - not_null
+      - name: fare_amount
+        description: "Time-and-distance fare in dollars"
+        tests:
+          - not_null
+      - name: tip_amount
+        description: "Tip amount (auto for credit card, cash tips not included)"
+      - name: total_amount
+        description: "Total amount charged to passengers (all fees included)"
+        tests:
+          - not_null
+      - name: congestion_surcharge
+        description: "NYC congestion surcharge"
+      - name: airport_fee
+        description: "Airport pickup fee ($1.25 for JFK/LaGuardia pickups)"
+
+  - name: stg_taxi_zones
+    description: "Taxi zone reference mapping location IDs to borough and zone names"
+    columns:
+      - name: location_id
+        description: "Unique TLC taxi zone identifier"
+        tests:
+          - unique
+          - not_null
+      - name: borough
+        description: "NYC borough name (Manhattan, Brooklyn, Queens, Bronx, Staten Island, EWR)"
+        tests:
+          - not_null
+      - name: zone_name
+        description: "Specific zone/neighborhood name within the borough"
+        tests:
+          - not_null
+      - name: service_zone
+        description: "Service zone classification (Yellow Zone, Boro Zone, Airports, EWR)"
+
+  - name: stg_payment_types
+    description: "Payment type reference mapping IDs to human-readable names"
+    columns:
+      - name: payment_type_id
+        description: "Payment type identifier"
+        tests:
+          - unique
+          - not_null
+      - name: payment_type_name
+        description: "Human-readable payment type name"
+        tests:
+          - not_null
+
+  - name: stg_rate_codes
+    description: "Rate code reference mapping IDs to rate descriptions"
+    columns:
+      - name: rate_code_id
+        description: "Rate code identifier"
+        tests:
+          - unique
+          - not_null
+      - name: rate_code_name
+        description: "Human-readable rate code name"
+        tests:
+          - not_null

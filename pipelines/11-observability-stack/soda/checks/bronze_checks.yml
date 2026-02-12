@@ -1,0 +1,11 @@
+# Bronze layer data quality checks
+checks for bronze_raw_trips:
+  - row_count > 0:
+      name: "Bronze table has data"
+  - schema:
+      name: "Bronze schema validation"
+      warn:
+        when wrong column type:
+          pickup_datetime: timestamp
+          dropoff_datetime: timestamp
+          fare_amount: double

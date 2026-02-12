@@ -1,0 +1,14 @@
+version: "3.9"
+
+services:
+  dbt:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ../../data:/data:ro
+      - ./dbt_project:/dbt
+    working_dir: /dbt
+    command: ["build", "--full-refresh", "--profiles-dir", "."]
+    environment:
+      - DBT_PROFILES_DIR=/dbt

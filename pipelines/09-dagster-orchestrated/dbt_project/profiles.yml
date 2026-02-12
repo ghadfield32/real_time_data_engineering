@@ -1,0 +1,27 @@
+# =============================================================================
+# dbt Profile for Pipeline 09: Dagster Orchestrated
+# =============================================================================
+# Uses DuckDB with iceberg and httpfs extensions to read Iceberg tables
+# from MinIO (S3-compatible) object storage.
+# =============================================================================
+
+nyc_taxi_pipeline_09:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /tmp/p09_dbt.duckdb
+      schema: main
+      threads: 4
+      extensions:
+        - httpfs
+        - parquet
+        - iceberg
+      settings:
+        memory_limit: "2GB"
+        s3_endpoint: "minio:9000"
+        s3_access_key_id: "minioadmin"
+        s3_secret_access_key: "minioadmin"
+        s3_url_style: "path"
+        s3_use_ssl: false
+        s3_region: "us-east-1"
