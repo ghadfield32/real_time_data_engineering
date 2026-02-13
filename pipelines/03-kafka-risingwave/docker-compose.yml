@@ -99,6 +99,8 @@ services:
     volumes:
       - ./dbt_project:/dbt
     working_dir: /dbt
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."]
     environment:
       DBT_PROFILES_DIR: /dbt
     depends_on:

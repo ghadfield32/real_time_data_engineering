@@ -19,11 +19,11 @@ process: ## No-op: dbt handles all processing
 	@echo "process: no-op for batch-baseline (run 'make dbt-build' instead)"
 
 dbt-build: ## Run dbt build inside the container
-	docker compose run --rm dbt build --full-refresh --profiles-dir .
+	docker compose run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 
 benchmark: ## Time a full dbt build
 	@echo "=== Benchmark: Pipeline 00 - Batch Baseline ==="
-	time docker compose run --rm dbt build --full-refresh --profiles-dir .
+	time docker compose run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 
 logs: ## Show dbt container logs
 	docker compose logs dbt

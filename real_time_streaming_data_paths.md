@@ -23,6 +23,7 @@ The current NYC Taxi dbt project is a batch-oriented pipeline (parquet file → 
 13. [2026 Industry Trends & Market Context](#13-2026-industry-trends--market-context)
 14. [Complete Reference Architecture](#14-complete-reference-architecture)
 15. [Implementation Roadmap](#15-implementation-roadmap)
+16. [Implementation Results & Benchmarks](#16-implementation-results--benchmarks)
 
 ---
 
@@ -1295,3 +1296,258 @@ To evolve the NYC Taxi project from batch to streaming, each step is independent
 14. **Add monitoring:** Consumer lag alerts, data freshness SLAs, pipeline health dashboards
 
 Each phase delivers value independently. Start with Phase 1 — it requires no new infrastructure beyond an orchestrator.
+
+---
+
+## 16. Implementation Results & Benchmarks
+
+> **All 12 pipelines from Section 15 were fully implemented, tested, and benchmarked.** This section documents what actually happened when theory met practice.
+
+### 16.1 What Was Built
+
+Every pipeline in `pipelines/00-11/` was implemented as a fully isolated Docker Compose stack processing the same NYC Yellow Taxi data (January 2024, 2,964,624 rows source). Each streaming pipeline generates 10,000 events via a shared data generator, processes them through the Medallion architecture (Bronze → Silver), and was benchmarked for speed, memory, and correctness.
+
+```
+pipelines/
+├── 00-batch-baseline/           # DuckDB + dbt (reference)
+├── 01-kafka-flink-iceberg/      # Kafka + Flink SQL + Iceberg/MinIO
+├── 02-kafka-spark-iceberg/      # Kafka + PySpark + Iceberg/MinIO
+├── 03-kafka-risingwave/         # Kafka + RisingWave MVs
+├── 04-redpanda-flink-iceberg/   # Redpanda + Flink SQL + Iceberg/MinIO
+├── 05-redpanda-spark-iceberg/   # Redpanda + PySpark + Iceberg/MinIO
+├── 06-redpanda-risingwave/      # Redpanda + RisingWave MVs
+├── 07-kestra-orchestrated/      # P01 + Kestra
+├── 08-airflow-orchestrated/     # P01 + Astronomer Airflow
+├── 09-dagster-orchestrated/     # P01 + Dagster
+├── 10-serving-comparison/       # ClickHouse + Metabase + Superset
+├── 11-observability-stack/      # P01 + Elementary + Soda Core
+└── comparison/                  # results.csv + comparison_report.md
+```
+
+### 16.2 Benchmark Results
+
+#### Tier 1: Core Streaming Pipelines (10,000 events)
+
+| # | Pipeline | Startup | Ingestion Rate | Bronze | Silver | Total Processing | Memory | Services |
+|---|----------|---------|---------------|--------|--------|-----------------|--------|----------|
+| 00 | Batch Baseline | n/a | n/a | n/a | n/a | **21s** (full 2.96M) | minimal | 1 |
+| 01 | Kafka+Flink+Iceberg | 31s | 18,586 evt/s | 13s | 9s | **24s** | 2,870 MB | 7 |
+| 02 | Kafka+Spark+Iceberg | 18s | 24,370 evt/s | 12s | 10s | **24s** | 1,230 MB | 6 |
+| 03 | Kafka+RisingWave | 34s | 18,069 evt/s | auto | auto | **~2s** | 687 MB | 4 |
+| 04 | Redpanda+Flink+Iceberg | 26s | 25,139 evt/s | 14s | 11s | **27s** | 1,860 MB | 6 |
+| 05 | Redpanda+Spark+Iceberg | 19s | 24,636 evt/s | 16s | 12s | **30s** | 917 MB | 5 |
+| 06 | Redpanda+RisingWave | 34s | 18,030 evt/s | auto | auto | **~2s** | 449 MB | 3 |
+
+#### Tier 2: Orchestrator Overhead (vs Pipeline 01 baseline)
+
+| # | Orchestrator | Processing Time | Memory | Overhead (Memory) | Overhead (Time) | UI Port |
+|---|-------------|-----------------|--------|-------------------|-----------------|---------|
+| 07 | Kestra | 26s | 2,890 MB | +485 MB | +2s | :8083 |
+| 08 | Airflow (Astro) | 27s | 2,230 MB* | +~1,500 MB | +3s | :8080 |
+| 09 | Dagster | 26s | 2,770 MB | +502 MB | +2s | :3000 |
+
+*Airflow memory shown is infra-only; Astronomer adds ~1,500 MB for webserver + scheduler + triggerer + postgres.
+
+#### Tier 3-4: Serving & Observability
+
+| # | Pipeline | Key Finding |
+|---|----------|-------------|
+| 10 | ClickHouse + Metabase + Superset | 2.76M rows loaded; all 4 benchmark queries <50ms cold and warm |
+| 11 | Elementary + Soda Core | dbt-native monitoring + in-pipeline quality checks working |
+
+### 16.3 Speed Rankings
+
+**By Total Processing Time (fastest to slowest):**
+
+| Rank | Pipeline | Processing Time | Why |
+|------|----------|----------------|-----|
+| 1 | RisingWave (P03/P06) | ~2s | Materialized views auto-process events as they arrive — no batch step needed |
+| 2 | Batch Baseline (P00) | 21s | DuckDB on local parquet is blazing fast for 2.96M rows |
+| 3 | Kafka+Flink (P01) | 24s | Flink SQL batch mode, Iceberg write overhead |
+| 4 | Kafka+Spark (P02) | 24s | Spark Structured Streaming, similar to Flink |
+| 5 | Kestra+Flink (P07) | 26s | +2s orchestrator overhead |
+| 6 | Dagster+Flink (P09) | 26s | +2s orchestrator overhead |
+| 7 | Redpanda+Flink (P04) | 27s | Slightly slower Flink processing vs P01 |
+| 8 | Airflow+Flink (P08) | 27s | +3s orchestrator overhead |
+| 9 | Redpanda+Spark (P05) | 30s | Spark slightly slower with Redpanda broker |
+
+### 16.4 Broker Comparison: Kafka vs Redpanda
+
+Three paired comparisons isolating the broker as the only variable:
+
+| Metric | Kafka (P01) | Redpanda (P04) | Winner |
+|--------|-------------|----------------|--------|
+| Ingestion rate | 18,586 evt/s | 25,139 evt/s | **Redpanda** (+35%) |
+| Bronze processing | 13s | 14s | Kafka (marginal) |
+| Silver processing | 9s | 11s | Kafka |
+| Memory | 2,870 MB | 1,860 MB | **Redpanda** (-35%) |
+| Services needed | 7 | 6 | **Redpanda** (no Schema Registry needed) |
+| Startup time | 31s | 26s | **Redpanda** (-16%) |
+
+| Metric | Kafka (P02) | Redpanda (P05) | Winner |
+|--------|-------------|----------------|--------|
+| Ingestion rate | 24,370 evt/s | 24,636 evt/s | Tie |
+| Total processing | 24s | 30s | **Kafka** |
+| Memory | 1,230 MB | 917 MB | **Redpanda** (-25%) |
+
+| Metric | Kafka (P03) | Redpanda (P06) | Winner |
+|--------|-------------|----------------|--------|
+| Ingestion rate | 18,069 evt/s | 18,030 evt/s | Tie |
+| Total processing | ~2s | ~2s | Tie |
+| Memory | 687 MB | 449 MB | **Redpanda** (-35%) |
+
+**Verdict:** Redpanda consistently uses 25-35% less memory and eliminates the need for a separate Schema Registry container. Ingestion rates are comparable or better. Kafka had marginally faster Flink processing in one test, but the difference is small.
+
+### 16.5 Processor Comparison: Flink vs Spark vs RisingWave
+
+Using Kafka-based pipelines (P01 vs P02 vs P03) as the control group:
+
+| Metric | Flink SQL (P01) | Spark (P02) | RisingWave (P03) |
+|--------|----------------|-------------|-----------------|
+| Processing model | Batch SQL statements | PySpark jobs | Materialized views |
+| Processing time | 24s | 24s | **~2s** |
+| Bronze rows | 10,000 | 10,000 | 10,000 |
+| Silver rows | 9,855 | 9,739 | 9,766 |
+| Memory | 2,870 MB | 1,230 MB | **687 MB** |
+| Services | 7 | 6 | **4** |
+| Language | SQL | Python | SQL |
+| Storage format | Iceberg (MinIO) | Iceberg (MinIO) | Internal (PG-compatible) |
+| JARs required | 7 custom JARs | 5 custom JARs | None |
+| Setup complexity | High | Medium | **Low** |
+
+**Key insight:** RisingWave is dramatically simpler and faster for streaming SQL workloads. The tradeoff is that it stores data internally (not Iceberg), so it's less interoperable with the broader lakehouse ecosystem. Flink and Spark both write to Iceberg, which is the 2026 industry standard for open table formats.
+
+### 16.6 Orchestrator Comparison: Kestra vs Airflow vs Dagster
+
+| Metric | Kestra (P07) | Airflow (P08) | Dagster (P09) |
+|--------|-------------|---------------|---------------|
+| Memory overhead | +485 MB | +~1,500 MB | +502 MB |
+| Processing overhead | +2s | +3s | +2s |
+| Service count | +2 | +3-4 | +3 |
+| Configuration | YAML flows | Python DAGs | Python definitions |
+| dbt integration | Plugin (CLI) | Cosmos (per-model tasks) | dagster-dbt (native assets) |
+| UI quality | Clean, modern | Mature, full-featured | Best lineage graph |
+| Lineage visibility | Flow-level | Task-level (with Cosmos) | **Asset-level** (best) |
+| Setup difficulty | Easiest | Hardest (Astronomer) | Medium |
+| Community/ecosystem | Growing | **Largest** | Growing fast |
+
+**Verdict:** Kestra wins for simplicity (YAML-native, lowest overhead). Dagster wins for dbt integration (asset-based model, best lineage). Airflow wins for ecosystem maturity but has the heaviest footprint.
+
+### 16.7 Memory Efficiency Rankings
+
+| Rank | Pipeline | Memory | Memory/Service |
+|------|----------|--------|---------------|
+| 1 | P06 Redpanda+RisingWave | **449 MB** | 150 MB |
+| 2 | P03 Kafka+RisingWave | 687 MB | 172 MB |
+| 3 | P05 Redpanda+Spark | 917 MB | 183 MB |
+| 4 | P02 Kafka+Spark | 1,230 MB | 205 MB |
+| 5 | P04 Redpanda+Flink | 1,860 MB | 310 MB |
+| 6 | P08 Airflow (infra) | 2,230 MB | 319 MB |
+| 7 | P09 Dagster | 2,770 MB | 277 MB |
+| 8 | P01 Kafka+Flink | 2,870 MB | 410 MB |
+| 9 | P07 Kestra | 2,890 MB | 321 MB |
+
+**What drives memory:** Flink TaskManager alone consumes 875-930 MB. Schema Registry adds 340-428 MB. Kafka uses 315-492 MB. Redpanda uses only 193-237 MB for the same function.
+
+### 16.8 Strengths and Weaknesses
+
+#### Brokers
+
+| Technology | Strengths | Weaknesses | Best For |
+|-----------|-----------|------------|----------|
+| **Kafka** | Industry standard, massive ecosystem, proven at petabyte scale, KRaft eliminates ZooKeeper | Higher memory (needs Schema Registry as separate service), more configuration required | Production systems needing maximum ecosystem compatibility |
+| **Redpanda** | 25-35% less memory, built-in Schema Registry, faster startup, C++ implementation, Kafka API-compatible | Smaller community, fewer managed service options, less battle-tested at extreme scale | Teams wanting Kafka compatibility with lower resource footprint |
+
+#### Stream Processors
+
+| Technology | Strengths | Weaknesses | Best For |
+|-----------|-----------|------------|----------|
+| **Flink SQL** | True streaming engine, exactly-once semantics, best Iceberg integration, SQL-native | Highest memory (1.5+ GB for JM+TM), requires 7 JARs, complex setup, JVM-heavy | Production streaming with Iceberg lakehouse, exactly-once requirements |
+| **Spark** | Mature ecosystem, Python-native (PySpark), strong ML integration, good for batch+streaming | Micro-batch (not true streaming), moderate memory, requires custom Docker image with JARs | Teams already using Spark, Python-centric data engineering, ML pipelines |
+| **RisingWave** | 12x faster processing, lowest memory, fewest services, SQL-only (no JARs), PostgreSQL compatible | Internal storage (no Iceberg), newer project, smaller community, less enterprise adoption | Rapid prototyping, streaming SQL analytics, teams wanting simplicity over ecosystem |
+
+#### Orchestrators
+
+| Technology | Strengths | Weaknesses | Best For |
+|-----------|-----------|------------|----------|
+| **Kestra** | Lightest resource footprint, YAML-native, modern UI, easy to learn | Smallest community, fewer plugins, less documentation | Small teams, YAML-first workflows, lightweight orchestration |
+| **Airflow** | Largest ecosystem, most mature, Cosmos dbt integration, Astronomer managed option | Heaviest footprint (~1.5 GB), complex setup, Python DAGs can be verbose | Enterprise teams, complex multi-system workflows, existing Airflow shops |
+| **Dagster** | Best dbt integration (native assets), best lineage graph, asset-centric model is intuitive | Medium complexity, Dagster-specific concepts to learn | dbt-heavy teams, asset-centric thinking, teams wanting deep lineage |
+
+### 16.9 Practical Recommendations
+
+#### By Use Case
+
+| Use Case | Recommended Pipeline | Why |
+|----------|---------------------|-----|
+| **Learning/prototyping** | P06 (Redpanda+RisingWave) | 3 services, 449 MB, SQL-only, instant results |
+| **Production lakehouse** | P04 (Redpanda+Flink+Iceberg) | Open table format, lower memory than Kafka variant |
+| **Enterprise standard** | P01 (Kafka+Flink+Iceberg) + P09 (Dagster) | Full ecosystem, Iceberg, asset-based orchestration |
+| **Python-centric team** | P02 (Kafka+Spark+Iceberg) | PySpark, familiar API, ML pipeline ready |
+| **Real-time SQL analytics** | P03 or P06 (RisingWave) | Materialized views, ~2s processing, PostgreSQL wire protocol |
+| **OLAP serving** | P10 (ClickHouse) | Sub-50ms queries on millions of rows |
+| **Data quality first** | P11 (Elementary+Soda) | dbt-native monitoring + in-pipeline validation |
+| **Minimal operations** | P06 → P03 | Fewest moving parts, lowest memory, auto-processing |
+
+#### Decision Flow
+
+```
+Need streaming?
+├── No  → Pipeline 00 (Batch dbt)
+└── Yes
+    ├── Need Iceberg/lakehouse?
+    │   ├── Yes
+    │   │   ├── Prefer SQL? → P04 (Redpanda+Flink+Iceberg)
+    │   │   └── Prefer Python? → P02 (Kafka+Spark+Iceberg)
+    │   └── No → P06 (Redpanda+RisingWave)
+    │
+    ├── Need orchestration?
+    │   ├── YAML-first → P07 (Kestra)
+    │   ├── dbt-centric → P09 (Dagster)
+    │   └── Enterprise/existing → P08 (Airflow)
+    │
+    └── Need serving?
+        └── Yes → P10 (ClickHouse + Metabase or Superset)
+```
+
+### 16.10 Lessons Learned
+
+#### What Worked Well
+- **Shared data generator**: A single Python producer worked identically across all Kafka and Redpanda pipelines with just a `BROKER_URL` env var change
+- **Shared dbt models with adapter dispatch**: Same SQL logic across DuckDB, Spark, and PostgreSQL (RisingWave) via macro dispatch
+- **Shared Flink Dockerfile**: Pre-installing 7 JARs in a custom image eliminated runtime dependency issues across P01, P04, P07-P09, P11
+- **Docker Compose profiles**: `--profile generator` and `--profile dbt` kept ephemeral containers out of `docker compose up -d`
+
+#### What Was Harder Than Expected
+- **Flink JAR management**: Finding compatible versions of 7 JARs (Kafka connector, Iceberg runtime, AWS bundle, Hadoop) took significant iteration
+- **Flink classloader**: Required `classloader.check-leaked-classloader: false` for Iceberg compatibility
+- **MSYS path conversion on Windows**: Every `docker exec` command needed `MSYS_NO_PATHCONV=1` to prevent `/opt/...` from being converted to `C:/Program Files/Git/opt/...`
+- **RisingWave psql**: The RisingWave Docker image doesn't include `psql`, requiring manual installation or a sidecar container
+- **Dagster DAGSTER_HOME**: Required explicit `dagster.yaml` with PostgreSQL config and `DAGSTER_HOME` env var — not documented clearly for Docker deployments
+- **Astronomer CLI on Windows**: TTY warnings and path issues required workarounds
+
+#### Silver Row Count Differences
+| Processor | Silver Rows | Filter Logic |
+|-----------|-------------|-------------|
+| Flink SQL | 9,855 | NULL checks + distance >= 0 + fare >= 0 + date range 2024 |
+| PySpark | 9,739 | Same filters but Spark's NULL handling differs slightly |
+| RisingWave | 9,766 | PostgreSQL-style NULL propagation, slightly different edge cases |
+
+All three are valid — the differences come from how each engine handles NULL comparisons and edge cases in timestamp parsing. In production, these would be aligned with explicit COALESCE/IFNULL patterns.
+
+### 16.11 Technology Maturity Assessment (2026)
+
+| Technology | Maturity | Production Readiness | Ecosystem Size |
+|-----------|----------|---------------------|---------------|
+| Apache Kafka | Mature | Production-proven at every scale | Massive |
+| Apache Flink | Mature | Production-proven (Alibaba, Uber, Netflix) | Large |
+| Apache Spark | Mature | Production-proven everywhere | Massive |
+| Apache Iceberg | Mature | Industry standard table format (2026) | Large, growing |
+| Redpanda | Maturing | Production-ready, growing adoption | Medium |
+| RisingWave | Early-maturing | Production-ready for specific workloads | Small, growing |
+| ClickHouse | Mature | Production-proven (Cloudflare, Uber) | Large |
+| Kestra | Early-maturing | Production-ready, growing adoption | Small |
+| Airflow | Mature | Industry standard orchestrator | Massive |
+| Dagster | Maturing | Production-ready, strong dbt ecosystem | Medium, growing |
+| Elementary | Maturing | Production-ready for dbt monitoring | Medium |
+| Soda Core | Maturing | Production-ready for data quality | Medium |

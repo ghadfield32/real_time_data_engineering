@@ -34,15 +34,15 @@ WITH cleaned AS (
         store_and_fwd_flag,
 
         -- Financials (cast to NUMERIC for precision)
-        ROUND(fare_amount::NUMERIC(10,2), 2) AS fare_amount,
-        ROUND(extra_amount::NUMERIC(10,2), 2) AS extra_amount,
-        ROUND(mta_tax::NUMERIC(10,2), 2) AS mta_tax,
-        ROUND(tip_amount::NUMERIC(10,2), 2) AS tip_amount,
-        ROUND(tolls_amount::NUMERIC(10,2), 2) AS tolls_amount,
-        ROUND(improvement_surcharge::NUMERIC(10,2), 2) AS improvement_surcharge,
-        ROUND(total_amount::NUMERIC(10,2), 2) AS total_amount,
-        ROUND(congestion_surcharge::NUMERIC(10,2), 2) AS congestion_surcharge,
-        ROUND(airport_fee::NUMERIC(10,2), 2) AS airport_fee,
+        ROUND(fare_amount::NUMERIC, 2) AS fare_amount,
+        ROUND(extra_amount::NUMERIC, 2) AS extra_amount,
+        ROUND(mta_tax::NUMERIC, 2) AS mta_tax,
+        ROUND(tip_amount::NUMERIC, 2) AS tip_amount,
+        ROUND(tolls_amount::NUMERIC, 2) AS tolls_amount,
+        ROUND(improvement_surcharge::NUMERIC, 2) AS improvement_surcharge,
+        ROUND(total_amount::NUMERIC, 2) AS total_amount,
+        ROUND(congestion_surcharge::NUMERIC, 2) AS congestion_surcharge,
+        ROUND(airport_fee::NUMERIC, 2) AS airport_fee,
 
         -- Computed: duration in minutes
         (EXTRACT(EPOCH FROM (dropoff_datetime - pickup_datetime)) / 60)::BIGINT

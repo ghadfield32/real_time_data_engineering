@@ -3,6 +3,7 @@ SHELL := bash
 # Pipeline 08: Airflow Orchestrated (Kafka + Flink + Iceberg + Airflow)
 # =============================================================================
 # Makefile for orchestrating the Airflow-managed streaming pipeline lifecycle.
+# Infrastructure runs via docker compose; Airflow runs via Astronomer CLI.
 # =============================================================================
 
 COMPOSE = docker compose
@@ -19,15 +20,16 @@ help: ## Show this help
 # Lifecycle
 # =============================================================================
 
-up: ## Start all infrastructure services (including Airflow)
+up: ## Start infrastructure + Astronomer Airflow
 	$(COMPOSE) up -d
+	cd astro-project && astro dev start
 	@echo ""
 	@echo "=== Pipeline 08: Airflow Orchestrated ==="
 	@echo "Kafka:            localhost:9092"
 	@echo "Schema Registry:  http://localhost:8085"
 	@echo "Flink Dashboard:  http://localhost:8081"
 	@echo "MinIO Console:    http://localhost:9001  (minioadmin/minioadmin)"
-	@echo "Airflow UI:       http://localhost:8084  (admin/admin)"
+	@echo "Airflow UI:       http://localhost:8080  (admin/admin)"
 	@echo ""
 	@echo "Next steps:"
 	@echo "  make create-topics   # Create Kafka topics"
@@ -36,11 +38,13 @@ up: ## Start all infrastructure services (including Airflow)
 	@echo "  make dbt-build       # Run dbt transformations"
 	@echo "  make airflow-ui      # Open Airflow UI"
 
-down: ## Stop all services and remove volumes
+down: ## Stop Astronomer Airflow + infrastructure and remove volumes
+	cd astro-project && astro dev stop
 	$(COMPOSE) --profile generator --profile dbt down -v
 	@echo "Pipeline 08 stopped and volumes removed."
 
 clean: ## Stop everything and prune all related resources
+	cd astro-project && astro dev stop || true
 	$(COMPOSE) --profile generator --profile dbt down -v --remove-orphans
 	docker network rm p08-pipeline-net 2>/dev/null || true
 	@echo "Pipeline 08 fully cleaned."
@@ -78,28 +82,22 @@ generate: ## Produce taxi trip events to Kafka (burst mode)
 process: process-bronze process-silver ## Submit all Flink SQL jobs (Bronze + Silver)
 	@echo "All Flink SQL jobs submitted."
 
-process-bronze: ## Submit Bronze layer Flink SQL jobs
-	@echo "=== Creating Kafka source table ==="
-	$(FLINK_SQL_CLIENT) -f /opt/flink/sql/01-create-kafka-source.sql
-	@echo ""
-	@echo "=== Creating Iceberg catalog ==="
-	$(FLINK_SQL_CLIENT) -f /opt/flink/sql/02-create-iceberg-catalog.sql
-	@echo ""
-	@echo "=== Creating Bronze table + INSERT job ==="
-	$(FLINK_SQL_CLIENT) -f /opt/flink/sql/03-bronze-raw-trips.sql
-	@echo "Bronze layer processing submitted."
+process-bronze: ## Submit Bronze layer Flink SQL jobs (batch mode)
+	@echo "=== Bronze: Kafka → Iceberg ==="
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/05-bronze.sql
+	@echo "Bronze layer complete."
 
-process-silver: ## Submit Silver layer Flink SQL jobs
-	@echo "=== Creating Silver table + INSERT job ==="
-	$(FLINK_SQL_CLIENT) -f /opt/flink/sql/04-silver-cleaned-trips.sql
-	@echo "Silver layer processing submitted."
+process-silver: ## Submit Silver layer Flink SQL jobs (batch mode)
+	@echo "=== Silver: Bronze → Cleaned Iceberg ==="
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
+	@echo "Silver layer complete."
 
 # =============================================================================
 # dbt Transformations
 # =============================================================================
 
 dbt-build: ## Run dbt build (full-refresh) on Iceberg Silver data
-	$(COMPOSE) run --rm dbt build --full-refresh --profiles-dir .
+	$(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 	@echo "dbt build complete."
 
 dbt-test: ## Run dbt tests only
@@ -113,7 +111,7 @@ dbt-docs: ## Generate dbt documentation
 # =============================================================================
 
 airflow-ui: ## Show Airflow UI URL
-	@echo "Airflow UI: http://localhost:8084  (admin/admin)"
+	@echo "Airflow UI: http://localhost:8080  (admin/admin)"
 
 # =============================================================================
 # Benchmark (Full E2E)
@@ -153,8 +151,8 @@ benchmark: ## Full end-to-end benchmark: up -> topics -> generate -> process -> 
 logs: ## Tail logs from all services
 	$(COMPOSE) logs -f --tail=100
 
-logs-airflow: ## Tail Airflow logs
-	$(COMPOSE) logs -f airflow-webserver airflow-scheduler
+logs-airflow: ## Tail Astronomer Airflow logs
+	cd astro-project && astro dev logs
 
 status: ## Show service status
 	@echo "=== Pipeline 08: Service Status ==="
@@ -168,7 +166,7 @@ status: ## Show service status
 	@curl -s http://localhost:8081/jobs/overview 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "(Flink not running)"
 	@echo ""
 	@echo "=== Airflow ==="
-	@curl -s http://localhost:8084/health 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "(Airflow not running)"
+	@curl -s http://localhost:8080/health 2>/dev/null | python3 -m json.tool 2>/dev/null || echo "(Airflow not running)"
 
 ps: ## Show running containers
 	$(COMPOSE) ps

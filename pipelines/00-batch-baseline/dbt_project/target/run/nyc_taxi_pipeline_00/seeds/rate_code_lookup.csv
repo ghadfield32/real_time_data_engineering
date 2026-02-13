@@ -1,0 +1,13 @@
+
+    
+    
+    
+    create table "dev"."main"."rate_code_lookup" ("rate_code_id" integer,"rate_code_name" varchar)
+  ;
+    -- dbt seed --
+    
+          COPY "dev"."main"."rate_code_lookup" FROM '/dbt/seeds/rate_code_lookup.csv' (FORMAT CSV, HEADER TRUE, DELIMITER ',')
+        
+
+;
+  

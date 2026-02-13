@@ -44,7 +44,7 @@ def create_spark_session() -> SparkSession:
         )
         .config("spark.sql.catalog.warehouse", "org.apache.iceberg.spark.SparkCatalog")
         .config("spark.sql.catalog.warehouse.type", "hadoop")
-        .config("spark.sql.catalog.warehouse.warehouse", "s3a://warehouse/")
+        .config("spark.sql.catalog.warehouse.warehouse", "s3a://warehouse/iceberg")
         .config(
             "spark.sql.catalog.warehouse.io-impl",
             "org.apache.iceberg.aws.s3.S3FileIO",

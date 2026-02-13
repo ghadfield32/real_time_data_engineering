@@ -1,0 +1,23 @@
+
+  
+  create view "dev"."main"."stg_taxi_zones__dbt_tmp" as (
+    /*
+    Staging model: Taxi zone lookup
+    Maps LocationID to borough and zone name.
+*/
+
+with source as (
+    select * from "dev"."main"."taxi_zone_lookup"
+),
+
+renamed as (
+    select
+        cast("LocationID" as integer) as location_id,
+        "Borough" as borough,
+        "Zone" as zone_name,
+        service_zone
+    from source
+)
+
+select * from renamed
+  );

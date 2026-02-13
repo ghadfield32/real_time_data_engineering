@@ -166,7 +166,8 @@ def main():
     print(f"  Topic:      {args.topic}")
     print(f"  Mode:       {args.mode}")
     print(f"  Data:       {args.data_path}")
-    print(f"  Max events: {'all' if args.max_events == 0 else args.max_events:,}")
+    max_events_str = "all" if args.max_events == 0 else f"{args.max_events:,}"
+    print(f"  Max events: {max_events_str}")
     print()
 
     producer = create_producer(args.broker)

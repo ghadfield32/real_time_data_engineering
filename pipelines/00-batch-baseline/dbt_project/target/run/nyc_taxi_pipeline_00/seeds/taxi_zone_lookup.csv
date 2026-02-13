@@ -1,0 +1,13 @@
+
+    
+    
+    
+    create table "dev"."main"."taxi_zone_lookup" ("LocationID" integer,"Borough" varchar,"Zone" varchar,"service_zone" varchar)
+  ;
+    -- dbt seed --
+    
+          COPY "dev"."main"."taxi_zone_lookup" FROM '/dbt/seeds/taxi_zone_lookup.csv' (FORMAT CSV, HEADER TRUE, DELIMITER ',')
+        
+
+;
+  

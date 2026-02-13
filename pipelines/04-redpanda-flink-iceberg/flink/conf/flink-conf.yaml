@@ -37,6 +37,9 @@ state.savepoints.dir: file:///tmp/flink-savepoints
 table.exec.state.ttl: 0
 table.exec.sink.not-null-enforcer: DROP
 
+# Classloader (avoid Iceberg classloader leak with batch DML sync)
+classloader.check-leaked-classloader: false
+
 # S3 (MinIO) filesystem configuration
 s3.endpoint: http://minio:9000
 s3.access-key: minioadmin

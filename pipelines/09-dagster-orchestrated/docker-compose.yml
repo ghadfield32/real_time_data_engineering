@@ -6,7 +6,9 @@
 # =============================================================================
 
 x-flink-common: &flink-common
-  image: flink:1.20-java17
+  build:
+    context: .
+    dockerfile: ../../shared/docker/flink.Dockerfile
   environment: &flink-env
     FLINK_PROPERTIES: |
       jobmanager.rpc.address: flink-jobmanager
@@ -16,6 +18,7 @@ x-flink-common: &flink-common
       state.checkpoints.dir: file:///tmp/flink-checkpoints
       execution.checkpointing.interval: 30s
       rest.flamegraph.enabled: true
+      classloader.check-leaked-classloader: false
   networks:
     - pipeline-net
 
@@ -143,6 +146,7 @@ services:
     volumes:
       - ./flink/sql:/opt/flink/sql:ro
       - ./flink/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml:ro
+      - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
       - flink-checkpoints:/tmp/flink-checkpoints
     depends_on:
       kafka:
@@ -160,6 +164,7 @@ services:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
       AWS_REGION: us-east-1
+      HADOOP_CONF_DIR: /opt/hadoop/conf
 
   # ---------------------------------------------------------------------------
   # Flink TaskManager
@@ -170,6 +175,7 @@ services:
     hostname: flink-taskmanager
     command: taskmanager
     volumes:
+      - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
       - flink-checkpoints:/tmp/flink-checkpoints
     depends_on:
       flink-jobmanager:
@@ -179,6 +185,7 @@ services:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
       AWS_REGION: us-east-1
+      HADOOP_CONF_DIR: /opt/hadoop/conf
 
   # ---------------------------------------------------------------------------
   # dbt (DuckDB adapter - reads Iceberg tables from MinIO)
@@ -192,6 +199,9 @@ services:
     container_name: p09-dbt
     volumes:
       - ./dbt_project:/dbt
+    working_dir: /dbt
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."]
     environment:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
@@ -220,6 +230,7 @@ services:
       BROKER_URL: kafka:9092
       TOPIC: taxi.raw_trips
       MODE: burst
+      MAX_EVENTS: "10000"
       DATA_PATH: /data/yellow_tripdata_2024-01.parquet
     depends_on:
       kafka:
@@ -257,13 +268,15 @@ services:
       context: ./dagster
       dockerfile: Dockerfile
     container_name: p09-dagster-webserver
-    command: dagster-webserver -h 0.0.0.0 -p 3000
+    command: dagster-webserver -h 0.0.0.0 -p 3000 -w /opt/dagster/app/workspace.yaml
     ports:
       - "3000:3000"
     environment:
       <<: *dagster-env
+      DAGSTER_HOME: /opt/dagster/home
     volumes:
       - ./dagster:/opt/dagster/app
+      - dagster-home:/opt/dagster/home
     depends_on:
       dagster-postgres:
         condition: service_healthy
@@ -278,11 +291,13 @@ services:
       context: ./dagster
       dockerfile: Dockerfile
     container_name: p09-dagster-daemon
-    command: dagster-daemon run
+    command: dagster-daemon run -w /opt/dagster/app/workspace.yaml
     environment:
       <<: *dagster-env
+      DAGSTER_HOME: /opt/dagster/home
     volumes:
       - ./dagster:/opt/dagster/app
+      - dagster-home:/opt/dagster/home
     depends_on:
       dagster-postgres:
         condition: service_healthy
@@ -298,6 +313,8 @@ volumes:
   flink-checkpoints:
     driver: local
   dagster-pg-data:
+    driver: local
+  dagster-home:
     driver: local
 
 # =============================================================================

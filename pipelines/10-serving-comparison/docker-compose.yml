@@ -13,7 +13,8 @@ services:
       - ./clickhouse/init:/docker-entrypoint-initdb.d:ro
       - ./clickhouse/queries:/queries:ro
       - clickhouse-data:/var/lib/clickhouse
-      - ../../data:/source-data:ro
+      - ../../data:/var/lib/clickhouse/user_files/source-data
+      - ../../shared/dbt-models/seeds:/var/lib/clickhouse/user_files/seeds
     environment:
       CLICKHOUSE_DB: nyc_taxi
       CLICKHOUSE_USER: default

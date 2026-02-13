@@ -78,30 +78,24 @@ generate-limited: ## Produce limited events for testing (10k)
 # =============================================================================
 
 process: process-bronze process-silver ## Submit all Flink SQL jobs (Bronze + Silver)
-	@echo "All Flink SQL jobs submitted."
+	@echo "All Flink SQL jobs complete."
 
-process-bronze: ## Submit Bronze layer Flink SQL jobs
-	@echo "=== Creating Kafka source table ==="
-	$(FLINK_SQL_CLIENT) -f /opt/flink/sql/01-create-kafka-source.sql
-	@echo ""
-	@echo "=== Creating Iceberg catalog ==="
-	$(FLINK_SQL_CLIENT) -f /opt/flink/sql/02-create-iceberg-catalog.sql
-	@echo ""
-	@echo "=== Creating Bronze table + INSERT job ==="
-	$(FLINK_SQL_CLIENT) -f /opt/flink/sql/03-bronze-raw-trips.sql
-	@echo "Bronze layer processing submitted."
+process-bronze: ## Submit Bronze layer Flink SQL jobs (batch mode)
+	@echo "=== Bronze: Kafka → Iceberg ==="
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/05-bronze.sql
+	@echo "Bronze layer complete."
 
-process-silver: ## Submit Silver layer Flink SQL jobs
-	@echo "=== Creating Silver table + INSERT job ==="
-	$(FLINK_SQL_CLIENT) -f /opt/flink/sql/04-silver-cleaned-trips.sql
-	@echo "Silver layer processing submitted."
+process-silver: ## Submit Silver layer Flink SQL jobs (batch mode)
+	@echo "=== Silver: Bronze → Cleaned Iceberg ==="
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
+	@echo "Silver layer complete."
 
 # =============================================================================
 # dbt Transformations
 # =============================================================================
 
 dbt-build: ## Run dbt build (full-refresh) on Iceberg Silver data
-	$(COMPOSE) run --rm dbt build --full-refresh --profiles-dir .
+	$(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 	@echo "dbt build complete."
 
 dbt-test: ## Run dbt tests only

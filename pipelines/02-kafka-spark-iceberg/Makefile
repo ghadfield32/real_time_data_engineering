@@ -6,9 +6,7 @@ SHELL := bash
 COMPOSE := docker compose
 PROJECT := 02-kafka-spark-iceberg
 
-# Iceberg JARs needed by Spark (fetched at spark-submit time via --packages)
-ICEBERG_VERSION := 1.5.2
-SPARK_PACKAGES := org.apache.iceberg:iceberg-spark-runtime-3.5_2.12:$(ICEBERG_VERSION),org.apache.hadoop:hadoop-aws:3.3.4,software.amazon.awssdk:bundle:2.25.11
+# JARs are pre-installed in the custom Spark Docker image (shared/docker/spark.Dockerfile)
 
 .PHONY: up down generate process dbt-build benchmark logs status clean topics
 
@@ -77,39 +75,15 @@ process: process-bronze process-silver
 
 ## Run Bronze ingest (Kafka -> Iceberg)
 process-bronze:
-	$(COMPOSE) exec spark-master /opt/bitnami/spark/bin/spark-submit \
-		--master spark://spark-master:7077 \
-		--deploy-mode client \
-		--packages $(SPARK_PACKAGES) \
-		--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
-		--conf spark.sql.catalog.warehouse=org.apache.iceberg.spark.SparkCatalog \
-		--conf spark.sql.catalog.warehouse.type=hadoop \
-		--conf "spark.sql.catalog.warehouse.warehouse=s3a://warehouse/" \
-		--conf spark.sql.catalog.warehouse.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
-		--conf spark.hadoop.fs.s3a.endpoint=http://minio:9000 \
-		--conf spark.hadoop.fs.s3a.access.key=minioadmin \
-		--conf spark.hadoop.fs.s3a.secret.key=minioadmin \
-		--conf spark.hadoop.fs.s3a.path.style.access=true \
-		--conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
+		--master local[*] \
 		/opt/spark-jobs/bronze_ingest.py
 	@echo "Bronze ingest complete."
 
 ## Run Silver transform (Bronze Iceberg -> Silver Iceberg)
 process-silver:
-	$(COMPOSE) exec spark-master /opt/bitnami/spark/bin/spark-submit \
-		--master spark://spark-master:7077 \
-		--deploy-mode client \
-		--packages $(SPARK_PACKAGES) \
-		--conf spark.sql.extensions=org.apache.iceberg.spark.extensions.IcebergSparkSessionExtensions \
-		--conf spark.sql.catalog.warehouse=org.apache.iceberg.spark.SparkCatalog \
-		--conf spark.sql.catalog.warehouse.type=hadoop \
-		--conf "spark.sql.catalog.warehouse.warehouse=s3a://warehouse/" \
-		--conf spark.sql.catalog.warehouse.io-impl=org.apache.iceberg.aws.s3.S3FileIO \
-		--conf spark.hadoop.fs.s3a.endpoint=http://minio:9000 \
-		--conf spark.hadoop.fs.s3a.access.key=minioadmin \
-		--conf spark.hadoop.fs.s3a.secret.key=minioadmin \
-		--conf spark.hadoop.fs.s3a.path.style.access=true \
-		--conf spark.hadoop.fs.s3a.impl=org.apache.hadoop.fs.s3a.S3AFileSystem \
+	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
+		--master local[*] \
 		/opt/spark-jobs/silver_transform.py
 	@echo "Silver transform complete."
 
@@ -119,9 +93,9 @@ process-silver:
 
 ## Install dbt dependencies and run full build
 dbt-build:
-	$(COMPOSE) exec dbt dbt deps
-	$(COMPOSE) exec dbt dbt seed
-	$(COMPOSE) exec dbt dbt build
+	$(COMPOSE) exec dbt dbt deps --profiles-dir .
+	$(COMPOSE) exec dbt dbt seed --profiles-dir .
+	$(COMPOSE) exec dbt dbt build --full-refresh --profiles-dir .
 
 ## Run dbt tests only
 dbt-test:

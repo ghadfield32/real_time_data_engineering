@@ -1,0 +1,13 @@
+
+    
+    
+    
+    create table "dev"."main"."payment_type_lookup" ("payment_type_id" integer,"payment_type_name" varchar)
+  ;
+    -- dbt seed --
+    
+          COPY "dev"."main"."payment_type_lookup" FROM '/dbt/seeds/payment_type_lookup.csv' (FORMAT CSV, HEADER TRUE, DELIMITER ',')
+        
+
+;
+  

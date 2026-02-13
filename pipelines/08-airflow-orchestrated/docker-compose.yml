@@ -1,12 +1,14 @@
 # =============================================================================
-# Pipeline 08: Airflow Orchestrated (Kafka + Flink + Iceberg + Airflow)
+# Pipeline 08: Airflow Orchestrated — Infrastructure Services
 # =============================================================================
-# Architecture: Airflow -> Kafka (KRaft) -> Flink SQL -> Iceberg (on MinIO) -> dbt (DuckDB)
-# Wraps Pipeline 01 with Apache Airflow for DAG-based orchestration.
+# Data infrastructure only. Airflow is managed by Astronomer (astro dev start).
+# Kafka (KRaft) -> Flink SQL -> Iceberg (on MinIO) -> dbt (DuckDB)
 # =============================================================================
 
 x-flink-common: &flink-common
-  image: flink:1.20-java17
+  build:
+    context: .
+    dockerfile: ../../shared/docker/flink.Dockerfile
   environment: &flink-env
     FLINK_PROPERTIES: |
       jobmanager.rpc.address: flink-jobmanager
@@ -16,14 +18,9 @@ x-flink-common: &flink-common
       state.checkpoints.dir: file:///tmp/flink-checkpoints
       execution.checkpointing.interval: 30s
       rest.flamegraph.enabled: true
+      classloader.check-leaked-classloader: false
   networks:
     - pipeline-net
-
-x-airflow-common: &airflow-common
-  environment: &airflow-env
-    AIRFLOW__CORE__EXECUTOR: LocalExecutor
-    AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://airflow:airflow@airflow-postgres:5432/airflow
-    AIRFLOW__CORE__LOAD_EXAMPLES: "false"
 
 services:
   # ---------------------------------------------------------------------------
@@ -141,6 +138,7 @@ services:
     volumes:
       - ./flink/sql:/opt/flink/sql:ro
       - ./flink/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml:ro
+      - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
       - flink-checkpoints:/tmp/flink-checkpoints
     depends_on:
       kafka:
@@ -158,6 +156,7 @@ services:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
       AWS_REGION: us-east-1
+      HADOOP_CONF_DIR: /opt/hadoop/conf
 
   # ---------------------------------------------------------------------------
   # Flink TaskManager
@@ -168,6 +167,7 @@ services:
     hostname: flink-taskmanager
     command: taskmanager
     volumes:
+      - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
       - flink-checkpoints:/tmp/flink-checkpoints
     depends_on:
       flink-jobmanager:
@@ -177,6 +177,7 @@ services:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
       AWS_REGION: us-east-1
+      HADOOP_CONF_DIR: /opt/hadoop/conf
 
   # ---------------------------------------------------------------------------
   # dbt (DuckDB adapter - reads Iceberg tables from MinIO)
@@ -190,6 +191,9 @@ services:
     container_name: p08-dbt
     volumes:
       - ./dbt_project:/dbt
+    working_dir: /dbt
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."]
     environment:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
@@ -218,94 +222,13 @@ services:
       BROKER_URL: kafka:9092
       TOPIC: taxi.raw_trips
       MODE: burst
+      MAX_EVENTS: "10000"
       DATA_PATH: /data/yellow_tripdata_2024-01.parquet
     depends_on:
       kafka:
         condition: service_healthy
     profiles:
       - generator
-    networks:
-      - pipeline-net
-
-  # ---------------------------------------------------------------------------
-  # Airflow PostgreSQL (metadata store)
-  # ---------------------------------------------------------------------------
-  airflow-postgres:
-    image: postgres:16-alpine
-    container_name: p08-airflow-postgres
-    environment:
-      POSTGRES_USER: airflow
-      POSTGRES_PASSWORD: airflow
-      POSTGRES_DB: airflow
-    volumes:
-      - airflow-pg-data:/var/lib/postgresql/data
-    healthcheck:
-      test: pg_isready -U airflow
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - pipeline-net
-
-  # ---------------------------------------------------------------------------
-  # Airflow Init (DB migration + admin user creation)
-  # ---------------------------------------------------------------------------
-  airflow-init:
-    image: apache/airflow:2.9-python3.12
-    container_name: p08-airflow-init
-    environment:
-      <<: *airflow-env
-      _AIRFLOW_DB_MIGRATE: "true"
-      _AIRFLOW_WWW_USER_CREATE: "true"
-      _AIRFLOW_WWW_USER_USERNAME: admin
-      _AIRFLOW_WWW_USER_PASSWORD: admin
-    entrypoint: /bin/bash -c "airflow db migrate && airflow users create --username admin --password admin --firstname Admin --lastname User --role Admin --email admin@example.com || true"
-    depends_on:
-      airflow-postgres:
-        condition: service_healthy
-    networks:
-      - pipeline-net
-
-  # ---------------------------------------------------------------------------
-  # Airflow Webserver
-  # ---------------------------------------------------------------------------
-  airflow-webserver:
-    image: apache/airflow:2.9-python3.12
-    container_name: p08-airflow-webserver
-    command: webserver
-    ports:
-      - "8084:8080"
-    environment:
-      <<: *airflow-env
-      AIRFLOW__WEBSERVER__EXPOSE_CONFIG: "true"
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags:ro
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
-    healthcheck:
-      test: curl -f http://localhost:8080/health || exit 1
-      interval: 15s
-      timeout: 10s
-      retries: 10
-      start_period: 60s
-    networks:
-      - pipeline-net
-
-  # ---------------------------------------------------------------------------
-  # Airflow Scheduler
-  # ---------------------------------------------------------------------------
-  airflow-scheduler:
-    image: apache/airflow:2.9-python3.12
-    container_name: p08-airflow-scheduler
-    command: scheduler
-    environment:
-      <<: *airflow-env
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags:ro
-    depends_on:
-      airflow-init:
-        condition: service_completed_successfully
     networks:
       - pipeline-net
 
@@ -316,8 +239,6 @@ volumes:
   minio-data:
     driver: local
   flink-checkpoints:
-    driver: local
-  airflow-pg-data:
     driver: local
 
 # =============================================================================

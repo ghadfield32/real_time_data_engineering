@@ -51,7 +51,7 @@ process: ## Submit RisingWave SQL init scripts (source + materialized views)
 	@echo "All RisingWave objects created. MVs will update automatically as Kafka events arrive."
 
 dbt-build: ## Run dbt build against RisingWave
-	$(COMPOSE) run --rm dbt build --profiles-dir .
+	$(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 
 benchmark: ## Run full pipeline benchmark (generate + process + dbt)
 	@echo "=== Benchmark: Pipeline 03 - Kafka + RisingWave ==="
