@@ -1,0 +1,22 @@
+# Pipeline 13: dbt-duckdb profile reading Silver Delta Lake tables from MinIO
+#
+# DuckDB can read Delta Lake tables via delta_scan() using the httpfs + delta
+# extensions. The source definition uses external_location with delta_scan().
+
+pipeline_13:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /tmp/p13.duckdb
+      threads: 4
+      extensions:
+        - httpfs
+        - delta
+      settings:
+        s3_region: us-east-1
+        s3_endpoint: http://minio:9000
+        s3_access_key_id: minioadmin
+        s3_secret_access_key: minioadmin
+        s3_use_ssl: false
+        s3_url_style: path

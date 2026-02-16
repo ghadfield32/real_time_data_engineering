@@ -1,0 +1,38 @@
+{
+  "schemaName": "taxi_trips",
+  "dimensionFieldSpecs": [
+    {"name": "VendorID", "dataType": "INT"},
+    {"name": "store_and_fwd_flag", "dataType": "STRING"},
+    {"name": "PULocationID", "dataType": "INT"},
+    {"name": "DOLocationID", "dataType": "INT"},
+    {"name": "payment_type", "dataType": "INT"},
+    {"name": "RatecodeID", "dataType": "INT"}
+  ],
+  "metricFieldSpecs": [
+    {"name": "passenger_count", "dataType": "DOUBLE"},
+    {"name": "trip_distance", "dataType": "DOUBLE"},
+    {"name": "fare_amount", "dataType": "DOUBLE"},
+    {"name": "extra", "dataType": "DOUBLE"},
+    {"name": "mta_tax", "dataType": "DOUBLE"},
+    {"name": "tip_amount", "dataType": "DOUBLE"},
+    {"name": "tolls_amount", "dataType": "DOUBLE"},
+    {"name": "improvement_surcharge", "dataType": "DOUBLE"},
+    {"name": "total_amount", "dataType": "DOUBLE"},
+    {"name": "congestion_surcharge", "dataType": "DOUBLE"},
+    {"name": "Airport_fee", "dataType": "DOUBLE"}
+  ],
+  "dateTimeFieldSpecs": [
+    {
+      "name": "tpep_pickup_datetime",
+      "dataType": "STRING",
+      "format": "1:SIMPLE_DATE_FORMAT:yyyy-MM-dd'T'HH:mm:ss",
+      "granularity": "1:MILLISECONDS"
+    },
+    {
+      "name": "tpep_dropoff_datetime",
+      "dataType": "STRING",
+      "format": "1:SIMPLE_DATE_FORMAT:yyyy-MM-dd'T'HH:mm:ss",
+      "granularity": "1:MILLISECONDS"
+    }
+  ]
+}

@@ -1,0 +1,153 @@
+-- =============================================================================
+-- Benchmark Query 3: Hourly Demand Heatmap (hour x day_of_week)
+-- =============================================================================
+-- Purpose : Build a heatmap of trip volume by hour-of-day and day-of-week.
+-- Use case: Demand forecasting, surge pricing calibration, shift scheduling.
+-- Protocol: Run 10 iterations, discard first 2 warm-up runs, report p50/p95/p99.
+--
+-- Expected result columns:
+--   day_of_week   INTEGER   -- 0=Sunday .. 6=Saturday  (or engine equivalent)
+--   hour_of_day   INTEGER   -- 0..23
+--   trips         BIGINT    -- total trip count for that cell
+--   avg_revenue   DECIMAL   -- AVG(total_amount) for that cell
+--   avg_distance  DECIMAL   -- AVG(trip_distance) for that cell
+-- =============================================================================
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 1: DuckDB / Iceberg
+-- ---------------------------------------------------------------------------
+-- fct_trips has pre-computed pickup_day_of_week (0=Sun..6=Sat) and
+-- pickup_hour (0..23) columns from the dbt int_trip_metrics model.
+--
+-- SELECT
+--     pickup_day_of_week                    AS day_of_week,
+--     pickup_hour                           AS hour_of_day,
+--     COUNT(*)                              AS trips,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles), 2)    AS avg_distance
+-- FROM fct_trips
+-- GROUP BY 1, 2
+-- ORDER BY 1, 2;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 2: ClickHouse
+-- ---------------------------------------------------------------------------
+-- ClickHouse provides toDayOfWeek() (1=Mon..7=Sun) and toHour().
+-- When using the dbt-materialized fct_trips the pre-computed columns are
+-- available; when querying raw data, extract directly.
+--
+-- Variant A: Pre-computed columns (fct_trips)
+-- SELECT
+--     pickup_day_of_week                    AS day_of_week,
+--     pickup_hour                           AS hour_of_day,
+--     COUNT(*)                              AS trips,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles), 2)    AS avg_distance
+-- FROM nyc_taxi.fct_trips
+-- GROUP BY day_of_week, hour_of_day
+-- ORDER BY day_of_week, hour_of_day;
+--
+-- Variant B: Extracted from raw timestamp
+-- SELECT
+--     toDayOfWeek(pickup_datetime)          AS day_of_week,
+--     toHour(pickup_datetime)               AS hour_of_day,
+--     COUNT(*)                              AS trips,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles), 2)    AS avg_distance
+-- FROM nyc_taxi.fct_trips
+-- GROUP BY day_of_week, hour_of_day
+-- ORDER BY day_of_week, hour_of_day;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 3: RisingWave / Materialize  (PostgreSQL-compatible)
+-- ---------------------------------------------------------------------------
+-- EXTRACT(DOW ...) returns 0=Sun..6=Sat in Postgres.  If querying fct_trips,
+-- use the pre-computed columns instead.
+--
+-- Variant A: Pre-computed columns
+-- SELECT
+--     pickup_day_of_week                    AS day_of_week,
+--     pickup_hour                           AS hour_of_day,
+--     COUNT(*)                              AS trips,
+--     ROUND(AVG(total_amount)::NUMERIC, 2)  AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles)::NUMERIC, 2) AS avg_distance
+-- FROM fct_trips
+-- GROUP BY 1, 2
+-- ORDER BY 1, 2;
+--
+-- Variant B: Extracted from timestamp
+-- SELECT
+--     EXTRACT(DOW FROM pickup_datetime)::INT  AS day_of_week,
+--     EXTRACT(HOUR FROM pickup_datetime)::INT AS hour_of_day,
+--     COUNT(*)                                AS trips,
+--     ROUND(AVG(total_amount)::NUMERIC, 2)    AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles)::NUMERIC, 2) AS avg_distance
+-- FROM fct_trips
+-- GROUP BY 1, 2
+-- ORDER BY 1, 2;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 4: Apache Pinot
+-- ---------------------------------------------------------------------------
+-- Pinot lacks EXTRACT but provides DATETIMECONVERT and dateTimeConvert UDFs.
+-- For hour and day-of-week, use the built-in transform functions.
+--
+-- SELECT
+--     DAYOFWEEK(tpep_pickup_datetime)       AS day_of_week,
+--     HOUR(tpep_pickup_datetime)            AS hour_of_day,
+--     COUNT(*)                              AS trips,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance), 2)          AS avg_distance
+-- FROM taxi_trips
+-- GROUP BY day_of_week, hour_of_day
+-- ORDER BY day_of_week, hour_of_day
+-- LIMIT 200;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 5: Apache Druid
+-- ---------------------------------------------------------------------------
+-- Druid provides TIME_EXTRACT for component extraction from __time.
+--
+-- SELECT
+--     TIME_EXTRACT(__time, 'DOW')           AS day_of_week,
+--     TIME_EXTRACT(__time, 'HOUR')          AS hour_of_day,
+--     COUNT(*)                              AS trips,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance), 2)          AS avg_distance
+-- FROM taxi_trips
+-- GROUP BY 1, 2
+-- ORDER BY 1, 2;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 6: Spark SQL
+-- ---------------------------------------------------------------------------
+-- Spark SQL supports EXTRACT, dayofweek(), and hour() functions.
+-- dayofweek() returns 1=Sun..7=Sat; subtract 1 to align with 0-based.
+--
+-- Variant A: Pre-computed columns (fct_trips)
+-- SELECT
+--     pickup_day_of_week                    AS day_of_week,
+--     pickup_hour                           AS hour_of_day,
+--     COUNT(*)                              AS trips,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles), 2)    AS avg_distance
+-- FROM nyc_taxi.fct_trips
+-- GROUP BY 1, 2
+-- ORDER BY 1, 2;
+--
+-- Variant B: Extracted from timestamp
+-- SELECT
+--     (DAYOFWEEK(pickup_datetime) - 1)      AS day_of_week,
+--     HOUR(pickup_datetime)                 AS hour_of_day,
+--     COUNT(*)                              AS trips,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles), 2)    AS avg_distance
+-- FROM nyc_taxi.fct_trips
+-- GROUP BY 1, 2
+-- ORDER BY 1, 2;

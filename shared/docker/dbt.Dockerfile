@@ -10,7 +10,6 @@ WORKDIR /dbt
 RUN pip install --no-cache-dir \
     "dbt-core>=1.8" \
     "${DBT_ADAPTER}${DBT_ADAPTER_VERSION}" \
-    "dbt-utils>=1.1.0" \
     pyarrow \
     pandas
 

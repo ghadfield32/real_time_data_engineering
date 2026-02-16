@@ -1,0 +1,160 @@
+-- =============================================================================
+-- Benchmark Query 2: Top 10 Pickup Zones by Trip Count and Revenue
+-- =============================================================================
+-- Purpose : Identify the busiest and highest-grossing pickup locations.
+-- Use case: Operations planning, driver allocation, zone-level reporting.
+-- Protocol: Run 10 iterations, discard first 2 warm-up runs, report p50/p95/p99.
+--
+-- Expected result columns:
+--   pickup_zone      VARCHAR   -- TLC taxi zone name
+--   pickup_borough   VARCHAR   -- NYC borough
+--   trips            BIGINT    -- total trip count
+--   revenue          DECIMAL   -- SUM(total_amount)
+--   avg_revenue      DECIMAL   -- AVG(total_amount)
+--   avg_distance     DECIMAL   -- AVG(trip_distance_miles)
+-- =============================================================================
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 1: DuckDB / Iceberg
+-- ---------------------------------------------------------------------------
+-- fct_trips already has pickup_zone and pickup_borough joined from dim_locations.
+--
+-- SELECT
+--     pickup_zone,
+--     pickup_borough,
+--     COUNT(*)                              AS trips,
+--     ROUND(SUM(total_amount), 2)           AS revenue,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles), 2)    AS avg_distance
+-- FROM fct_trips
+-- WHERE pickup_zone IS NOT NULL
+-- GROUP BY pickup_zone, pickup_borough
+-- ORDER BY trips DESC
+-- LIMIT 10;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 2: ClickHouse
+-- ---------------------------------------------------------------------------
+-- ClickHouse fct_trips mirrors the dbt mart with pre-joined zone names.
+--
+-- SELECT
+--     pickup_zone,
+--     pickup_borough,
+--     COUNT(*)                              AS trips,
+--     ROUND(SUM(total_amount), 2)           AS revenue,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles), 2)    AS avg_distance
+-- FROM nyc_taxi.fct_trips
+-- WHERE pickup_zone != ''
+-- GROUP BY pickup_zone, pickup_borough
+-- ORDER BY trips DESC
+-- LIMIT 10;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 3: RisingWave / Materialize  (PostgreSQL-compatible)
+-- ---------------------------------------------------------------------------
+-- Same schema as DuckDB.  RisingWave materializes the join at ingest time;
+-- Materialize provides an indexed view.
+--
+-- SELECT
+--     pickup_zone,
+--     pickup_borough,
+--     COUNT(*)                              AS trips,
+--     ROUND(SUM(total_amount)::NUMERIC, 2)  AS revenue,
+--     ROUND(AVG(total_amount)::NUMERIC, 2)  AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles)::NUMERIC, 2) AS avg_distance
+-- FROM fct_trips
+-- WHERE pickup_zone IS NOT NULL
+-- GROUP BY pickup_zone, pickup_borough
+-- ORDER BY trips DESC
+-- LIMIT 10;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 4: Apache Pinot
+-- ---------------------------------------------------------------------------
+-- Pinot uses raw column names.  Zone lookup must be handled via a lookup join
+-- or denormalized at ingestion time.  If zone_name is pre-joined into the
+-- taxi_trips table, use it directly; otherwise join against dim_taxi_zones.
+--
+-- Variant A: Pre-joined zone columns in taxi_trips
+-- SELECT
+--     pickup_zone,
+--     pickup_borough,
+--     COUNT(*)                              AS trips,
+--     ROUND(SUM(total_amount), 2)           AS revenue,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance), 2)          AS avg_distance
+-- FROM taxi_trips
+-- WHERE pickup_zone IS NOT NULL
+-- GROUP BY pickup_zone, pickup_borough
+-- ORDER BY trips DESC
+-- LIMIT 10;
+--
+-- Variant B: Raw location IDs only (requires application-side join)
+-- SELECT
+--     PULocationID                          AS pickup_location_id,
+--     COUNT(*)                              AS trips,
+--     ROUND(SUM(total_amount), 2)           AS revenue,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance), 2)          AS avg_distance
+-- FROM taxi_trips
+-- GROUP BY PULocationID
+-- ORDER BY trips DESC
+-- LIMIT 10;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 5: Apache Druid
+-- ---------------------------------------------------------------------------
+-- Druid ingestion can denormalize zone names via a lookup or inline spec.
+-- If zones are embedded at ingestion, query directly; otherwise use
+-- LOOKUP() for runtime enrichment.
+--
+-- Variant A: Denormalized at ingestion
+-- SELECT
+--     pickup_zone,
+--     pickup_borough,
+--     COUNT(*)                              AS trips,
+--     ROUND(SUM(total_amount), 2)           AS revenue,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance), 2)          AS avg_distance
+-- FROM taxi_trips
+-- WHERE pickup_zone IS NOT NULL
+-- GROUP BY 1, 2
+-- ORDER BY trips DESC
+-- LIMIT 10;
+--
+-- Variant B: Runtime lookup
+-- SELECT
+--     LOOKUP(CAST(PULocationID AS VARCHAR), 'taxi_zone_lookup') AS pickup_zone,
+--     COUNT(*)                              AS trips,
+--     ROUND(SUM(total_amount), 2)           AS revenue,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance), 2)          AS avg_distance
+-- FROM taxi_trips
+-- GROUP BY 1
+-- ORDER BY trips DESC
+-- LIMIT 10;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 6: Spark SQL
+-- ---------------------------------------------------------------------------
+-- Spark reads from the Iceberg/Hive catalog.  fct_trips has pre-joined zones.
+--
+-- SELECT
+--     pickup_zone,
+--     pickup_borough,
+--     COUNT(*)                              AS trips,
+--     ROUND(SUM(total_amount), 2)           AS revenue,
+--     ROUND(AVG(total_amount), 2)           AS avg_revenue,
+--     ROUND(AVG(trip_distance_miles), 2)    AS avg_distance
+-- FROM nyc_taxi.fct_trips
+-- WHERE pickup_zone IS NOT NULL
+-- GROUP BY pickup_zone, pickup_borough
+-- ORDER BY trips DESC
+-- LIMIT 10;

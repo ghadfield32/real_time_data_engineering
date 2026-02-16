@@ -1,0 +1,51 @@
+{
+  "type": "kafka",
+  "spec": {
+    "ioConfig": {
+      "type": "kafka",
+      "consumerProperties": {
+        "bootstrap.servers": "kafka:9092"
+      },
+      "topic": "taxi.raw_trips",
+      "inputFormat": {
+        "type": "json"
+      },
+      "useEarliestOffset": true
+    },
+    "tuningConfig": {
+      "type": "kafka",
+      "maxRowsPerSegment": 5000000,
+      "maxRowsInMemory": 100000
+    },
+    "dataSchema": {
+      "dataSource": "taxi_trips",
+      "timestampSpec": {
+        "column": "tpep_pickup_datetime",
+        "format": "iso"
+      },
+      "dimensionsSpec": {
+        "dimensions": [
+          {"name": "VendorID", "type": "long"},
+          {"name": "store_and_fwd_flag", "type": "string"},
+          {"name": "PULocationID", "type": "long"},
+          {"name": "DOLocationID", "type": "long"},
+          {"name": "payment_type", "type": "long"},
+          {"name": "RatecodeID", "type": "long"}
+        ]
+      },
+      "metricsSpec": [
+        {"name": "count", "type": "count"},
+        {"name": "sum_fare_amount", "type": "doubleSum", "fieldName": "fare_amount"},
+        {"name": "sum_total_amount", "type": "doubleSum", "fieldName": "total_amount"},
+        {"name": "sum_tip_amount", "type": "doubleSum", "fieldName": "tip_amount"},
+        {"name": "sum_trip_distance", "type": "doubleSum", "fieldName": "trip_distance"},
+        {"name": "sum_passenger_count", "type": "doubleSum", "fieldName": "passenger_count"}
+      ],
+      "granularitySpec": {
+        "segmentGranularity": "DAY",
+        "queryGranularity": "HOUR",
+        "rollup": true
+      }
+    }
+  }
+}

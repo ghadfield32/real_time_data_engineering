@@ -1,18 +1,19 @@
-FROM apache/spark:3.5.4
+FROM apache/spark:3.3.3
 
 USER root
 
 # Pre-download Iceberg, Kafka, Hadoop AWS, and AWS SDK JARs
 # This avoids runtime Maven/Ivy downloads which are slow and unreliable.
-ARG ICEBERG_VERSION=1.5.2
+# Using Spark 3.3.2 + Iceberg 1.4.3 for better stability (avoids Netty conflicts)
+ARG ICEBERG_VERSION=1.4.3
 ARG HADOOP_AWS_VERSION=3.3.4
-ARG AWS_SDK_VERSION=2.25.11
-ARG SPARK_KAFKA_VERSION=3.5.4
+ARG AWS_SDK_VERSION=2.20.18
+ARG SPARK_KAFKA_VERSION=3.3.3
 ARG SCALA_VERSION=2.12
 
-# Iceberg Spark runtime
+# Iceberg Spark runtime (for Spark 3.3)
 RUN wget -q -P /opt/spark/jars/ \
-    "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.5_${SCALA_VERSION}/${ICEBERG_VERSION}/iceberg-spark-runtime-3.5_${SCALA_VERSION}-${ICEBERG_VERSION}.jar" \
+    "https://repo1.maven.org/maven2/org/apache/iceberg/iceberg-spark-runtime-3.3_${SCALA_VERSION}/${ICEBERG_VERSION}/iceberg-spark-runtime-3.3_${SCALA_VERSION}-${ICEBERG_VERSION}.jar" \
     && echo "Iceberg Spark runtime downloaded"
 
 # Iceberg AWS bundle (S3FileIO)
@@ -31,7 +32,7 @@ RUN wget -q -P /opt/spark/jars/ \
     && echo "AWS SDK v2 bundle downloaded"
 
 # AWS SDK v1 bundle (needed by hadoop-aws S3AFileSystem)
-ARG AWS_SDK_V1_VERSION=1.12.367
+ARG AWS_SDK_V1_VERSION=1.12.262
 RUN wget -q -P /opt/spark/jars/ \
     "https://repo1.maven.org/maven2/com/amazonaws/aws-java-sdk-bundle/${AWS_SDK_V1_VERSION}/aws-java-sdk-bundle-${AWS_SDK_V1_VERSION}.jar" \
     && echo "AWS SDK v1 bundle downloaded"

@@ -1,0 +1,9 @@
+project: nyc_taxi
+registry: /app/feast_repo/data/registry.db
+provider: local
+online_store:
+  type: sqlite
+  path: /app/feast_repo/data/online_store.db
+offline_store:
+  type: duckdb
+entity_key_serialization_version: 2

@@ -1,0 +1,159 @@
+-- =============================================================================
+-- Benchmark Query 4: Revenue Breakdown by Payment Type
+-- =============================================================================
+-- Purpose : Segment trips and revenue by payment method.
+-- Use case: Finance reconciliation, cashless adoption tracking, fraud analysis.
+-- Protocol: Run 10 iterations, discard first 2 warm-up runs, report p50/p95/p99.
+--
+-- Expected result columns:
+--   payment_type       VARCHAR   -- human-readable name (Credit card, Cash, ...)
+--   trips              BIGINT    -- trip count per payment type
+--   total_revenue      DECIMAL   -- SUM(total_amount)
+--   avg_fare           DECIMAL   -- AVG(fare_amount)
+--   avg_tip            DECIMAL   -- AVG(tip_amount)
+--   avg_tip_pct        DECIMAL   -- AVG(tip_amount / NULLIF(fare_amount, 0)) * 100
+--   pct_of_trips       DECIMAL   -- percentage of total trip volume
+-- =============================================================================
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 1: DuckDB / Iceberg
+-- ---------------------------------------------------------------------------
+-- fct_trips has payment_type_id; join dim_payment_types for the label.
+-- DuckDB supports window functions for the percent-of-total calculation.
+--
+-- SELECT
+--     pt.payment_type_name                           AS payment_type,
+--     COUNT(*)                                       AS trips,
+--     ROUND(SUM(t.total_amount), 2)                  AS total_revenue,
+--     ROUND(AVG(t.fare_amount), 2)                   AS avg_fare,
+--     ROUND(AVG(t.tip_amount), 2)                    AS avg_tip,
+--     ROUND(AVG(t.tip_amount / NULLIF(t.fare_amount, 0)) * 100, 2) AS avg_tip_pct,
+--     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_of_trips
+-- FROM fct_trips t
+-- JOIN dim_payment_types pt
+--     ON t.payment_type_id = pt.payment_type_id
+-- GROUP BY pt.payment_type_name
+-- ORDER BY trips DESC;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 2: ClickHouse
+-- ---------------------------------------------------------------------------
+-- ClickHouse supports window functions since v21.  Use dictGet() or a
+-- standard JOIN for the payment type label.
+--
+-- SELECT
+--     pt.payment_type_name                           AS payment_type,
+--     COUNT(*)                                       AS trips,
+--     ROUND(SUM(t.total_amount), 2)                  AS total_revenue,
+--     ROUND(AVG(t.fare_amount), 2)                   AS avg_fare,
+--     ROUND(AVG(t.tip_amount), 2)                    AS avg_tip,
+--     ROUND(AVG(t.tip_amount / nullIf(t.fare_amount, 0)) * 100, 2) AS avg_tip_pct,
+--     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_of_trips
+-- FROM nyc_taxi.fct_trips AS t
+-- JOIN nyc_taxi.dim_payment_types AS pt
+--     ON t.payment_type_id = pt.payment_type_id
+-- GROUP BY pt.payment_type_name
+-- ORDER BY trips DESC;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 3: RisingWave / Materialize  (PostgreSQL-compatible)
+-- ---------------------------------------------------------------------------
+-- Full Postgres syntax with window function for percent-of-total.
+--
+-- SELECT
+--     pt.payment_type_name                           AS payment_type,
+--     COUNT(*)                                       AS trips,
+--     ROUND(SUM(t.total_amount)::NUMERIC, 2)         AS total_revenue,
+--     ROUND(AVG(t.fare_amount)::NUMERIC, 2)          AS avg_fare,
+--     ROUND(AVG(t.tip_amount)::NUMERIC, 2)           AS avg_tip,
+--     ROUND((AVG(t.tip_amount / NULLIF(t.fare_amount, 0)) * 100)::NUMERIC, 2)
+--                                                    AS avg_tip_pct,
+--     ROUND((COUNT(*) * 100.0 / SUM(COUNT(*)) OVER ())::NUMERIC, 2)
+--                                                    AS pct_of_trips
+-- FROM fct_trips t
+-- JOIN dim_payment_types pt
+--     ON t.payment_type_id = pt.payment_type_id
+-- GROUP BY pt.payment_type_name
+-- ORDER BY trips DESC;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 4: Apache Pinot
+-- ---------------------------------------------------------------------------
+-- Pinot does not support JOINs in all deployment modes.  Use CASE-WHEN to
+-- decode payment_type inline.  Window functions are not available; compute
+-- pct_of_trips in the application layer or use a sub-query if supported.
+--
+-- SELECT
+--     CASE payment_type
+--         WHEN 1 THEN 'Credit card'
+--         WHEN 2 THEN 'Cash'
+--         WHEN 3 THEN 'No charge'
+--         WHEN 4 THEN 'Dispute'
+--         WHEN 5 THEN 'Unknown'
+--         WHEN 6 THEN 'Voided trip'
+--         ELSE 'Other'
+--     END                                            AS payment_type,
+--     COUNT(*)                                       AS trips,
+--     ROUND(SUM(total_amount), 2)                    AS total_revenue,
+--     ROUND(AVG(fare_amount), 2)                     AS avg_fare,
+--     ROUND(AVG(tip_amount), 2)                      AS avg_tip
+-- FROM taxi_trips
+-- GROUP BY payment_type
+-- ORDER BY trips DESC
+-- LIMIT 10;
+--
+-- NOTE: pct_of_trips must be computed client-side for Pinot.
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 5: Apache Druid
+-- ---------------------------------------------------------------------------
+-- Druid supports CASE-WHEN inline decoding.  Window functions are available
+-- in Druid 28+; for older versions, compute pct_of_trips client-side.
+--
+-- SELECT
+--     CASE payment_type
+--         WHEN 1 THEN 'Credit card'
+--         WHEN 2 THEN 'Cash'
+--         WHEN 3 THEN 'No charge'
+--         WHEN 4 THEN 'Dispute'
+--         WHEN 5 THEN 'Unknown'
+--         WHEN 6 THEN 'Voided trip'
+--         ELSE 'Other'
+--     END                                            AS payment_type,
+--     COUNT(*)                                       AS trips,
+--     ROUND(SUM(total_amount), 2)                    AS total_revenue,
+--     ROUND(AVG(fare_amount), 2)                     AS avg_fare,
+--     ROUND(AVG(tip_amount), 2)                      AS avg_tip,
+--     ROUND(AVG(tip_amount / CASE WHEN fare_amount = 0 THEN NULL ELSE fare_amount END) * 100, 2)
+--                                                    AS avg_tip_pct,
+--     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2)
+--                                                    AS pct_of_trips
+-- FROM taxi_trips
+-- GROUP BY 1
+-- ORDER BY trips DESC;
+
+
+-- ---------------------------------------------------------------------------
+-- Engine 6: Spark SQL
+-- ---------------------------------------------------------------------------
+-- Spark reads dim_payment_types from the Iceberg/Hive catalog and supports
+-- full window function syntax.
+--
+-- SELECT
+--     pt.payment_type_name                           AS payment_type,
+--     COUNT(*)                                       AS trips,
+--     ROUND(SUM(t.total_amount), 2)                  AS total_revenue,
+--     ROUND(AVG(t.fare_amount), 2)                   AS avg_fare,
+--     ROUND(AVG(t.tip_amount), 2)                    AS avg_tip,
+--     ROUND(AVG(t.tip_amount / NULLIF(t.fare_amount, 0)) * 100, 2) AS avg_tip_pct,
+--     ROUND(COUNT(*) * 100.0 / SUM(COUNT(*)) OVER (), 2) AS pct_of_trips
+-- FROM nyc_taxi.fct_trips t
+-- JOIN nyc_taxi.dim_payment_types pt
+--     ON t.payment_type_id = pt.payment_type_id
+-- GROUP BY pt.payment_type_name
+-- ORDER BY trips DESC;

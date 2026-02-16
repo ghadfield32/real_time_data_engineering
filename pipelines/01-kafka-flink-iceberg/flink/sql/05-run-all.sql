@@ -100,7 +100,23 @@ CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
     is_weekend              BOOLEAN
 );
 
+-- Deduplication: ROW_NUMBER partitioned by natural key, keeping latest ingestion
 INSERT INTO iceberg_catalog.silver.cleaned_trips
+WITH deduped AS (
+    SELECT *,
+        ROW_NUMBER() OVER (
+            PARTITION BY VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
+                         PULocationID, DOLocationID, fare_amount, total_amount
+            ORDER BY ingestion_ts DESC
+        ) AS rn
+    FROM iceberg_catalog.bronze.raw_trips
+    WHERE tpep_pickup_datetime IS NOT NULL
+      AND tpep_dropoff_datetime IS NOT NULL
+      AND trip_distance >= 0
+      AND fare_amount >= 0
+      AND CAST(tpep_pickup_datetime AS DATE) >= DATE '2024-01-01'
+      AND CAST(tpep_pickup_datetime AS DATE) <  DATE '2024-02-01'
+)
 SELECT
     CAST(MD5(CONCAT_WS('|',
         CAST(VendorID AS STRING),
@@ -155,10 +171,5 @@ SELECT
         WHEN DAYOFWEEK(tpep_pickup_datetime) IN (1, 7) THEN TRUE
         ELSE FALSE
     END AS is_weekend
-FROM iceberg_catalog.bronze.raw_trips
-WHERE tpep_pickup_datetime IS NOT NULL
-  AND tpep_dropoff_datetime IS NOT NULL
-  AND trip_distance >= 0
-  AND fare_amount >= 0
-  AND CAST(tpep_pickup_datetime AS DATE) >= DATE '2024-01-01'
-  AND CAST(tpep_pickup_datetime AS DATE) <  DATE '2024-02-01';
+FROM deduped
+WHERE rn = 1;

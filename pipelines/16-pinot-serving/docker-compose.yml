@@ -1,0 +1,258 @@
+# =============================================================================
+# Pipeline 16: Redpanda -> Flink -> Apache Pinot (User-Facing OLAP)
+# =============================================================================
+# Architecture:
+#   Redpanda (taxi.raw_trips)
+#     -> Flink SQL -> Iceberg (Silver on MinIO)
+#     -> Pinot real-time table (ingests directly from Redpanda topic)
+# =============================================================================
+
+x-flink-common: &flink-common
+  build:
+    context: .
+    dockerfile: ../../shared/docker/flink.Dockerfile
+  environment: &flink-env
+    FLINK_PROPERTIES: |
+      jobmanager.rpc.address: flink-jobmanager
+      taskmanager.numberOfTaskSlots: 4
+      parallelism.default: 2
+      state.backend: hashmap
+      state.checkpoints.dir: file:///tmp/flink-checkpoints
+      execution.checkpointing.interval: 30s
+      rest.flamegraph.enabled: true
+      classloader.check-leaked-classloader: false
+  networks:
+    - pipeline-net
+
+x-pinot-common: &pinot-common
+  image: apachepinot/pinot:1.2.0
+  networks:
+    - pipeline-net
+
+services:
+  # ---------------------------------------------------------------------------
+  # Redpanda (Kafka-compatible streaming)
+  # ---------------------------------------------------------------------------
+  redpanda:
+    image: redpandadata/redpanda:latest
+    container_name: p16-redpanda
+    hostname: redpanda
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 512M
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092
+      - --advertise-kafka-addr internal://redpanda:9092
+      - --pandaproxy-addr internal://0.0.0.0:8082
+      - --advertise-pandaproxy-addr internal://redpanda:8082
+      - --schema-registry-addr internal://0.0.0.0:8081
+    ports:
+      - "9092:9092"
+      - "8082:8082"
+      - "8081:8081"
+    healthcheck:
+      test: rpk cluster health | grep -E 'Healthy:.+true' || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO (S3-compatible storage for Iceberg)
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:latest
+    container_name: p16-minio
+    hostname: minio
+    ports:
+      - "9002:9000"
+      - "9003:9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: mc ready local || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - minio-data:/data
+    networks:
+      - pipeline-net
+
+  mc-init:
+    image: minio/mc:latest
+    container_name: p16-mc-init
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin &&
+      mc mb myminio/warehouse --ignore-existing &&
+      mc anonymous set download myminio/warehouse &&
+      echo 'Bucket warehouse created'
+      "
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Flink (Iceberg processing)
+  # ---------------------------------------------------------------------------
+  flink-jobmanager:
+    <<: *flink-common
+    container_name: p16-flink-jobmanager
+    hostname: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8083:8081"
+    volumes:
+      - ./flink/sql:/opt/flink/sql:ro
+      - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
+      - flink-checkpoints:/tmp/flink-checkpoints
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      mc-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: curl -f http://localhost:8081/overview || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    environment:
+      <<: *flink-env
+      HADOOP_CONF_DIR: /opt/hadoop/conf
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_REGION: us-east-1
+
+  flink-taskmanager:
+    <<: *flink-common
+    container_name: p16-flink-taskmanager
+    hostname: flink-taskmanager
+    command: taskmanager
+    volumes:
+      - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
+      - flink-checkpoints:/tmp/flink-checkpoints
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      <<: *flink-env
+      HADOOP_CONF_DIR: /opt/hadoop/conf
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_REGION: us-east-1
+
+  # ---------------------------------------------------------------------------
+  # Apache Pinot (User-Facing OLAP)
+  # ---------------------------------------------------------------------------
+  pinot-zookeeper:
+    image: zookeeper:3.9
+    container_name: p16-pinot-zookeeper
+    hostname: pinot-zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOO_4LW_COMMANDS_WHITELIST: "srvr,ruok"
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc localhost 2181 | grep -q imok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    networks:
+      - pipeline-net
+
+  pinot-controller:
+    <<: *pinot-common
+    container_name: p16-pinot-controller
+    hostname: pinot-controller
+    command: StartController -zkAddress pinot-zookeeper:2181
+    ports:
+      - "9010:9000"
+    depends_on:
+      pinot-zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:9000/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  pinot-broker:
+    <<: *pinot-common
+    container_name: p16-pinot-broker
+    hostname: pinot-broker
+    command: StartBroker -zkAddress pinot-zookeeper:2181
+    ports:
+      - "8099:8099"
+    depends_on:
+      pinot-controller:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:8099/health || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  pinot-server:
+    <<: *pinot-common
+    container_name: p16-pinot-server
+    hostname: pinot-server
+    command: StartServer -zkAddress pinot-zookeeper:2181
+    ports:
+      - "8098:8098"
+    depends_on:
+      pinot-broker:
+        condition: service_healthy
+    healthcheck:
+      test: curl -f http://localhost:8097/health/readiness || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+
+  # ---------------------------------------------------------------------------
+  # Data Generator
+  # ---------------------------------------------------------------------------
+  data-generator:
+    build:
+      context: ../../shared/data-generator/
+      dockerfile: Dockerfile
+    container_name: p16-data-generator
+    volumes:
+      - ../../data:/data:ro
+    environment:
+      BROKER_URL: redpanda:9092
+      TOPIC: taxi.raw_trips
+      MODE: burst
+      MAX_EVENTS: "10000"
+      DATA_PATH: /data/yellow_tripdata_2024-01.parquet
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    profiles:
+      - generator
+    networks:
+      - pipeline-net
+
+volumes:
+  minio-data:
+  flink-checkpoints:
+
+networks:
+  pipeline-net:
+    name: p16-pipeline-net
+    driver: bridge

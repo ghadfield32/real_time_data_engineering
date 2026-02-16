@@ -1,0 +1,91 @@
+# =============================================================================
+# Pipeline 20: Kafka + Bytewax Python Streaming
+# =============================================================================
+# Architecture: Kafka (KRaft) -> Bytewax Dataflow -> Bronze/Silver Kafka Topics
+# =============================================================================
+
+services:
+  # ---------------------------------------------------------------------------
+  # Kafka (KRaft mode - single node)
+  # ---------------------------------------------------------------------------
+  kafka:
+    image: apache/kafka:latest
+    container_name: p20-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: 'p20BytewaxClusterId001'
+    healthcheck:
+      test: /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Bytewax Stream Processor
+  # ---------------------------------------------------------------------------
+  bytewax-processor:
+    build:
+      context: ./bytewax
+      dockerfile: Dockerfile
+    container_name: p20-bytewax
+    hostname: bytewax-processor
+    restart: unless-stopped
+    environment:
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
+      INPUT_TOPIC: taxi.raw_trips
+      BRONZE_TOPIC: taxi.bronze
+      SILVER_TOPIC: taxi.silver
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Data Generator (reads parquet, produces to Kafka)
+  # ---------------------------------------------------------------------------
+  data-generator:
+    profiles: ["generator"]
+    image: python:3.12-slim
+    container_name: p20-data-generator
+    working_dir: /app
+    volumes:
+      - ../../shared/data-generator:/app
+      - ../../data:/data:ro
+    environment:
+      BROKER_URL: kafka:9092
+      TOPIC: taxi.raw_trips
+      MODE: burst
+      MAX_EVENTS: "10000"
+    command: ["sh", "-c", "pip install -q -r requirements.txt && python generator.py"]
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  pipeline-net:
+    name: p20-pipeline-net
+    driver: bridge

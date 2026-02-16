@@ -1,0 +1,19 @@
+blocks:
+  - uuid: load_from_kafka
+    type: data_loader
+    language: python
+    upstream_blocks: []
+  - uuid: transform_bronze
+    type: transformer
+    language: python
+    upstream_blocks: [load_from_kafka]
+  - uuid: transform_silver
+    type: transformer
+    language: python
+    upstream_blocks: [transform_bronze]
+  - uuid: export_to_duckdb
+    type: data_exporter
+    language: python
+    upstream_blocks: [transform_silver]
+name: taxi_pipeline
+type: python

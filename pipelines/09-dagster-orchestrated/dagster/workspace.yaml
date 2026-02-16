@@ -1,2 +1,4 @@
 load_from:
-  - python_file: definitions.py
+  - python_file:
+      relative_path: dagster_repo/repository.py
+      working_directory: /opt/dagster/app

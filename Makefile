@@ -6,7 +6,10 @@ DBT = uv run dbt
 PROFILES = --profiles-dir .
 PROJECT_DIR = nyc_taxi_dbt
 
-.PHONY: help setup deps seed build run test docs clean fresh lint shell validate benchmark snapshot
+.PHONY: help setup deps seed build run test docs clean fresh lint shell validate benchmark snapshot \
+       pipeline-up pipeline-down pipeline-logs pipeline-benchmark pipeline-status \
+       benchmark-all benchmark-core benchmark-extended benchmark-full \
+       compare clean-all
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -97,29 +100,52 @@ pipeline-benchmark: ## Benchmark a pipeline (usage: make pipeline-benchmark P=01
 	@echo "Benchmarking $(PIPELINE_DIR)..."
 	cd $(PIPELINE_DIR) && make benchmark
 
-benchmark-all: ## Benchmark all pipelines sequentially
-	@for p in 00 01 02 03 04 05 06 07 08 09 10 11; do \
+ALL_PIPELINES = 00 01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16 17 18 19 20 21 22 23
+CORE_PIPELINES = 00 01 02 03 04 05 06
+EXTENDED_PIPELINES = 12 13 14 15 16 17 18 19 20 21 22 23
+
+benchmark-all: ## Benchmark all 24 pipelines sequentially
+	@for p in $(ALL_PIPELINES); do \
 		dir=$$(ls -d pipelines/$$p-* 2>/dev/null | head -1); \
 		if [ -n "$$dir" ]; then \
-			echo "\n=== Benchmarking $$dir ==="; \
+			echo ""; \
+			echo "=== Benchmarking $$dir ==="; \
 			cd $$dir && make benchmark && cd ../..; \
 		fi; \
 	done
 
 benchmark-core: ## Benchmark Tier 1 pipelines only (00-06)
-	@for p in 00 01 02 03 04 05 06; do \
+	@for p in $(CORE_PIPELINES); do \
 		dir=$$(ls -d pipelines/$$p-* 2>/dev/null | head -1); \
 		if [ -n "$$dir" ]; then \
-			echo "\n=== Benchmarking $$dir ==="; \
+			echo ""; \
+			echo "=== Benchmarking $$dir ==="; \
 			cd $$dir && make benchmark && cd ../..; \
 		fi; \
 	done
 
-compare: ## Generate comparison report from all benchmark results
-	uv run python shared/benchmarks/report.py
+benchmark-extended: ## Benchmark extended pipelines only (12-23)
+	@for p in $(EXTENDED_PIPELINES); do \
+		dir=$$(ls -d pipelines/$$p-* 2>/dev/null | head -1); \
+		if [ -n "$$dir" ]; then \
+			echo ""; \
+			echo "=== Benchmarking $$dir ==="; \
+			cd $$dir && make benchmark && cd ../..; \
+		fi; \
+	done
 
-clean-all: ## Stop all pipelines and remove volumes
-	@for p in 00 01 02 03 04 05 06 07 08 09 10 11; do \
+benchmark-full: ## Full benchmark with resource collection (uses benchmark_runner.sh)
+	bash benchmark_runner.sh --all --runs 3
+
+pipeline-status: ## Show pipeline status (usage: make pipeline-status P=01)
+	@if [ -z "$(PIPELINE_DIR)" ]; then echo "Pipeline $(P) not found"; exit 1; fi
+	cd $(PIPELINE_DIR) && make status
+
+compare: ## Generate comparison report from all benchmark results
+	python shared/benchmarks/report.py
+
+clean-all: ## Stop all 24 pipelines and remove volumes
+	@for p in $(ALL_PIPELINES); do \
 		dir=$$(ls -d pipelines/$$p-* 2>/dev/null | head -1); \
 		if [ -n "$$dir" ]; then \
 			echo "Stopping $$dir..."; \

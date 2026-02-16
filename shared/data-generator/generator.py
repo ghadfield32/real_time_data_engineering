@@ -61,6 +61,8 @@ def read_parquet(path: str, max_events: int = 0):
 def create_producer(broker_url: str) -> Producer:
     conf = {
         "bootstrap.servers": broker_url,
+        "enable.idempotence": True,
+        "acks": "all",
         "linger.ms": 5,
         "batch.num.messages": 10000,
         "queue.buffering.max.messages": 500000,

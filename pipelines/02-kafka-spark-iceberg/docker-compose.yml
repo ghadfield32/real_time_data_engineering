@@ -117,6 +117,7 @@ services:
       AWS_REGION: us-east-1
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin
+      # Using Spark 3.3.3 + Iceberg 1.4.3 for stability
     volumes:
       - ./spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
       - ./spark/jobs:/opt/spark-jobs:ro
@@ -153,7 +154,44 @@ services:
       - pipeline-net
 
   # ---------------------------------------------------------------------------
-  # dbt (DuckDB with Iceberg scan)
+  # Spark Thrift Server (for dbt-spark connectivity)
+  # ---------------------------------------------------------------------------
+  spark-thrift:
+    build:
+      context: .
+      dockerfile: ../../shared/docker/spark.Dockerfile
+    container_name: p02-spark-thrift
+    hostname: spark-thrift
+    ports:
+      - "10000:10000"
+      - "4040:4040"
+    depends_on:
+      spark-master:
+        condition: service_healthy
+    command: >
+      /opt/spark/sbin/start-thriftserver.sh
+      --master spark://spark-master:7077
+      --conf spark.sql.warehouse.dir=/tmp/spark-warehouse
+      --hiveconf hive.server2.thrift.port=10000
+      --hiveconf hive.server2.thrift.bind.host=0.0.0.0
+    environment:
+      SPARK_NO_DAEMONIZE: "true"
+      AWS_REGION: us-east-1
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+    volumes:
+      - ./spark/conf/spark-defaults.conf:/opt/spark/conf/spark-defaults.conf:ro
+    healthcheck:
+      test: netstat -an | grep 10000 || exit 1
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # dbt (dbt-spark reading Iceberg via Thrift Server)
   # ---------------------------------------------------------------------------
   dbt:
     build:
@@ -161,7 +199,7 @@ services:
       dockerfile: Dockerfile
     container_name: p02-dbt
     depends_on:
-      minio:
+      spark-thrift:
         condition: service_healthy
     environment:
       AWS_ACCESS_KEY_ID: minioadmin

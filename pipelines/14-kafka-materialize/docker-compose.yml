@@ -1,0 +1,120 @@
+version: "3.9"
+
+# Pipeline 14 - Kafka + Materialize (Real-Time dbt)
+# Materialize is a streaming SQL engine with PostgreSQL wire protocol.
+
+services:
+  # ── Kafka (KRaft mode, single node) ───────────────────────
+  kafka:
+    image: apache/kafka:latest
+    container_name: p14-kafka
+    hostname: kafka
+    ports:
+      - "9092:9092"
+    environment:
+      # KRaft mode (no ZooKeeper)
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:29093
+      # Listeners
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:29093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      # Cluster
+      CLUSTER_ID: "p14-kafka-materialize-001"
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_NUM_PARTITIONS: 3
+      KAFKA_LOG_RETENTION_HOURS: 24
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "false"
+    volumes:
+      - kafka-data:/var/lib/kafka/data
+    healthcheck:
+      test: /opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list || exit 1
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks:
+      - pipeline-net
+
+  # ── Materialize (streaming database) ────────────────────────
+  materialize:
+    image: materialize/materialized:latest
+    container_name: p14-materialize
+    hostname: materialize
+    ports:
+      - "6875:6875"   # PostgreSQL-compatible SQL port
+      - "6878:6878"   # HTTP / internal API port
+    volumes:
+      - materialize-data:/mzdata
+      - ./materialize/sql:/materialize/sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6875 -U materialize || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+
+  # ── Data Generator ────────────────────────────────────────
+  data-generator:
+    build:
+      context: ../../shared/data-generator/
+      dockerfile: Dockerfile
+    container_name: p14-data-generator
+    environment:
+      BROKER_URL: kafka:9092
+      TOPIC: taxi.raw_trips
+      MODE: burst
+      DATA_PATH: /data/yellow_tripdata_2024-01.parquet
+      MAX_EVENTS: 0
+    volumes:
+      - ../../data:/data:ro
+    depends_on:
+      kafka:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+    profiles:
+      - generate
+
+  # ── dbt (PostgreSQL adapter for Materialize) ─────────────
+  dbt:
+    build:
+      context: .
+      dockerfile: ../../shared/docker/dbt.Dockerfile
+      args:
+        DBT_ADAPTER: dbt-postgres
+        DBT_ADAPTER_VERSION: ">=1.8"
+    container_name: p14-dbt
+    volumes:
+      - ./dbt_project:/dbt
+    working_dir: /dbt
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."]
+    environment:
+      DBT_PROFILES_DIR: /dbt
+    depends_on:
+      materialize:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+    profiles:
+      - dbt
+
+volumes:
+  kafka-data:
+  materialize-data:
+
+networks:
+  pipeline-net:
+    name: p14-pipeline-net
+    driver: bridge

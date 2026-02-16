@@ -56,6 +56,23 @@ echo "  taxi.raw_trips created (3 partitions, 24h retention)"
 echo ""
 
 # ---------------------------------------------------------------------------
+# taxi.raw_trips.dlq - Dead Letter Queue for failed/invalid events
+# ---------------------------------------------------------------------------
+echo "Creating topic: taxi.raw_trips.dlq"
+${KAFKA_BIN}/kafka-topics.sh \
+    --bootstrap-server "${BOOTSTRAP_SERVER}" \
+    --create \
+    --topic taxi.raw_trips.dlq \
+    --partitions 1 \
+    --replication-factor 1 \
+    --if-not-exists \
+    --config retention.ms=604800000 \
+    --config cleanup.policy=delete
+
+echo "  taxi.raw_trips.dlq created (1 partition, 7d retention)"
+echo ""
+
+# ---------------------------------------------------------------------------
 # Verify
 # ---------------------------------------------------------------------------
 echo "============================================================"

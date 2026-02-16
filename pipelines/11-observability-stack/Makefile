@@ -1,7 +1,7 @@
 SHELL := bash
 # Pipeline 11: Observability Stack
 COMPOSE := docker compose
-FLINK_SQL_CLIENT = $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
+FLINK_SQL_CLIENT = MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
 
 .PHONY: up down generate create-topics process process-bronze process-silver dbt-build soda-check elementary-report benchmark logs status help
 
@@ -23,7 +23,7 @@ create-topics: ## Create Kafka topics
 		--topic taxi.raw_trips --partitions 3 --replication-factor 1
 
 generate: ## Produce taxi events to Kafka
-	$(COMPOSE) run --rm data-generator
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
 
 process-bronze: ## Submit Bronze layer Flink SQL jobs (batch mode)
 	@echo "=== Bronze: Kafka → Iceberg ==="
@@ -39,17 +39,17 @@ process: process-bronze process-silver ## Submit all Flink SQL jobs (Bronze + Si
 	@echo "All Flink SQL jobs submitted."
 
 dbt-build: ## Run dbt build with Elementary
-	$(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 
 soda-check: ## Run Soda Core quality checks
 	@echo "=== Running Soda Core Checks ==="
-	$(COMPOSE) run --rm soda scan -d nyc_taxi -c /soda/configuration.yml /soda/checks/bronze_checks.yml
-	$(COMPOSE) run --rm soda scan -d nyc_taxi -c /soda/configuration.yml /soda/checks/silver_checks.yml
-	$(COMPOSE) run --rm soda scan -d nyc_taxi -c /soda/configuration.yml /soda/checks/gold_checks.yml
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm soda scan -d nyc_taxi -c /soda/configuration.yml /soda/checks/bronze_checks.yml
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm soda scan -d nyc_taxi -c /soda/configuration.yml /soda/checks/silver_checks.yml
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm soda scan -d nyc_taxi -c /soda/configuration.yml /soda/checks/gold_checks.yml
 	@echo "=== Soda checks complete ==="
 
 elementary-report: ## Generate Elementary observability report
-	$(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt run --select elementary --profiles-dir ."
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt run --select elementary --profiles-dir ."
 	@echo "Elementary report generated. Check dbt_project/target/elementary_output.html"
 
 benchmark: ## Full E2E: generate -> process -> dbt -> quality checks

@@ -1,0 +1,63 @@
+version: 2
+
+models:
+  - name: int_trip_metrics
+    description: "Trip records enriched with calculated metrics."
+    columns:
+      - name: trip_id
+        tests:
+          - not_null
+      - name: trip_duration_minutes
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 1
+                max_value: 720
+      - name: pickup_date
+        tests:
+          - not_null
+      - name: pickup_hour
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 23
+      - name: is_weekend
+        tests:
+          - not_null
+
+  - name: int_daily_summary
+    description: "Daily aggregated trip counts, revenue, and average metrics"
+    columns:
+      - name: pickup_date
+        tests:
+          - unique
+          - not_null
+      - name: total_trips
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+      - name: total_revenue
+        tests:
+          - not_null
+
+  - name: int_hourly_patterns
+    description: "Hourly trip aggregations by date"
+    columns:
+      - name: pickup_date
+        tests:
+          - not_null
+      - name: pickup_hour
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              arguments:
+                min_value: 0
+                max_value: 23
+      - name: total_trips
+        tests:
+          - not_null

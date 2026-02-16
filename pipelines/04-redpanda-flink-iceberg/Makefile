@@ -7,7 +7,7 @@ SHELL := bash
 # =============================================================================
 
 COMPOSE = docker compose
-FLINK_SQL_CLIENT = $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
+FLINK_SQL_CLIENT = MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
 
 .PHONY: help up down generate create-topics process process-bronze process-silver \
         dbt-build benchmark logs status clean ps restart
@@ -66,11 +66,11 @@ create-topics: ## Create Redpanda topics
 # =============================================================================
 
 generate: ## Produce taxi trip events to Redpanda (burst mode)
-	$(COMPOSE) run --rm data-generator
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
 	@echo "Data generation complete."
 
 generate-limited: ## Produce limited events for testing (10k)
-	$(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
 	@echo "Limited data generation complete (10k events)."
 
 # =============================================================================
@@ -95,24 +95,25 @@ process-silver: ## Submit Silver layer Flink SQL jobs (batch mode)
 # =============================================================================
 
 dbt-build: ## Run dbt build (full-refresh) on Iceberg Silver data
-	$(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 	@echo "dbt build complete."
 
 dbt-test: ## Run dbt tests only
-	$(COMPOSE) run --rm dbt test --profiles-dir .
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm dbt test --profiles-dir .
 
 dbt-docs: ## Generate dbt documentation
-	$(COMPOSE) run --rm dbt docs generate --profiles-dir .
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm dbt docs generate --profiles-dir .
 
 # =============================================================================
 # Benchmark (Full E2E)
 # =============================================================================
 
-benchmark: ## Full end-to-end benchmark: up → topics → generate → process → dbt → down
+benchmark: ## Full end-to-end benchmark: down -> up → topics → generate → process → dbt → down
 	@echo "============================================================"
 	@echo "  Pipeline 04 Benchmark: Redpanda + Flink + Iceberg"
 	@echo "============================================================"
 	@START_TIME=$$(date +%s) && \
+	$(MAKE) down 2>/dev/null || true && \
 	$(MAKE) up && \
 	echo "Waiting for services to stabilize..." && \
 	sleep 15 && \

@@ -1,8 +1,510 @@
-# dbt Master -- NYC Taxi Trip Analytics
+# Real-Time Data Engineering: 24-Pipeline Comparison Framework
 
-A **4-week progressive dbt learning project** using **dbt Core + DuckDB** with **NYC Yellow Taxi trip data**. Managed with `uv` and `pyproject.toml` for a modern Python workflow.
+Compare **30+ streaming technologies** across **24 complete pipelines** using identical NYC Yellow Taxi workloads. Every pipeline implements the same Medallion Architecture (Bronze / Silver / Gold) with the same business logic, enabling direct "apples-to-apples" performance and complexity comparisons.
 
-## Architecture
+**Latest Benchmark:** 2026-02-16 | **10 pipelines fully passing** (dbt tests green) | **8 partial** | **6 known failures**
+
+---
+
+## Pick Your Pipeline
+
+| Use Case | Pipeline | Stack | E2E Time |
+|----------|----------|-------|----------|
+| Production-grade streaming | **P01** | Kafka + Flink 2.0.1 + Iceberg 1.10.1 + dbt | 175s |
+| Fastest streaming | **P15** | Kafka Streams (Java) | 30s |
+| Fastest with orchestration | **P09** | Dagster + Kafka + Flink + Iceberg | 109s |
+| Lightest footprint | **P06** | Redpanda + RisingWave (449 MB, 3 services) | ~5s |
+| CDC / change capture | **P12** | Debezium + Flink + Iceberg | 112s |
+| End-to-end with dashboards | **P23** | CDC + Flink + Iceberg + dbt + ClickHouse + Grafana | 155s |
+| Python-native streaming | **P20** | Kafka + Bytewax | 40s |
+| Batch baseline (dbt only) | **P00** | Parquet + DuckDB + dbt | 19s |
+| Redpanda over Kafka | **P04** | Redpanda + Flink + Iceberg (14% faster than P01) | 151s |
+
+> **Recommended production stack:** `Kafka 4.0 (KRaft) -> Flink 2.0.1 -> Iceberg 1.10.1 (Lakekeeper) -> dbt-duckdb` (P01) -- 94/94 dbt tests, idempotent producer, DLQ, watermarks, dedup, Prometheus metrics.
+
+---
+
+## Quick Start
+
+```bash
+# Run a single pipeline (example: P01 production stack)
+cd pipelines/01-kafka-flink-iceberg
+make up              # Start all containers
+make create-topics   # Create Kafka topics
+make generate        # Produce 10k taxi events
+make process         # Run Flink SQL (Bronze + Silver)
+make dbt-build       # Run dbt transformations (Gold)
+make status          # Check pipeline health
+make down            # Tear down
+
+# Or run the full benchmark in one command
+make benchmark
+
+# From repo root: benchmark all 24 pipelines
+make benchmark-all
+
+# Generate comparison report
+make compare
+cat pipelines/comparison/comparison_report.md
+```
+
+### Prerequisites
+
+- **Docker Desktop** (with 8+ GB memory allocated)
+- **Make** (`scoop install make` on Windows, pre-installed on macOS/Linux)
+- **Git Bash** (on Windows) or any Unix shell
+
+---
+
+## Benchmark Results (2026-02-16)
+
+**Full details:** [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md)
+
+### Results at a Glance
+
+| Status | Count | Pipelines |
+|--------|-------|-----------|
+| **Full PASS** (E2E + dbt green) | 10 | P00, P01, P04, P07, P09, P12, P15, P16, P17, P23 |
+| **Partial** (processing OK, dbt issues) | 8 | P02, P05, P11, P13, P14, P20, P21, P22 |
+| **Known Failures** | 6 | P03, P06 (RisingWave), P08 (Astronomer TTY), P10 (needs data), P18 (Prefect), P19 (deps) |
+
+### Top Performers
+
+| Metric | Pipeline | Value |
+|--------|----------|-------|
+| **Fastest E2E** | P00 (Batch Baseline) | 19s |
+| **Fastest Streaming** | P15 (Kafka Streams) | 30s |
+| **Best Full Pipeline** | P09 (Dagster) | 109s, 91/91 PASS |
+| **Best Production Stack** | P01 (Kafka+Flink+Iceberg) | 175s, 94/94 PASS |
+| **Lightest Footprint** | P15/P20 (Streams/Bytewax) | 4-6 containers |
+| **Highest Ingestion** | P05 (Redpanda+Spark) | 133,477 evt/s |
+
+### E2E Time (lower is better)
+
+```
+P00  ||||                                        19s  (Batch baseline)
+P15  ||||||                                      30s  (Kafka Streams)
+P20  ||||||||                                    40s  (Bytewax)
+P17  ||||||||||||||                              70s  (Druid)
+P16  ||||||||||||||||||                          94s  (Pinot)
+P09  ||||||||||||||||||||||                     109s  (Dagster)
+P12  ||||||||||||||||||||||                     112s  (Debezium CDC)
+P04  ||||||||||||||||||||||||||||||             151s  (Redpanda+Flink)
+P23  ||||||||||||||||||||||||||||||             155s  (Full Stack Capstone)
+P07  |||||||||||||||||||||||||||||||            158s  (Kestra)
+P01  ||||||||||||||||||||||||||||||||||         175s  (Kafka+Flink PROD)
+```
+
+### Production Recommendations
+
+**Recommended Stack (Validated in P01):**
+```
+Kafka 4.0 (KRaft) -> Flink 2.0.1 -> Iceberg 1.10.1 (Lakekeeper) -> dbt-duckdb
+```
+
+94/94 dbt tests PASS with: idempotent producer (exactly-once), Dead Letter Queue, watermarks + ROW_NUMBER dedup, dbt freshness monitoring, Prometheus metrics, Lakekeeper REST catalog.
+
+**Also Production-Ready:**
+
+| Stack | Pipeline | Notes |
+|-------|----------|-------|
+| Redpanda + Flink + Iceberg | P04 | 14% faster than Kafka |
+| Kafka + Flink + Iceberg + Dagster | P09 | Best with orchestration |
+| Debezium CDC + Flink + Iceberg | P12 | For CDC use cases |
+| Full Stack (CDC + Flink + Iceberg + dbt + ClickHouse + Grafana) | P23 | End-to-end reference |
+
+**Lightweight Alternatives:**
+
+| Stack | Pipeline | Best For |
+|-------|----------|----------|
+| Kafka Streams (Java) | P15 | Simple transformations, 30s E2E |
+| Kafka + Bytewax (Python) | P20 | Python-native streaming, 40s E2E |
+
+---
+
+## 24 Pipeline Implementations
+
+### Tier 1: Core Streaming (P00-P06)
+
+The foundational streaming pipelines comparing brokers and processing engines:
+
+- **P00: Batch Baseline** (Parquet -> DuckDB -> dbt)
+  - Reference implementation using batch processing
+  - Establishes performance baselines for comparison
+
+- **P01: Kafka + Flink + Iceberg** -- Production Reference
+  - Apache Kafka (KRaft mode) for messaging
+  - Apache Flink 2.0.1 SQL for stream processing
+  - Apache Iceberg 1.10.1 for ACID table storage
+  - Production-hardened: idempotent producer, DLQ, watermarks, dedup, Prometheus
+
+- **P02: Kafka + Spark Structured Streaming + Iceberg**
+  - Kafka messaging with Spark Structured Streaming
+  - Demonstrates micro-batch processing vs. continuous streaming
+
+- **P03: Kafka + RisingWave**
+  - RisingWave as PostgreSQL-compatible streaming SQL database
+  - Simplest deployment (no separate storage layer)
+
+- **P04: Redpanda + Flink + Iceberg**
+  - Redpanda as Kafka-compatible broker (C++ implementation)
+  - 14% faster than P01 (151s vs 175s), 25-35% less memory
+
+- **P05: Redpanda + Spark + Iceberg**
+  - Redpanda with Spark Structured Streaming
+
+- **P06: Redpanda + RisingWave**
+  - Minimal complexity stack combining Redpanda and RisingWave
+  - Lightest footprint: 449 MB, 3 services
+
+### Tier 2: Orchestration (P07-P09)
+
+Event-driven and DAG-based workflow orchestration:
+
+- **P07: Kestra Orchestrated**
+  - Event-driven workflows with real-time triggers
+  - YAML-based pipeline definitions, lightest orchestrator (+485 MB)
+
+- **P08: Airflow Orchestrated**
+  - DAG-based scheduling with Cosmos dbt integration
+  - Monitoring via Airflow UI
+
+- **P09: Dagster Orchestrated**
+  - Asset-based orchestration with data lineage
+  - Fastest orchestrated pipeline (109s, 91/91 PASS)
+
+### Tier 3-4: Serving & Observability (P10-P11)
+
+Analytics serving and data quality monitoring:
+
+- **P10: ClickHouse + Metabase + Superset**
+  - ClickHouse OLAP engine comparison
+  - Dual BI stack: Metabase (user-friendly) vs. Superset (advanced)
+
+- **P11: Elementary + Soda Core**
+  - Elementary for dbt-native data observability
+  - Soda Core for data quality assertions
+  - Automated anomaly detection and alerting
+
+### Extended Tier: Specialized Systems (P12-P23)
+
+Advanced patterns and emerging technologies:
+
+- **P12: Debezium CDC** -- PostgreSQL WAL-based Change Data Capture (112s, 91/91 PASS)
+- **P13: Delta Lake** -- Kafka + Spark + Delta Lake (alternative to Iceberg)
+- **P14: Materialize** -- Streaming SQL database with incrementally maintained views
+- **P15: Kafka Streams** -- Lightweight Java stream processing, fastest at 30s
+- **P16: Apache Pinot** -- Real-time OLAP analytics database (94s)
+- **P17: Apache Druid** -- Timeseries-optimized OLAP with Grafana dashboards (70s)
+- **P18: Prefect 3.x** -- Modern Python-first orchestration platform
+- **P19: Mage AI** -- Visual pipeline builder with Jupyter-style notebooks
+- **P20: Bytewax** -- Pure Python streaming framework (40s)
+- **P21: Feast** -- ML feature store with online/offline serving
+- **P22: Apache Hudi** -- Upsert-optimized table format
+- **P23: Full-Stack Capstone** -- CDC + Flink + Iceberg + dbt + ClickHouse + Grafana (155s, 91/91 PASS)
+
+---
+
+## Technology Coverage Matrix
+
+The project covers **30+ technologies** across **7 pipeline stages**:
+
+#### Ingestion
+- **Apache Kafka** (KRaft mode - no ZooKeeper)
+- **Redpanda** (Kafka-compatible, C++ implementation)
+- **Debezium** (Change Data Capture connector)
+
+#### Processing
+- **Apache Flink** (continuous stream processing)
+- **Spark Structured Streaming** (micro-batch processing)
+- **RisingWave** (PostgreSQL-compatible streaming SQL)
+- **Materialize** (incrementally maintained views)
+- **Kafka Streams** (lightweight library-based processing)
+- **Bytewax** (Python dataflow framework)
+
+#### Storage
+- **Apache Iceberg** (ACID table format for data lakes)
+- **Delta Lake** (Databricks-originated table format)
+- **Apache Hudi** (upsert-optimized table format)
+- **ClickHouse** (columnar OLAP database)
+- **Apache Pinot** (real-time analytics database)
+- **Apache Druid** (timeseries OLAP database)
+- **PostgreSQL** (relational database for CDC source)
+
+#### Transformation
+- **dbt-duckdb** (batch transformations)
+- **dbt-spark** (Spark-based transformations)
+- **dbt-postgres** (PostgreSQL transformations)
+
+#### Orchestration
+- **Apache Airflow** (DAG-based workflow engine)
+- **Dagster** (asset-oriented orchestration)
+- **Kestra** (event-driven workflow platform)
+- **Prefect 3.x** (modern Python orchestration)
+- **Mage AI** (visual pipeline builder)
+
+#### Serving
+- **ClickHouse** (analytical queries)
+- **Apache Pinot** (low-latency analytics)
+- **Apache Druid** (timeseries queries)
+- **Metabase** (user-friendly BI)
+- **Superset** (advanced analytics BI)
+- **Grafana** (observability dashboards)
+
+#### Observability
+- **Elementary** (dbt-native data observability)
+- **Soda Core** (data quality assertions)
+
+---
+
+## Key Comparisons
+
+The framework enables direct "apples-to-apples" comparisons:
+
+#### Brokers: Kafka vs. Redpanda
+- **P01 vs. P04**: Kafka + Flink vs. Redpanda + Flink
+- **P02 vs. P05**: Kafka + Spark vs. Redpanda + Spark
+- **P03 vs. P06**: Kafka + RisingWave vs. Redpanda + RisingWave
+- **Result**: Redpanda 14% faster, 25-35% less memory, same API
+
+#### Processors: Flink vs. Spark vs. RisingWave
+- **P01 vs. P02 vs. P03**: Same Kafka broker, different processors
+- **Result**: Flink best for production (94/94 dbt tests), RisingWave fastest (~2s), Spark best Python ecosystem
+
+#### Table Formats: Iceberg vs. Delta Lake vs. Hudi
+- **P01 vs. P13 vs. P22**: Same pipeline, different storage layer
+- **Result**: Iceberg most portable (Flink+DuckDB), Delta for Databricks, Hudi for upserts
+
+#### OLAP Engines: ClickHouse vs. Pinot vs. Druid
+- **P10 vs. P16 vs. P17**: Real-time analytics database comparison
+- **Result**: Druid fastest E2E (70s), Pinot best for user-facing, ClickHouse most versatile
+
+#### Orchestrators: Airflow vs. Dagster vs. Kestra vs. Prefect vs. Mage
+- **P08 vs. P09 vs. P07 vs. P18 vs. P19**: Same pipeline logic, different orchestration
+- **Result**: Dagster fastest (109s), Kestra lightest (+485 MB), Airflow most mature
+
+---
+
+## Version Compatibility Matrix (Validated)
+
+| Component | Version | Notes |
+|-----------|---------|-------|
+| Flink | 2.0.1 | config.yaml (not flink-conf.yaml) |
+| Iceberg | 1.10.1 | Deletion vectors GA, V3 format |
+| Flink-Kafka connector | 4.0.1-2.0 | For Kafka 4.0 |
+| Flink-Iceberg connector | 1.10.1-2.0 | V2 sink API |
+| Spark | 3.3.3 | NOT 3.5.x (JVM crash with Iceberg) |
+| Iceberg (for Spark) | 1.4.3 | Stable with Spark 3.3.x |
+| Kafka | 4.0 | KRaft mode, no ZooKeeper |
+| Lakekeeper | 0.11.2 | REST catalog with credential vending |
+| dbt-core | 1.11.x | With dbt-duckdb or dbt-postgres |
+| DuckDB | 1.2.x | Iceberg scan via httpfs extension |
+
+---
+
+## Benchmarking Framework
+
+The project includes a comprehensive benchmarking framework with three components:
+
+#### 1. Master Orchestrator (`benchmark_runner.sh`)
+- Runs all 24 pipelines sequentially
+- Collects Docker container statistics (CPU, memory, network)
+- Performs multiple runs (default: 3) for statistical confidence
+- Generates timestamped result files
+
+#### 2. Python Runner (`shared/benchmarks/runner.py`)
+- Pipeline-type-aware lifecycle management
+- Handles different startup patterns (batch, streaming, orchestrated)
+- Executes standardized queries across 6 different engines
+- Validates Bronze/Silver row counts for correctness
+
+#### 3. Report Generator (`shared/benchmarks/report.py`)
+- Multi-tier comparison tables (Tier 1, 2, 3-4, Extended)
+- Statistical aggregation (mean, median, min, max, stddev)
+- Technology-specific insights and recommendations
+- Markdown-formatted output
+
+#### Standardized Queries
+
+Located in `shared/benchmarks/queries/`, the framework includes identical business logic queries for DuckDB, Spark SQL, Flink SQL, RisingWave SQL, ClickHouse SQL, Pinot SQL, and Druid SQL.
+
+---
+
+## Pipeline Structure
+
+Each pipeline follows a consistent directory structure:
+
+```
+pipelines/<NN>-<pipeline-name>/
+├── docker-compose.yml          # All infrastructure services
+├── Makefile                    # Lifecycle commands (up/down/benchmark)
+├── README.md                   # Pipeline-specific documentation
+├── .env                        # Environment variables
+├── <processor>/                # Processing engine specific code
+│   ├── sql/                    # SQL DDL/DML for stream processing
+│   └── jobs/                   # Job configurations (Spark, Flink)
+├── dbt_project/                # dbt transformation layer (Gold)
+│   ├── models/
+│   ├── dbt_project.yml
+│   └── profiles.yml
+├── kafka/                      # Kafka topic configurations (if applicable)
+├── orchestration/              # Orchestrator DAGs/workflows (if applicable)
+└── benchmark_results/          # JSON benchmark outputs
+```
+
+---
+
+## Architecture Patterns
+
+All pipelines implement the **Medallion Architecture**:
+
+#### Bronze Layer (Raw Ingestion)
+- Minimal transformation (schema evolution, data type casting)
+- 1:1 mapping with source data, append-only
+- Full audit trail preservation
+
+#### Silver Layer (Cleaned & Enriched)
+- Data quality filtering (remove nulls, negatives, outliers)
+- Deduplication and late-arriving data handling
+- Standardized schema across all pipelines
+
+#### Gold Layer (Business-Ready)
+- Aggregated fact tables and dimensions via dbt
+- Pre-joined views for analytics
+- Optimized for query performance
+
+---
+
+## Project Structure
+
+```
+real_time_data_engineering/
+├── README.md                              # This file
+├── BENCHMARK_RESULTS.md                   # Detailed benchmark results (all 24 pipelines)
+├── real_time_streaming_data_paths.md      # Comprehensive technology reference (2300+ lines)
+├── Makefile                               # Root-level benchmark orchestration
+├── benchmark_runner.sh                    # Master benchmark script
+│
+├── pipelines/                             # 24 pipeline implementations
+│   ├── 00-batch-baseline/                 # DuckDB batch reference (19s)
+│   ├── 01-kafka-flink-iceberg/            # Production stack (175s, 94/94 PASS)
+│   ├── 02-kafka-spark-iceberg/            # Spark variant
+│   ├── 03-kafka-risingwave/               # Real-time SQL (~2s processing)
+│   ├── 04-redpanda-flink-iceberg/         # Optimized broker (151s)
+│   ├── 05-redpanda-spark-iceberg/         # Spark + Redpanda
+│   ├── 06-redpanda-risingwave/            # Lightest (449 MB)
+│   ├── 07-kestra-orchestrated/            # Event-driven (158s)
+│   ├── 08-airflow-orchestrated/           # DAG-based
+│   ├── 09-dagster-orchestrated/           # Asset-centric (109s)
+│   ├── 10-clickhouse-serving/             # OLAP analytics
+│   ├── 11-observability-stack/            # Elementary + Soda
+│   ├── 12-cdc-debezium-pipeline/          # PostgreSQL CDC (112s)
+│   ├── 13-kafka-spark-delta-lake/         # Delta alternative
+│   ├── 14-kafka-materialize/              # Streaming SQL MVs
+│   ├── 15-kafka-streams/                  # Java lightweight (30s)
+│   ├── 16-pinot-serving/                  # Real-time OLAP (94s)
+│   ├── 17-druid-timeseries/               # Timeseries OLAP (70s)
+│   ├── 18-prefect-orchestrated/           # Modern orchestration
+│   ├── 19-mage-ai/                        # Visual builder
+│   ├── 20-kafka-bytewax/                  # Python streaming (40s)
+│   ├── 21-feast-feature-store/            # ML features
+│   ├── 22-hudi-cdc-storage/               # Upsert storage
+│   ├── 23-full-stack-capstone/            # End-to-end (155s)
+│   └── comparison/                        # Benchmark results & report
+│
+├── shared/                                # Shared infrastructure
+│   ├── data-generator/                    # Parquet -> Kafka producer
+│   ├── docker/                            # Base Dockerfiles (Flink, Spark, dbt)
+│   ├── schemas/                           # Event JSON schemas
+│   ├── benchmarks/                        # Benchmark framework (runner + report)
+│   └── dbt-models/                        # Shared dbt models
+│
+├── docs/                                  # Documentation
+│   ├── P01_PRODUCTION_GUIDE.md            # Production walkthrough
+│   ├── dbt/                               # dbt learning guides
+│   └── README.md                          # Documentation index
+│
+├── notebooks/                             # Jupyter notebooks
+│   └── P01_Complete_Pipeline_Notebook.ipynb  # 118-cell walkthrough
+│
+├── nyc_taxi_dbt/                          # Original batch dbt project (reference)
+│
+└── scripts/                               # Utility scripts
+    ├── download_data.py
+    ├── setup_project.py
+    └── validate.py
+```
+
+---
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) | Full benchmark results for all 24 pipelines |
+| [real_time_streaming_data_paths.md](real_time_streaming_data_paths.md) | Comprehensive technology reference (2300+ lines) |
+| [docs/P01_PRODUCTION_GUIDE.md](docs/P01_PRODUCTION_GUIDE.md) | Production walkthrough for the recommended stack |
+| [docs/README.md](docs/README.md) | Documentation index and learning paths |
+| [docs/dbt/](docs/dbt/) | dbt learning guides (basics through Iceberg integration) |
+| [pipelines/comparison/](pipelines/comparison/) | Auto-generated comparison report and results CSV |
+| [notebooks/P01_Complete_Pipeline_Notebook.ipynb](notebooks/P01_Complete_Pipeline_Notebook.ipynb) | 118-cell interactive notebook |
+
+---
+
+## Educational Use Cases
+
+### For Data Engineers
+- See production patterns for 30+ technologies
+- Understand tradeoffs between streaming engines
+- Learn CDC, table formats, and OLAP systems
+- Practice with Docker Compose-based local environments
+
+### For Architects
+- Evaluate technology fit for specific requirements
+- Compare resource costs across stacks
+- Assess operational complexity
+- Build vendor-neutral reference architectures
+
+### For Managers
+- Data-driven technology selection with benchmark evidence
+- Understand team skill requirements per stack
+- Estimate infrastructure costs
+- Plan migration strategies
+
+---
+
+## NYC Taxi Dataset
+
+- **Source**: [NYC Taxi & Limousine Commission](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
+- **Period**: January 2024
+- **Rows**: ~2.96 million yellow taxi trips
+- **Format**: Parquet (~100MB)
+- **Zone Lookup**: 265 TLC Taxi Zones across NYC boroughs
+
+All 24 pipelines process this same dataset through their respective technology stacks.
+
+---
+
+## Contributing
+
+To add a new pipeline comparison (P24+):
+
+1. Create directory: `pipelines/<NN>-<tech-stack-name>/`
+2. Implement Bronze/Silver processing with identical business logic
+3. Add dbt project for Gold layer transformations
+4. Create `Makefile` with `up`, `down`, `benchmark` targets
+5. Add pipeline to `benchmark_runner.sh`
+6. Document in pipeline-specific README
+7. Submit PR with benchmark results
+
+---
+
+<details>
+<summary><strong>Original dbt Learning Project (P00 Baseline)</strong></summary>
+
+The repository originated as a **4-week progressive dbt learning project** using dbt Core + DuckDB. This content is preserved below as reference for the P00 batch baseline pipeline.
+
+### Architecture
 
 ```mermaid
 graph LR
@@ -63,7 +565,7 @@ graph LR
     I2 --> AN
 ```
 
-**Data flows through 3 layers:**
+### Data Layers
 
 | Layer | Purpose | Materialization |
 |-------|---------|-----------------|
@@ -71,596 +573,53 @@ graph LR
 | **Intermediate** | Calculate metrics, aggregate | View |
 | **Marts** | Business-ready facts & dimensions | Table, Incremental, External, Python |
 
----
-
-## Prerequisites
-
-- **Python 3.10+**
-- **[uv](https://docs.astral.sh/uv/getting-started/installation/)** -- fast Python package manager
-- **Git**
-
----
-
-## Quick Start
+### Running the Batch Baseline
 
 ```bash
-# 1. Clone the repo
-git clone https://github.com/ghadfield32/dbt_master.git
-cd dbt_master
-
-# 2. Install Python dependencies
+# Install Python dependencies
 uv sync
 
-# 3. Download NYC Taxi data (~100MB parquet + zone lookup CSV)
+# Download NYC Taxi data
 uv run python scripts/download_data.py
 
-# 4. Set up local profiles.yml
+# Set up profiles
 uv run python scripts/setup_project.py
 
-# 5. Build everything (seeds + models + tests)
+# Build everything
 cd nyc_taxi_dbt
 uv run dbt deps --profiles-dir .
 uv run dbt build --profiles-dir .
 ```
 
----
-
-## Project Structure
-
-```
-dbt_master/
-├── pyproject.toml                         # Python deps (dbt-core, dbt-duckdb, etc.)
-├── Makefile                               # Make targets wrapping dbt commands
-├── .sqlfluff                              # SQLFluff linter config (DuckDB dialect)
-├── .gitignore
-├── README.md                              # This file
-│
-├── .github/workflows/
-│   └── dbt-ci.yml                         # GitHub Actions CI pipeline
-│
-├── scripts/
-│   ├── download_data.py                   # Download parquet + zone CSV
-│   ├── verify_data.py                     # Quick DuckDB inspection
-│   ├── setup_project.py                   # Copy profiles.yml.example -> profiles.yml
-│   ├── shell.py                           # Interactive DuckDB REPL
-│   ├── validate.py                        # Project validation suite
-│   └── benchmark.py                       # Performance benchmarking
-│
-├── data/                                  # Raw data (gitignored)
-│   └── yellow_tripdata_2024-01.parquet
-│
-├── exports/                               # External materialization output (gitignored)
-│   └── daily_revenue.parquet              # Parquet export of mart_daily_revenue
-│
-├── nyc_taxi_dbt/                          # dbt project root
-│   ├── dbt_project.yml                    # Project config
-│   ├── packages.yml                       # dbt packages (dbt_utils, codegen)
-│   ├── profiles.yml.example               # Connection template (committed)
-│   ├── profiles.yml                       # Your local connection (gitignored)
-│   │
-│   ├── seeds/                             # Small reference CSVs
-│   │   ├── taxi_zone_lookup.csv           # ~265 zones
-│   │   ├── payment_type_lookup.csv        # 6 payment types
-│   │   ├── rate_code_lookup.csv           # 7 rate codes
-│   │   └── seed_properties.yml
-│   │
-│   ├── models/
-│   │   ├── sources.yml                    # External source + freshness config
-│   │   ├── exposures.yml                  # Downstream consumers (dashboards)
-│   │   ├── example/                       # Week 1 starter models
-│   │   ├── staging/                       # Clean + rename raw data
-│   │   │   └── _unit_tests.yml            # Unit tests for stg_yellow_trips
-│   │   ├── intermediate/                  # Calculate metrics + aggregate
-│   │   │   └── _unit_tests.yml            # Unit tests for int_trip_metrics
-│   │   └── marts/                         # Business-ready tables
-│   │       ├── core/                      # Fact + dimension tables (with contracts)
-│   │       │   └── _unit_tests.yml        # Unit tests for fct_trips
-│   │       └── analytics/                 # Pre-aggregated analytics (with contracts)
-│   │           ├── anomaly_daily_trips.py # Python model: anomaly detection
-│   │           └── export_daily_revenue.sql # External materialization (parquet)
-│   │
-│   ├── macros/                            # Reusable SQL functions
-│   ├── tests/                             # Singular (custom) tests
-│   ├── analyses/                          # Ad-hoc queries (not materialized)
-│   └── snapshots/
-│       └── snap_locations.sql             # SCD Type 2 snapshot for taxi zones
-│
-└── docs/                                  # Learning notes per week
-```
-
----
-
-## Week-by-Week Learning Guide
-
-### Week 1: Getting Started
-
-**What you will learn:** uv, pyproject.toml, dbt init, profiles.yml, `dbt debug`, `dbt run`, materializations (view vs table), the `ref()` function.
-
-#### Steps
-
-```bash
-# 1. Create the Python environment
-cd dbt_master
-uv sync
-
-# 2. Set up local profiles
-uv run python scripts/setup_project.py
-
-# 3. Verify dbt can connect to DuckDB
-cd nyc_taxi_dbt
-uv run dbt debug --profiles-dir .
-# Should show: "All checks passed!"
-
-# 4. Run the example models
-uv run dbt run --profiles-dir .
-# Creates my_first_model and my_second_model in DuckDB
-
-# 5. Explore what dbt created
-cd ..
-uv run python -c "
-import duckdb
-con = duckdb.connect('dev.duckdb')
-print(con.sql('SHOW ALL TABLES').fetchdf().to_string())
-con.close()
-"
-```
-
-#### Key Concepts
-
-- **pyproject.toml**: Declares project dependencies. `uv sync` installs them into a virtual environment.
-- **profiles.yml**: Tells dbt HOW to connect (which database, where). Ours points to a local DuckDB file.
-- **dbt_project.yml**: Tells dbt WHAT the project is (name, paths, materializations).
-- **ref()**: The `{{ ref('model_name') }}` function creates dependencies between models. dbt builds them in the right order automatically.
-- **Materializations**: `view` = SQL view (fast to create, queries run each time). `table` = physical table (slower to create, faster to query).
-
-#### Exercises
-
-1. Change `my_first_model` to materialize as a `table` (add `{{ config(materialized='table') }}` at the top). Run `dbt run` and check the DuckDB file size difference.
-2. Add a third model that references `my_second_model` and adds a new calculated column.
-3. Run `dbt run --select my_second_model+` (the `+` means "and everything downstream").
-
----
-
-### Week 2: Seeds, Staging, and Real Data
-
-**What you will learn:** `dbt seed`, reading parquet files, the staging pattern (clean/rename/cast), CTEs, `ref()` chaining, basic data quality filtering.
-
-#### Steps
-
-```bash
-# 1. Download NYC Taxi data
-cd dbt_master
-uv run python scripts/download_data.py
-
-# 2. Verify the data
-uv run python scripts/verify_data.py
-# Should show ~3M rows and column schema
-
-# 3. Load seed CSV files into DuckDB
-cd nyc_taxi_dbt
-uv run dbt seed --profiles-dir .
-
-# 4. Run staging models
-uv run dbt run --select staging --profiles-dir .
-
-# 5. Check results
-cd ..
-uv run python -c "
-import duckdb
-con = duckdb.connect('dev.duckdb')
-print('=== Trip count ===')
-print(con.sql('SELECT count(*) FROM main_staging.stg_yellow_trips').fetchone())
-print('=== Zones ===')
-print(con.sql('SELECT count(*) FROM main_staging.stg_taxi_zones').fetchone())
-con.close()
-"
-```
-
-#### Key Concepts
-
-- **Seeds**: Small CSV files that dbt loads directly into the database. Perfect for reference/lookup tables (zones, payment types, rate codes). NOT for large datasets.
-- **Staging models**: The first transformation layer. Their job is simple: rename columns to snake_case, cast types, filter obviously bad records. One staging model per source.
-- **CTEs (Common Table Expressions)**: The `with ... as (...)` pattern keeps SQL readable. Each CTE is a logical step: source -> renamed -> filtered.
-- **DuckDB + Parquet**: DuckDB reads parquet files natively with `read_parquet()`. No ETL needed!
-
-#### Exercises
-
-1. Query the staging model to find: How many distinct pickup locations exist? What's the average fare?
-2. Add a filter to `stg_yellow_trips` that removes trips with `passenger_count = 0`. Re-run and compare row counts.
-3. Create a simple model that counts trips per borough by joining `stg_yellow_trips` with `stg_taxi_zones`.
-
----
-
-### Week 3: Packages, Documentation, and Testing
-
-**What you will learn:** dbt packages (dbt_utils, codegen), surrogate keys, YAML schema files, column descriptions, generic tests (not_null, unique, accepted_values, relationships), singular tests, custom generic tests, `dbt test`, `dbt build`.
-
-#### Steps
-
-```bash
-cd nyc_taxi_dbt
-
-# 1. Install dbt packages
-uv run dbt deps --profiles-dir .
-
-# 2. (Optional) Use codegen to generate YAML skeletons
-uv run dbt run-operation generate_model_yaml --args "{'model_names': ['stg_yellow_trips']}" --profiles-dir .
-# Copy the output into staging.yml and add descriptions
-
-# 3. Run all models (staging + intermediate)
-uv run dbt run --profiles-dir .
-
-# 4. Run all tests
-uv run dbt test --profiles-dir .
-
-# 5. Or run everything in dependency order
-uv run dbt build --profiles-dir .
-```
-
-#### Key Concepts
-
-- **Packages**: Reusable dbt code from the community. `dbt_utils` provides `generate_surrogate_key`, `date_spine`, `accepted_range` test, and more. `codegen` auto-generates YAML schema files from your models.
-- **surrogate_key**: `dbt_utils.generate_surrogate_key()` creates a deterministic hash from multiple columns. Useful when the source data lacks a true primary key (like taxi trips).
-- **Schema YAML (`.yml`)**: Defines metadata for your models -- descriptions, column docs, and tests. Lives alongside your SQL files.
-- **Generic tests**: Built-in tests you declare in YAML: `not_null`, `unique`, `accepted_values`, `relationships` (foreign key check).
-- **Singular tests**: Custom SQL files in `tests/` that return failing rows. If 0 rows returned, the test passes.
-- **Custom generic tests**: Reusable test macros in `macros/`. Our `positive_value` test checks that a column has no negative values.
-- **Test severity**: Use `config: {severity: warn}` for tests on real-world data that may have known quality issues. Warns instead of failing the build.
-
-#### Test Strategy
-
-| Test Type | What It Checks | Example |
-|-----------|---------------|---------|
-| `not_null` | No nulls in column | `trip_id`, `pickup_datetime` |
-| `unique` | No duplicate values | `dim_locations.location_id` |
-| `accepted_values` | Values within allowed set | `vendor_id` in [1, 2] |
-| `relationships` | Foreign key exists in target | `pickup_location_id` -> `stg_taxi_zones` |
-| `dbt_utils.accepted_range` | Value within numeric range | `trip_duration_minutes` between 1-720 |
-| Singular test | Custom SQL assertion | `assert_trip_duration_positive` |
-| Custom generic | Reusable custom test | `positive_value` on `fare_amount` |
-
-#### Exercises
-
-1. Run `dbt test --select stg_yellow_trips` and observe which tests pass/warn/fail. Investigate the failures.
-2. Add a `dbt_utils.unique_combination_of_columns` test on `int_hourly_patterns` for `(pickup_date, pickup_hour, is_weekend)`.
-3. Write a singular test that checks for trips where `dropoff_datetime < pickup_datetime`.
-
----
-
-### Week 4: Sources, Marts, and Documentation
-
-**What you will learn:** `source()`, external sources in dbt-duckdb, dimensional modeling (fact tables + dimensions), the staging/intermediate/marts layering pattern, `dbt docs generate`, `dbt docs serve`, DAG visualization.
-
-#### Steps
-
-```bash
-cd nyc_taxi_dbt
-
-# 1. Build everything end-to-end
-uv run dbt build --profiles-dir .
-
-# 2. Generate documentation site
-uv run dbt docs generate --profiles-dir .
-
-# 3. Serve docs locally (opens in browser)
-uv run dbt docs serve --profiles-dir .
-# Visit http://localhost:8080 -- explore the DAG!
-
-# 4. Run just the marts
-uv run dbt run --select marts --profiles-dir .
-
-# 5. Run a model and all its upstream dependencies
-uv run dbt run --select +mart_daily_revenue --profiles-dir .
-
-# 6. Test just the marts
-uv run dbt test --select marts --profiles-dir .
-```
-
-#### Key Concepts
-
-- **source()**: `{{ source('raw_nyc_taxi', 'raw_yellow_trips') }}` references data that exists OUTSIDE dbt (our parquet file). Defined in `sources.yml`. Enables lineage tracking from raw data through all transformations.
-- **External sources (dbt-duckdb)**: The `config.external_location` in `sources.yml` tells dbt-duckdb to use `read_parquet()` to load the data. No pre-loading needed!
-- **Dimensional modeling**: Organize your data into **fact tables** (events/transactions with metrics) and **dimension tables** (descriptive attributes for filtering/grouping).
-  - `fct_trips`: One row per trip with all measures (fare, distance, duration, etc.)
-  - `dim_locations`: Zone ID -> borough, zone name
-  - `dim_dates`: Date -> day of week, weekend flag, holiday flag
-  - `dim_payment_types`: Payment ID -> name
-- **Analytics marts**: Pre-aggregated tables for common business questions. Faster to query than the fact table.
-- **dbt docs**: Generates a searchable website from your YAML descriptions, showing the full DAG (dependency graph). Essential for team communication.
-
-#### The 3-Layer Pattern
-
-```
-Raw Data  -->  Staging  -->  Intermediate  -->  Marts
-(parquet)     (clean)       (enrich)          (serve)
-
-Source:        stg_*         int_*            fct_* / dim_* / mart_*
-- rename       - calc fields   - join dims
-- cast types   - aggregate     - aggregate
-- filter bad   - filter        - window funcs
-```
-
-#### Exercises
-
-1. Open the dbt docs site and trace the lineage from `raw_yellow_trips` through to `mart_daily_revenue`. How many models does data pass through?
-2. Add a new dimension: `dim_rate_codes` (from `stg_rate_codes`). Join it into `fct_trips` to add `rate_code_name`.
-3. Create a new analytics mart: `mart_borough_comparison` that compares metrics across boroughs (total trips, avg fare, avg tip %).
-4. Add source freshness checks to `sources.yml` using `loaded_at_field`.
-
----
-
-### Beyond Week 4: Modern dbt Features
-
-After mastering the 4-week fundamentals, the project also demonstrates these advanced dbt capabilities:
-
-#### Unit Tests (dbt 1.8+)
-
-Native unit tests validate transformation logic with mock data -- no real database needed. See `_unit_tests.yml` files in each model directory.
-
-```bash
-# Run only unit tests
-uv run dbt test --select "test_type:unit" --profiles-dir .
-```
-
-**7 unit tests cover:**
-- `stg_yellow_trips`: Column renaming, null/negative/date filtering
-- `int_trip_metrics`: Duration, speed, weekend flag, impossible trip filtering, zero-division safety
-- `fct_trips`: Left join enrichment preserving unknown locations
-
-#### Model Contracts
-
-All 7 mart models enforce contracts (`contract: { enforced: true }`) that guarantee column names and data types. If the model's output doesn't match the contract, the build fails.
-
-#### Incremental Materialization
-
-`fct_trips` uses `incremental` materialization with `delete+insert` strategy. On subsequent runs, only new trips (by `pickup_datetime`) are processed -- reducing build time from ~4s to ~0.2s.
-
-```bash
-# Normal run (incremental)
-uv run dbt run --select fct_trips --profiles-dir .
-
-# Full rebuild
-uv run dbt run --select fct_trips --full-refresh --profiles-dir .
-```
-
-#### Snapshots (SCD Type 2)
-
-`snap_locations` tracks changes to taxi zone definitions using dbt's `check` strategy. Creates `dbt_valid_from` / `dbt_valid_to` columns for historical tracking.
-
-```bash
-uv run dbt snapshot --profiles-dir .
-```
-
-#### Exposures
-
-`exposures.yml` documents downstream consumers (dashboards, reports) that depend on mart models. Visible in the DAG documentation site.
-
-#### Source Freshness
-
-`sources.yml` includes `freshness` config with `loaded_at_field`. Check data currency with:
-
-```bash
-uv run dbt source freshness --profiles-dir .
-```
-
-#### CI/CD
-
-`.github/workflows/dbt-ci.yml` provides a GitHub Actions pipeline that runs the full build on every PR.
-
-#### External Materialization (Parquet Export)
-
-`export_daily_revenue` uses dbt-duckdb's `external` materialization to write data directly to a parquet file at `exports/daily_revenue.parquet`. A view is created in DuckDB that reads from the file, keeping it in the DAG. Use this to share data with external tools (Jupyter, Polars, Spark) without DuckDB access.
-
-```bash
-# Build the export
-uv run dbt run --select export_daily_revenue --profiles-dir .
-
-# Read the parquet with any tool
-uv run python -c "import duckdb; print(duckdb.query('SELECT * FROM read_parquet(\"exports/daily_revenue.parquet\") LIMIT 5').df())"
-```
-
-#### Python Models (Anomaly Detection)
-
-`anomaly_daily_trips` is a native dbt Python model that uses pandas for statistical anomaly detection. It applies both z-score and IQR methods to flag unusual days in trip volumes and revenue. Demonstrates how to combine SQL-based dbt pipelines with Python-based ML/analytics.
-
-```bash
-# Run the Python model
-uv run dbt run --select anomaly_daily_trips --profiles-dir .
-
-# View flagged anomalies
-make shell
-# dbt> SELECT * FROM main_marts.anomaly_daily_trips WHERE is_anomaly
-```
-
-#### Interactive Shell & Scripts
-
-```bash
-make shell        # Interactive DuckDB REPL connected to dev database
-make validate     # Run project validation suite (idempotency, contracts, etc.)
-make benchmark    # Run performance benchmarks
-```
-
----
-
-## Data Dictionary
-
-### Staging Models
-
-| Model | Description | Row Grain |
-|-------|-------------|-----------|
-| `stg_yellow_trips` | Cleaned taxi trip records | One per trip |
-| `stg_taxi_zones` | Zone ID to borough/name mapping | One per zone (~265) |
-| `stg_payment_types` | Payment type codes | One per type (6) |
-| `stg_rate_codes` | Rate code definitions | One per code (7) |
-
-### Intermediate Models
-
-| Model | Description | Row Grain |
-|-------|-------------|-----------|
-| `int_trip_metrics` | Trips enriched with duration, speed, tip %, time dims | One per valid trip |
-| `int_daily_summary` | Daily aggregated metrics | One per day |
-| `int_hourly_patterns` | Hourly aggregated metrics | One per date + hour |
-
-### Mart Models (Core)
-
-| Model | Description | Row Grain |
-|-------|-------------|-----------|
-| `fct_trips` | Fact table with location names joined | One per valid trip |
-| `dim_locations` | Location dimension | One per zone |
-| `dim_dates` | Date dimension (Jan 2024) | One per day |
-| `dim_payment_types` | Payment type dimension | One per type |
-
-### Mart Models (Analytics)
-
-| Model | Description | Row Grain |
-|-------|-------------|-----------|
-| `mart_daily_revenue` | Daily revenue with running totals | One per day |
-| `mart_location_performance` | Per-zone performance summary | One per zone |
-| `mart_hourly_demand` | Hourly demand patterns | One per hour + weekday/weekend |
-| `export_daily_revenue` | Parquet export of daily revenue (external) | One per day |
-| `anomaly_daily_trips` | Anomaly detection on daily metrics (Python) | One per day |
-
----
-
-## NYC Taxi Dataset
-
-- **Source**: [NYC Taxi & Limousine Commission](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
-- **Period**: January 2024
-- **Rows**: ~3 million yellow taxi trips
-- **Format**: Parquet (~100MB)
-- **Zone Lookup**: 265 TLC Taxi Zones across NYC boroughs
-
-### Key Columns
-
-| Column | Description |
-|--------|-------------|
-| `VendorID` | 1=Creative Mobile, 2=VeriFone |
-| `tpep_pickup_datetime` | Meter engaged timestamp |
-| `tpep_dropoff_datetime` | Meter disengaged timestamp |
-| `passenger_count` | Number of passengers (driver-entered) |
-| `trip_distance` | Trip distance in miles (taximeter) |
-| `PULocationID` / `DOLocationID` | Pickup/dropoff TLC Zone IDs |
-| `payment_type` | 1=Credit, 2=Cash, 3=No charge, 4=Dispute |
-| `fare_amount` | Time-and-distance fare |
-| `tip_amount` | Tip (auto for credit card; cash tips not recorded) |
-| `total_amount` | Total charged (excludes cash tips) |
-
-### Known Data Quality Issues
-
-- **Null `passenger_count`**: Some trips have null or 0 passengers. These are retained but flagged.
-- **Unknown location IDs**: IDs 264/265 appear in trip data but not in the zone lookup. The `relationships` test uses `severity: warn` for this.
-- **Negative fares**: Some records have negative `fare_amount` (adjustments/corrections). Filtered in staging.
-- **Zero-distance trips**: Some trips show 0 distance with non-zero fares (flat-rate, airport, etc.). Retained.
-
----
-
-## Commands Reference
-
-### Using Make (recommended)
-
-A `Makefile` wraps all common commands. Run from the repo root:
+### dbt Commands Reference
 
 | Command | Description |
 |---------|-------------|
 | `make build` | Full build: seed + run + test (incremental) |
 | `make fresh` | Full refresh build (rebuild all tables) |
 | `make test` | Run all tests (data + unit) |
-| `make test-unit` | Run only unit tests |
 | `make docs` | Generate and serve documentation |
-| `make debug` | Check dbt connection |
-| `make lint` | Lint SQL with SQLFluff |
-| `make snapshot` | Run SCD Type 2 snapshots |
 | `make shell` | Interactive DuckDB REPL |
 | `make validate` | Run project validation suite |
 | `make benchmark` | Run performance benchmarks |
-| `make setup` | Initial project setup |
-| `make help` | Show all available targets |
 
-### Raw dbt Commands
+For the full 4-week learning guide, see the `nyc_taxi_dbt/` directory and `docs/dbt/`.
 
-All commands assume you're in the `nyc_taxi_dbt/` directory.
-
-| Command | Description |
-|---------|-------------|
-| `uv run dbt debug --profiles-dir .` | Verify connection and config |
-| `uv run dbt seed --profiles-dir .` | Load CSV seeds into DuckDB |
-| `uv run dbt run --profiles-dir .` | Run all models |
-| `uv run dbt run --select staging --profiles-dir .` | Run only staging models |
-| `uv run dbt run --select +fct_trips --profiles-dir .` | Run fct_trips and all upstream |
-| `uv run dbt test --profiles-dir .` | Run all tests (data + unit) |
-| `uv run dbt test --select "test_type:unit" --profiles-dir .` | Run only unit tests |
-| `uv run dbt build --profiles-dir .` | Seed + run + test in dependency order |
-| `uv run dbt build --full-refresh --profiles-dir .` | Rebuild all tables from scratch |
-| `uv run dbt snapshot --profiles-dir .` | Run SCD Type 2 snapshots |
-| `uv run dbt source freshness --profiles-dir .` | Check source data freshness |
-| `uv run dbt deps --profiles-dir .` | Install packages from packages.yml |
-| `uv run dbt docs generate --profiles-dir .` | Generate documentation site |
-| `uv run dbt docs serve --profiles-dir .` | Serve docs at localhost:8080 |
-| `uv run dbt clean --profiles-dir .` | Delete target/ and dbt_packages/ |
-
-**Tip**: Set the environment variable once to skip `--profiles-dir .`:
-
-```powershell
-# PowerShell
-$env:DBT_PROFILES_DIR = "."
-
-# cmd
-set DBT_PROFILES_DIR=.
-
-# bash/zsh
-export DBT_PROFILES_DIR=.
-```
+</details>
 
 ---
 
-## Troubleshooting
+## Acknowledgments
 
-### `dbt debug` fails with "Could not find profile"
-
-The `profiles.yml` file is missing or in the wrong location. Run:
-```bash
-uv run python scripts/setup_project.py
-```
-Or copy `profiles.yml.example` to `profiles.yml` manually.
-
-### DuckDB file lock error
-
-DuckDB allows only one write connection. Close any other tool that has `dev.duckdb` open (Python REPL, DBeaver, etc.). If a `.wal` file lingers after a crash:
-```bash
-del dev.duckdb.wal   # Windows
-rm dev.duckdb.wal    # macOS/Linux
-```
-
-### `accepted_values` test fails on `payment_type_id`
-
-The real dataset may contain values outside our expected set (e.g., 0 for unknown). Check which values exist:
-```sql
--- In DuckDB
-SELECT DISTINCT payment_type FROM read_parquet('data/yellow_tripdata_2024-01.parquet');
-```
-Then update the `accepted_values` list in `staging.yml` or change severity to `warn`.
-
-### `relationships` test warns for location IDs
-
-Location IDs 264/265 appear in trip data but not in the taxi zone lookup. This is expected -- they represent "Unknown" zones. The test is configured with `severity: warn`.
-
-### Models fail with "read_parquet: No such file"
-
-The parquet file path is relative to the DuckDB database file location (`dev.duckdb` at repo root). Make sure:
-1. You downloaded the data: `uv run python scripts/download_data.py`
-2. The `dev.duckdb` file is at the repo root (not inside `nyc_taxi_dbt/`)
-3. Paths in `sources.yml` use forward slashes (even on Windows)
-
----
+- **NYC TLC** for providing open taxi trip data
+- **dbt Labs** for the dbt framework and best practices
+- **Apache Software Foundation** for Kafka, Flink, Spark, Iceberg, Airflow, Pinot, Druid, and Hudi
+- **Streaming community** for RisingWave, Materialize, Redpanda, and other open-source innovations
 
 ## Resources
 
-- [dbt Documentation](https://docs.getdbt.com/)
-- [dbt Best Practices: How We Structure Projects](https://docs.getdbt.com/best-practices/how-we-structure/1-guide-overview)
-- [dbt-duckdb Adapter](https://github.com/duckdb/dbt-duckdb)
-- [DuckDB Documentation](https://duckdb.org/docs/)
-- [NYC TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)
-- [NYC TLC Data Dictionary](https://www.nyc.gov/assets/tlc/downloads/pdf/data_dictionary_trip_records_yellow.pdf)
-- [dbt_utils Package](https://hub.getdbt.com/dbt-labs/dbt_utils/latest/)
-- [codegen Package](https://hub.getdbt.com/dbt-labs/codegen/latest/)
-- [uv Documentation](https://docs.astral.sh/uv/)
+- **[dbt Documentation](https://docs.getdbt.com/)**
+- **[Apache Flink](https://flink.apache.org/)**
+- **[Apache Iceberg](https://iceberg.apache.org/)**
+- **[Apache Kafka](https://kafka.apache.org/)**
+- **[NYC TLC Trip Record Data](https://www.nyc.gov/site/tlc/about/tlc-trip-record-data.page)**

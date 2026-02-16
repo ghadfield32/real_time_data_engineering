@@ -1,0 +1,36 @@
+version: 2
+
+models:
+  - name: mart_daily_revenue
+    description: "Daily revenue metrics with running totals."
+    columns:
+      - name: date_key
+        tests: [unique, not_null]
+      - name: total_trips
+      - name: total_revenue
+        tests: [not_null]
+      - name: cumulative_revenue
+      - name: revenue_change_vs_prior_day
+
+  - name: mart_location_performance
+    description: "Per-zone performance summary."
+    columns:
+      - name: pickup_location_id
+        tests: [unique, not_null]
+      - name: pickup_borough
+      - name: pickup_zone
+      - name: total_pickups
+        tests: [not_null]
+      - name: total_revenue
+      - name: most_common_dropoff_zone
+      - name: peak_pickup_hour
+
+  - name: mart_hourly_demand
+    description: "Hourly demand patterns."
+    columns:
+      - name: pickup_hour
+        tests: [not_null]
+      - name: is_weekend
+        tests: [not_null]
+      - name: avg_trips_per_period
+      - name: total_trips_all_days

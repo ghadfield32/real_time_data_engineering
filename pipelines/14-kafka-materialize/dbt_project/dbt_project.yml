@@ -1,0 +1,39 @@
+name: nyc_taxi_pipeline_14
+version: "1.0.0"
+config-version: 2
+
+profile: nyc_taxi_pipeline_14
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+dispatch:
+  - macro_namespace: nyc_taxi_dbt
+    search_order:
+      - nyc_taxi_pipeline_14
+      - nyc_taxi_dbt
+
+models:
+  nyc_taxi_pipeline_14:
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      core:
+        +materialized: table
+      analytics:
+        +materialized: table
+
+seeds:
+  nyc_taxi_pipeline_14:
+    +schema: public

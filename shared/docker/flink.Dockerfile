@@ -1,17 +1,17 @@
 # =============================================================================
 # Shared Flink Image with Kafka + Iceberg Connectors
 # =============================================================================
-# Base: Flink 1.20 (Java 17)
+# Base: Flink 2.0.1 (Java 17)
 # Adds: Kafka SQL connector, Iceberg Flink runtime, AWS S3 bundle
-# Used by: Pipelines 01, 04, 07, 08, 09, 11
+# Used by: Pipelines 01, 04, 07-09, 11-12, 16-18, 21, 23
 # =============================================================================
 
-FROM flink:1.20-java17
+FROM flink:2.0.1-java17
 
-# Connector versions
-ARG FLINK_KAFKA_CONNECTOR_VERSION=3.3.0-1.20
-ARG ICEBERG_VERSION=1.7.1
-ARG FLINK_MAJOR_MINOR=1.20
+# Connector versions (Flink 2.0 requires new connector builds)
+ARG FLINK_KAFKA_CONNECTOR_VERSION=4.0.1-2.0
+ARG ICEBERG_VERSION=1.10.1
+ARG FLINK_MAJOR_MINOR=2.0
 
 # Download Kafka SQL connector (fat jar)
 RUN wget -q -P /opt/flink/lib/ \

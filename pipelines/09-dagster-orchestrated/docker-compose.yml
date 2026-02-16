@@ -145,7 +145,7 @@ services:
       - "8081:8081"
     volumes:
       - ./flink/sql:/opt/flink/sql:ro
-      - ./flink/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml:ro
+      - ./flink/conf/config.yaml:/opt/flink/conf/config.yaml:ro
       - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
       - flink-checkpoints:/tmp/flink-checkpoints
     depends_on:

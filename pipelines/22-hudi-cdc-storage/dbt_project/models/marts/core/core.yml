@@ -1,0 +1,136 @@
+version: 2
+
+models:
+  - name: fct_trips
+    description: "Fact table with fully enriched trip records."
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: trip_id
+        data_type: varchar
+        tests: [not_null, unique]
+      - name: vendor_id
+        data_type: integer
+      - name: rate_code_id
+        data_type: integer
+      - name: payment_type_id
+        data_type: integer
+      - name: pickup_location_id
+        data_type: integer
+      - name: dropoff_location_id
+        data_type: integer
+      - name: pickup_datetime
+        data_type: timestamp
+        tests: [not_null]
+      - name: dropoff_datetime
+        data_type: timestamp
+      - name: pickup_date
+        data_type: date
+      - name: pickup_hour
+        data_type: bigint
+      - name: pickup_day_of_week
+        data_type: varchar
+      - name: is_weekend
+        data_type: boolean
+      - name: passenger_count
+        data_type: integer
+      - name: trip_distance_miles
+        data_type: double
+      - name: trip_duration_minutes
+        data_type: bigint
+      - name: avg_speed_mph
+        data_type: double
+      - name: cost_per_mile
+        data_type: double
+      - name: fare_amount
+        data_type: "decimal(10,2)"
+      - name: extra_amount
+        data_type: "decimal(10,2)"
+      - name: mta_tax
+        data_type: "decimal(10,2)"
+      - name: tip_amount
+        data_type: "decimal(10,2)"
+      - name: tip_percentage
+        data_type: double
+      - name: tolls_amount
+        data_type: "decimal(10,2)"
+      - name: improvement_surcharge
+        data_type: "decimal(10,2)"
+      - name: total_amount
+        data_type: "decimal(10,2)"
+        tests: [not_null]
+      - name: congestion_surcharge
+        data_type: "decimal(10,2)"
+      - name: airport_fee
+        data_type: "decimal(10,2)"
+      - name: pickup_borough
+        data_type: varchar
+      - name: pickup_zone
+        data_type: varchar
+      - name: dropoff_borough
+        data_type: varchar
+      - name: dropoff_zone
+        data_type: varchar
+
+  - name: dim_locations
+    description: "Location dimension"
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: location_id
+        data_type: integer
+        tests: [unique, not_null]
+      - name: borough
+        data_type: varchar
+        tests: [not_null]
+      - name: zone_name
+        data_type: varchar
+        tests: [not_null]
+      - name: service_zone
+        data_type: varchar
+
+  - name: dim_dates
+    description: "Date dimension for January 2024"
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: date_key
+        data_type: date
+        tests: [unique, not_null]
+      - name: year
+        data_type: bigint
+      - name: month
+        data_type: bigint
+      - name: day_of_month
+        data_type: bigint
+      - name: day_of_week_num
+        data_type: bigint
+      - name: day_of_week_name
+        data_type: varchar
+        tests: [not_null]
+      - name: month_name
+        data_type: varchar
+      - name: week_of_year
+        data_type: bigint
+      - name: is_weekend
+        data_type: boolean
+        tests: [not_null]
+      - name: is_holiday
+        data_type: boolean
+        tests: [not_null]
+
+  - name: dim_payment_types
+    description: "Payment type dimension"
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: payment_type_id
+        data_type: integer
+        tests: [unique, not_null]
+      - name: payment_type_name
+        data_type: varchar
+        tests: [not_null]

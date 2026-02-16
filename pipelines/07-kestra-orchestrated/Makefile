@@ -6,7 +6,7 @@ SHELL := bash
 # =============================================================================
 
 COMPOSE = docker compose
-FLINK_SQL_CLIENT = $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
+FLINK_SQL_CLIENT = MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
 
 .PHONY: help up down generate create-topics process process-bronze process-silver \
         dbt-build benchmark logs status clean ps restart kestra-ui
@@ -68,7 +68,7 @@ create-topics: ## Create Kafka topics
 # =============================================================================
 
 generate: ## Produce taxi trip events to Kafka (burst mode)
-	$(COMPOSE) run --rm data-generator
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
 	@echo "Data generation complete."
 
 # =============================================================================
@@ -93,14 +93,14 @@ process-silver: ## Submit Silver layer Flink SQL jobs (batch mode)
 # =============================================================================
 
 dbt-build: ## Run dbt build (full-refresh) on Iceberg Silver data
-	$(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 	@echo "dbt build complete."
 
 dbt-test: ## Run dbt tests only
-	$(COMPOSE) run --rm dbt test --profiles-dir .
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm dbt test --profiles-dir .
 
 dbt-docs: ## Generate dbt documentation
-	$(COMPOSE) run --rm dbt docs generate --profiles-dir .
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm dbt docs generate --profiles-dir .
 
 # =============================================================================
 # Kestra

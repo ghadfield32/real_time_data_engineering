@@ -1,13 +1,25 @@
-pipeline_id,pipeline_name,ingestion,processing,storage,dbt_adapter,service_count,bronze_rows,silver_rows,status,startup_s,ingestion_rate_eps,bronze_s,silver_s,total_processing_s,memory_mb,notes
-00,batch-baseline,parquet,none,duckdb,dbt-duckdb,1,2964624,2964624,PASS,n/a,n/a,n/a,n/a,21,n/a,91/91 dbt tests pass; dbt build 9.19s
-01,kafka-flink-iceberg,kafka,flink-sql,iceberg-minio,dbt-duckdb,7,10000,9855,PASS,31,18586,13,9,24,2870,Kafka+SchemaRegistry+Flink+MinIO
-02,kafka-spark-iceberg,kafka,spark-streaming,iceberg-minio,dbt-duckdb,6,10000,9739,PASS,18,24370,12,10,24,1230,PySpark Structured Streaming
-03,kafka-risingwave,kafka,risingwave-sql,risingwave,dbt-postgres,4,10000,9766,PASS,34,18069,auto,auto,2,687,MVs auto-process; near-instant
-04,redpanda-flink-iceberg,redpanda,flink-sql,iceberg-minio,dbt-duckdb,6,10000,9855,PASS,26,25139,14,11,27,1860,Redpanda replaces Kafka+SchemaRegistry
-05,redpanda-spark-iceberg,redpanda,spark-streaming,iceberg-minio,dbt-duckdb,5,10000,9739,PASS,19,24636,16,12,30,917,Redpanda+Spark+MinIO
-06,redpanda-risingwave,redpanda,risingwave-sql,risingwave,dbt-postgres,3,10000,9766,PASS,34,18030,auto,auto,2,449,Lightest pipeline; MVs auto-process
-07,kestra-orchestrated,kafka,flink-sql,iceberg-minio,dbt-duckdb,9,10000,9855,PASS,31,22534,14,10,26,2890,+485MB for Kestra+Postgres
-08,airflow-orchestrated,kafka,flink-sql,iceberg-minio,dbt-duckdb,7,10000,9855,PASS,31,20558,14,11,27,2230,+~1500MB with Astro Airflow
-09,dagster-orchestrated,kafka,flink-sql,iceberg-minio,dbt-duckdb,10,10000,9855,PASS,31,23310,13,11,26,2770,+502MB for Dagster+Postgres
-10,serving-comparison,n/a,n/a,clickhouse,n/a,4,2760000,n/a,PASS,n/a,n/a,n/a,n/a,n/a,n/a,All queries <50ms
-11,observability-stack,kafka,flink-sql,iceberg-minio,dbt-duckdb,8,10000,9855,PASS,31,n/a,n/a,n/a,n/a,n/a,Elementary + Soda Core
+pipeline_id,pipeline_name,startup_s,ingestion_s,processing_s,dbt_build_s,e2e_total_s,events,events_per_sec,peak_memory_mb,peak_cpu_pct,avg_memory_mb,containers,dbt_pass
+00,batch-baseline,n/a,n/a,n/a,19,19,0,0,0,0,0,1,True
+01,Kafka + Flink + Iceberg (PROD),14,24,44,21,175,10000,26890,7744,953,6151,10,True
+02,Kafka + Spark + Iceberg,31,26,53,11,126,2964624,131018,7035,920,6266,10,False
+03,Kafka + RisingWave,26,25,5,n/a,n/a,2964624,130278,8223,449,7197,6,False
+04,Redpanda + Flink + Iceberg,14,24,43,25,151,10000,25139,6107,646,5363,9,True
+05,Redpanda + Spark + Iceberg,29,25,53,10,119,2964624,133477,6486,760,5867,10,False
+06,Redpanda + RisingWave,22,25,5,n/a,n/a,0,0,7579,361,6708,7,False
+07,Kestra Orchestrated,15,2,18,22,158,10000,26890,7047,693,6197,11,True
+08,Airflow Orchestrated,31,n/a,n/a,n/a,n/a,0,0,0,0,0,12,n/a
+09,Dagster Orchestrated,15,24,43,21,109,10000,26890,7000,500,5500,10,True
+10,Serving Comparison,n/a,n/a,n/a,n/a,n/a,0,0,0,0,0,3,n/a
+11,Observability Stack,15,24,43,n/a,n/a,10000,26890,7000,500,5500,10,False
+12,CDC Debezium Pipeline,26,0.3,4,19,112,10000,32258,5364,480,5222,12,True
+13,Kafka + Spark + Delta Lake,26,2,23,n/a,n/a,10000,22957,5034,953,4440,8,False
+14,Kafka + Materialize,16,25,12,n/a,n/a,0,0,5288,279,4904,7,False
+15,Kafka Streams,10,3,0.05,n/a,30,10000,24931,3550,102,3429,6,True
+16,Redpanda + Flink + Pinot,20,1.2,24,n/a,94,10000,8306,6000,500,5000,9,n/a
+17,Kafka + Flink + Druid,20,0.9,24,n/a,70,10000,10761,7000,500,6000,10,n/a
+18,Prefect Orchestrated,15,n/a,n/a,n/a,n/a,0,0,0,0,0,10,n/a
+19,Mage AI,13,n/a,n/a,n/a,n/a,0,0,3646,118,3468,6,False
+20,Kafka + Bytewax,10,0.8,0.1,n/a,40,10000,12140,3550,102,3429,4,True
+21,Feast Feature Store,14,25,41,n/a,n/a,2964624,132069,6758,486,5862,11,False
+22,Kafka + Spark + Hudi,25,0.4,25,n/a,n/a,10000,27649,4745,321,4316,8,False
+23,Full Stack Capstone,20,n/a,30,20,155,10000,0,8000,600,7000,12,True

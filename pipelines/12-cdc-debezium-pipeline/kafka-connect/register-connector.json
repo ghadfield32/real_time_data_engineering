@@ -1,0 +1,23 @@
+{
+  "name": "taxi-cdc-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "taxi",
+    "database.password": "taxi",
+    "database.dbname": "taxidb",
+    "topic.prefix": "dbserver1",
+    "table.include.list": "public.taxi_trips",
+    "plugin.name": "pgoutput",
+    "publication.name": "taxi_publication",
+    "slot.name": "taxi_slot",
+    "snapshot.mode": "initial",
+    "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "key.converter.schemas.enable": false,
+    "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+    "value.converter.schemas.enable": false,
+    "decimal.handling.mode": "double",
+    "time.precision.mode": "connect"
+  }
+}

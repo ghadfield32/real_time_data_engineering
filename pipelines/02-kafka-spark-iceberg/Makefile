@@ -50,7 +50,7 @@ topics:
 
 ## Produce taxi events to Kafka
 generate:
-	$(COMPOSE) run --rm \
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm \
 		-e MODE=burst \
 		-e MAX_EVENTS=0 \
 		-e METRICS_PATH=/benchmarks/generator_metrics.json \
@@ -59,7 +59,7 @@ generate:
 
 ## Produce a small sample (10k events) for testing
 generate-sample:
-	$(COMPOSE) run --rm \
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm \
 		-e MODE=burst \
 		-e MAX_EVENTS=10000 \
 		-e METRICS_PATH=/benchmarks/generator_metrics.json \
@@ -75,14 +75,14 @@ process: process-bronze process-silver
 
 ## Run Bronze ingest (Kafka -> Iceberg)
 process-bronze:
-	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
+	MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
 		--master local[*] \
 		/opt/spark-jobs/bronze_ingest.py
 	@echo "Bronze ingest complete."
 
 ## Run Silver transform (Bronze Iceberg -> Silver Iceberg)
 process-silver:
-	$(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
+	MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T spark-master /opt/spark/bin/spark-submit \
 		--master local[*] \
 		/opt/spark-jobs/silver_transform.py
 	@echo "Silver transform complete."
@@ -109,13 +109,18 @@ dbt-docs:
 # Benchmark
 # ---------------------------------------------------------------------------
 
-## Run full end-to-end benchmark
-benchmark: up
+## Run full end-to-end benchmark (down -> up)
+benchmark:
 	@echo "=== Pipeline 02 Benchmark ==="
-	$(MAKE) generate
-	$(MAKE) process
-	$(MAKE) dbt-build
-	@echo "=== Benchmark complete ==="
+	@START_TIME=$$(date +%s) && \
+	$(MAKE) down 2>/dev/null || true && \
+	$(MAKE) up && \
+	$(MAKE) generate && \
+	$(MAKE) process && \
+	$(MAKE) dbt-build && \
+	END_TIME=$$(date +%s) && \
+	ELAPSED=$$((END_TIME - START_TIME)) && \
+	echo "=== Benchmark complete (Total: $${ELAPSED}s) ==="
 
 # ---------------------------------------------------------------------------
 # Observability

@@ -1,0 +1,51 @@
+# =============================================================================
+# Pipeline 18: Flink Configuration
+# =============================================================================
+# Configuration for Flink 1.20 with Iceberg + Kafka connectors.
+# This file is mounted into the JobManager container.
+# =============================================================================
+
+# Cluster
+jobmanager.rpc.address: flink-jobmanager
+jobmanager.rpc.port: 6123
+jobmanager.bind-host: 0.0.0.0
+jobmanager.memory.process.size: 1600m
+
+taskmanager.bind-host: 0.0.0.0
+taskmanager.host: flink-taskmanager
+taskmanager.memory.process.size: 2048m
+taskmanager.numberOfTaskSlots: 4
+
+parallelism.default: 2
+
+# REST API (Flink Dashboard)
+rest.address: 0.0.0.0
+rest.bind-address: 0.0.0.0
+rest.port: 8081
+rest.flamegraph.enabled: true
+
+# Checkpointing
+execution.checkpointing.interval: 30s
+execution.checkpointing.mode: EXACTLY_ONCE
+execution.checkpointing.min-pause: 10s
+execution.checkpointing.timeout: 5min
+state.backend: hashmap
+state.checkpoints.dir: file:///tmp/flink-checkpoints
+state.savepoints.dir: file:///tmp/flink-savepoints
+
+# Table / SQL Configuration
+table.exec.state.ttl: 0
+table.exec.sink.not-null-enforcer: DROP
+
+# Classloader (avoid Iceberg classloader leak with batch DML sync)
+classloader.check-leaked-classloader: false
+
+# S3 (MinIO) filesystem configuration
+s3.endpoint: http://minio:9000
+s3.access-key: minioadmin
+s3.secret-key: minioadmin
+s3.path.style.access: true
+
+# Logging
+env.log.max: 5
+env.log.dir: /opt/flink/log

@@ -1,0 +1,22 @@
+# Pipeline 22: dbt-duckdb profile reading Silver Hudi tables from MinIO
+#
+# DuckDB cannot natively read Hudi metadata, so we read the underlying
+# Parquet files directly via read_parquet() with httpfs extension.
+# The Hudi COW table stores data as standard Parquet files.
+
+pipeline_22:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /tmp/p22_dbt.duckdb
+      threads: 4
+      extensions:
+        - httpfs
+      settings:
+        s3_region: us-east-1
+        s3_endpoint: minio:9000
+        s3_access_key_id: minioadmin
+        s3_secret_access_key: minioadmin
+        s3_use_ssl: false
+        s3_url_style: path

@@ -35,3 +35,13 @@ Thumbs.db
 .claude
 .github
 nul
+.mypy_cache
+
+# Pipeline build artifacts (pipelines/00-23)
+pipelines/*/dbt_project/target/
+pipelines/*/dbt_project/logs/
+pipelines/*/dbt_project/dbt_packages/
+pipelines/*/dbt_project/.user.yml
+pipelines/*/dbt_project/package-lock.yml
+pipelines/*/benchmark_results/
+pipelines/*/benchmark_output.log

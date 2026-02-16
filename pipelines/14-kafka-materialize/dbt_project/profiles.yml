@@ -1,0 +1,12 @@
+nyc_taxi_pipeline_14:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: materialize
+      port: 6875
+      user: materialize
+      password: ""
+      dbname: materialize
+      schema: public
+      threads: 1

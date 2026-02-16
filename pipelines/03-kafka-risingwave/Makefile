@@ -34,35 +34,39 @@ topics: ## Create Kafka topics
 	@echo "Topics created."
 
 generate: ## Produce taxi events into Kafka
-	$(COMPOSE) run --rm data-generator
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
 	@echo "Event generation complete."
 
 process: ## Submit RisingWave SQL init scripts (source + materialized views)
 	@echo "Submitting RisingWave SQL scripts..."
-	$(COMPOSE) exec -T risingwave \
-		psql -h localhost -p 4566 -U root -d dev -f /risingwave/sql/01-create-source.sql || true
+	MSYS_NO_PATHCONV=1 docker run --rm --network 03-kafka-risingwave_pipeline-net \
+		-v "$$(pwd)/risingwave/sql:/sql:ro" postgres:alpine \
+		psql -h risingwave -p 4566 -U root -d dev -f /sql/01-create-source.sql || true
 	@echo "[1/3] Kafka source created."
-	$(COMPOSE) exec -T risingwave \
-		psql -h localhost -p 4566 -U root -d dev -f /risingwave/sql/02-mv-bronze-trips.sql || true
+	MSYS_NO_PATHCONV=1 docker run --rm --network 03-kafka-risingwave_pipeline-net \
+		-v "$$(pwd)/risingwave/sql:/sql:ro" postgres:alpine \
+		psql -h risingwave -p 4566 -U root -d dev -f /sql/02-mv-bronze-trips.sql || true
 	@echo "[2/3] Bronze materialized view created."
-	$(COMPOSE) exec -T risingwave \
-		psql -h localhost -p 4566 -U root -d dev -f /risingwave/sql/03-mv-silver-metrics.sql || true
+	MSYS_NO_PATHCONV=1 docker run --rm --network 03-kafka-risingwave_pipeline-net \
+		-v "$$(pwd)/risingwave/sql:/sql:ro" postgres:alpine \
+		psql -h risingwave -p 4566 -U root -d dev -f /sql/03-mv-silver-metrics.sql || true
 	@echo "[3/3] Silver materialized view created."
 	@echo "All RisingWave objects created. MVs will update automatically as Kafka events arrive."
 
 dbt-build: ## Run dbt build against RisingWave
-	$(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
 
-benchmark: ## Run full pipeline benchmark (generate + process + dbt)
+benchmark: ## Run full pipeline benchmark (down -> up, generate + process + dbt)
 	@echo "=== Benchmark: Pipeline 03 - Kafka + RisingWave ==="
+	@$(MAKE) down 2>/dev/null || true
 	@echo "[1/4] Infrastructure up..."
 	$(MAKE) up
 	@echo "[2/4] Creating RisingWave streaming objects..."
 	$(MAKE) process
 	@echo "[3/4] Generating events..."
-	time $(MAKE) generate
+	$(MAKE) generate
 	@echo "[4/4] Running dbt build..."
-	time $(MAKE) dbt-build
+	$(MAKE) dbt-build
 	@echo "=== Benchmark complete ==="
 
 logs: ## Tail logs for all services
@@ -72,8 +76,8 @@ status: ## Show container status and RisingWave MV row counts
 	$(COMPOSE) ps
 	@echo ""
 	@echo "--- RisingWave Materialized View Counts ---"
-	@$(COMPOSE) exec -T risingwave \
-		psql -h localhost -p 4566 -U root -d dev \
+	@MSYS_NO_PATHCONV=1 docker run --rm --network 03-kafka-risingwave_pipeline-net postgres:alpine \
+		psql -h risingwave -p 4566 -U root -d dev \
 		-c "SELECT 'bronze_raw_trips' AS mv, count(*) FROM bronze_raw_trips UNION ALL SELECT 'silver_cleaned_trips', count(*) FROM silver_cleaned_trips;" 2>/dev/null || \
 		echo "(RisingWave not running or MVs not created yet)"
 

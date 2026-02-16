@@ -1,9 +1,13 @@
 # =============================================================================
-# Pipeline 01: Kafka + Flink + Iceberg (2026 Industry Standard)
+# Pipeline 01: Kafka + Flink + Iceberg (Production-Grade Template)
 # =============================================================================
-# Architecture: Kafka (KRaft) → Flink SQL → Iceberg (on MinIO) → dbt (DuckDB)
+# Architecture: Kafka (KRaft) -> Flink SQL -> Iceberg (on MinIO) -> dbt (DuckDB)
+# Compose V2+ (version key removed - deprecated since Docker Compose 2.x)
 # =============================================================================
 
+# ---------------------------------------------------------------------------
+# Shared Flink configuration (YAML anchor)
+# ---------------------------------------------------------------------------
 x-flink-common: &flink-common
   build:
     context: .
@@ -23,33 +27,37 @@ x-flink-common: &flink-common
 
 services:
   # ---------------------------------------------------------------------------
-  # Kafka (KRaft mode - single node)
+  # Kafka (KRaft mode - ZooKeeper fully removed in 4.0)
   # ---------------------------------------------------------------------------
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.0.0
     container_name: p01-kafka
     hostname: kafka
+    restart: unless-stopped
     ports:
       - "9092:9092"
     environment:
-      # KRaft mode configuration
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9093
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      # Listener configuration
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9093
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      # Cluster settings
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
       KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
-      # Log settings
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       CLUSTER_ID: "p01-kafka-flink-iceberg-001"
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '2.0'
+        reservations:
+          memory: 1G
     healthcheck:
       test: /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 || exit 1
       interval: 10s
@@ -63,9 +71,10 @@ services:
   # Schema Registry (Confluent)
   # ---------------------------------------------------------------------------
   schema-registry:
-    image: confluentinc/cp-schema-registry:7.6.0
+    image: confluentinc/cp-schema-registry:7.9.0
     container_name: p01-schema-registry
     hostname: schema-registry
+    restart: unless-stopped
     ports:
       - "8085:8081"
     environment:
@@ -91,13 +100,19 @@ services:
     image: minio/minio:latest
     container_name: p01-minio
     hostname: minio
+    restart: unless-stopped
     ports:
       - "9000:9000"
       - "9001:9001"
     environment:
-      MINIO_ROOT_USER: minioadmin
-      MINIO_ROOT_PASSWORD: minioadmin
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
     command: server /data --console-address ":9001"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '1.0'
     healthcheck:
       test: mc ready local || exit 1
       interval: 10s
@@ -120,11 +135,122 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set myminio http://minio:9000 minioadmin minioadmin &&
+      mc alias set myminio http://minio:9000 ${MINIO_ROOT_USER:-minioadmin} ${MINIO_ROOT_PASSWORD:-minioadmin} &&
       mc mb myminio/warehouse --ignore-existing &&
       mc anonymous set download myminio/warehouse &&
       echo 'Bucket warehouse created successfully'
       "
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Lakekeeper REST Catalog (opt-in: docker compose --profile lakekeeper up -d)
+  # ---------------------------------------------------------------------------
+  lakekeeper-db:
+    image: postgres:17
+    container_name: p01-lakekeeper-db
+    hostname: lakekeeper-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lakekeeper
+      POSTGRES_PASSWORD: lakekeeper
+      POSTGRES_DB: lakekeeper
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lakekeeper"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    volumes:
+      - lakekeeper-db-data:/var/lib/postgresql/data
+    profiles:
+      - lakekeeper
+    networks:
+      - pipeline-net
+
+  lakekeeper-migrate:
+    image: quay.io/lakekeeper/catalog:v0.11.2
+    container_name: p01-lakekeeper-migrate
+    command: ["migrate"]
+    environment:
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
+      LAKEKEEPER__PG_ENCRYPTION_KEY: "this-is-NOT-secure-change-in-prod!!"
+    depends_on:
+      lakekeeper-db:
+        condition: service_healthy
+    profiles:
+      - lakekeeper
+    networks:
+      - pipeline-net
+
+  lakekeeper:
+    image: quay.io/lakekeeper/catalog:v0.11.2
+    container_name: p01-lakekeeper
+    hostname: lakekeeper
+    restart: unless-stopped
+    command: ["serve"]
+    ports:
+      - "8181:8181"
+    environment:
+      LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
+      LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
+      LAKEKEEPER__PG_ENCRYPTION_KEY: "this-is-NOT-secure-change-in-prod!!"
+      LAKEKEEPER__LISTEN_PORT: 8181
+    depends_on:
+      lakekeeper-migrate:
+        condition: service_completed_successfully
+    healthcheck:
+      test: curl -f http://localhost:8181/health || exit 1
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    profiles:
+      - lakekeeper
+    networks:
+      - pipeline-net
+
+  lakekeeper-init:
+    image: curlimages/curl:latest
+    container_name: p01-lakekeeper-init
+    depends_on:
+      lakekeeper:
+        condition: service_healthy
+      mc-init:
+        condition: service_completed_successfully
+    entrypoint: /bin/sh
+    command:
+      - -c
+      - |
+        echo 'Bootstrapping Lakekeeper...' &&
+        curl -sf -X POST http://lakekeeper:8181/management/v1/bootstrap \
+          -H 'Content-Type: application/json' \
+          -d '{"accept-terms-of-use": true}' &&
+        echo '' &&
+        echo 'Creating warehouse...' &&
+        curl -sf -X POST http://lakekeeper:8181/management/v1/warehouse \
+          -H 'Content-Type: application/json' \
+          -d '{
+            "warehouse-name": "warehouse",
+            "storage-profile": {
+              "type": "s3",
+              "bucket": "warehouse",
+              "region": "us-east-1",
+              "endpoint": "http://minio:9000",
+              "path-style-access": true,
+              "flavor": "minio"
+            },
+            "storage-credential": {
+              "type": "s3",
+              "credential-type": "access-key",
+              "aws-access-key-id": "minioadmin",
+              "aws-secret-access-key": "minioadmin"
+            }
+          }' &&
+        echo '' &&
+        echo 'Lakekeeper initialized successfully'
+    profiles:
+      - lakekeeper
     networks:
       - pipeline-net
 
@@ -135,14 +261,22 @@ services:
     <<: *flink-common
     container_name: p01-flink-jobmanager
     hostname: flink-jobmanager
+    restart: unless-stopped
     command: jobmanager
     ports:
-      - "8081:8081"
+      - "8083:8081"
     volumes:
       - ./flink/sql:/opt/flink/sql:ro
-      - ./flink/conf/flink-conf.yaml:/opt/flink/conf/flink-conf.yaml:ro
+      - ./flink/conf/config.yaml:/opt/flink/conf/config.yaml:ro
       - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
       - flink-checkpoints:/tmp/flink-checkpoints
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
     depends_on:
       kafka:
         condition: service_healthy
@@ -156,8 +290,8 @@ services:
       start_period: 30s
     environment:
       <<: *flink-env
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       AWS_REGION: us-east-1
       HADOOP_CONF_DIR: /opt/hadoop/conf
 
@@ -168,17 +302,25 @@ services:
     <<: *flink-common
     container_name: p01-flink-taskmanager
     hostname: flink-taskmanager
+    restart: unless-stopped
     command: taskmanager
     volumes:
       - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
       - flink-checkpoints:/tmp/flink-checkpoints
+    deploy:
+      resources:
+        limits:
+          memory: 3G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
     depends_on:
       flink-jobmanager:
         condition: service_healthy
     environment:
       <<: *flink-env
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       AWS_REGION: us-east-1
       HADOOP_CONF_DIR: /opt/hadoop/conf
 
@@ -198,8 +340,8 @@ services:
     entrypoint: ["/bin/sh", "-c"]
     command: ["dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."]
     environment:
-      AWS_ACCESS_KEY_ID: minioadmin
-      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ACCESS_KEY_ID: ${MINIO_ACCESS_KEY:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${MINIO_SECRET_KEY:-minioadmin}
       AWS_ENDPOINT_URL: http://minio:9000
       AWS_REGION: us-east-1
       DBT_PROFILES_DIR: /dbt
@@ -241,6 +383,8 @@ volumes:
   minio-data:
     driver: local
   flink-checkpoints:
+    driver: local
+  lakekeeper-db-data:
     driver: local
 
 # =============================================================================
