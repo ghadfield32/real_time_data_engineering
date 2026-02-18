@@ -1,0 +1,41 @@
+version: 2
+
+# =============================================================================
+# Template Pipeline: dbt Sources
+# =============================================================================
+# Defines the Silver Iceberg table as a dbt source.
+# dbt reads it via DuckDB's iceberg_scan() function using the external_location config.
+#
+# HOW IT WORKS:
+#   iceberg_scan('s3://warehouse/silver/DOMAIN/TABLE_NAME', allow_moved_paths=true)
+#   - s3:// (not s3a://) — DuckDB httpfs uses the AWS SDK URL scheme
+#   - allow_moved_paths=true — handles the mismatch between Flink's s3a:// write paths
+#     and DuckDB's s3:// read paths in the Iceberg metadata files
+#
+# TODO: Replace DOMAIN, TABLE_NAME, and column/description values below.
+# =============================================================================
+
+sources:
+  - name: raw_DOMAIN                     # TODO: replace DOMAIN (e.g., raw_stock_ticks)
+    description: "TODO: describe your Silver layer data"
+    schema: main
+    freshness:
+      # Adjust these thresholds to match your pipeline SLA.
+      # For real-time pipelines: warn_after 1 hour, error_after 6 hours.
+      # For daily batch: warn_after 25 hours, error_after 48 hours.
+      warn_after:  {count: 30, period: day}
+      error_after: {count: 365, period: day}
+    # TODO: Update loaded_at_field to your primary timestamp column name (snake_case Silver name)
+    loaded_at_field: event_datetime       # TODO: replace with your timestamp column
+
+    tables:
+      - name: raw_DOMAIN_events           # TODO: replace (e.g., raw_stock_tick_events)
+        description: "Silver-layer cleaned events from Iceberg (Flink-filtered, deduplicated, snake_case columns)"
+        config:
+          # TODO: Update the path:
+          #   s3://warehouse/silver/<iceberg-database-name>/<table-name>
+          # The path must match what Flink created:
+          #   USE CATALOG iceberg_catalog; CREATE DATABASE IF NOT EXISTS silver;
+          #   CREATE TABLE IF NOT EXISTS silver.cleaned_events (...)
+          # → path = s3://warehouse/silver/cleaned_events
+          external_location: "iceberg_scan('s3://warehouse/silver/cleaned_events', allow_moved_paths = true)"

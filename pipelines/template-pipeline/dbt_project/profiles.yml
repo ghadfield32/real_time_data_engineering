@@ -1,0 +1,29 @@
+# =============================================================================
+# Template Pipeline: dbt Profiles (DuckDB + Iceberg via httpfs)
+# =============================================================================
+# TODO: Replace PIPELINE_NAME with your project name (must match dbt_project.yml)
+#
+# HOW IT WORKS:
+#   DuckDB loads the iceberg + httpfs extensions at startup.
+#   iceberg extension: enables iceberg_scan() for reading Iceberg tables from S3.
+#   httpfs extension: enables HTTP/S3 requests (MinIO endpoint configured below).
+#   s3_endpoint format: "host:port" (NO http:// prefix — DuckDB httpfs requirement).
+# =============================================================================
+
+PIPELINE_NAME:                # TODO: replace with your project name
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /dbt/PIPELINE_NAME.duckdb   # TODO: replace PIPELINE_NAME
+      extensions:
+        - iceberg     # enables iceberg_scan() for reading Iceberg tables
+        - httpfs      # enables S3/HTTP requests to MinIO
+      settings:
+        s3_region: us-east-1
+        s3_endpoint: minio:9000         # IMPORTANT: no http:// prefix (DuckDB httpfs format)
+        s3_access_key_id: minioadmin
+        s3_secret_access_key: minioadmin
+        s3_use_ssl: false
+        s3_url_style: path              # path-style required for MinIO (not virtual-hosted)
+      threads: 4

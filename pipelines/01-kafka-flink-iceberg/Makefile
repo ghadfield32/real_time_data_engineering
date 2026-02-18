@@ -9,7 +9,8 @@ COMPOSE = docker compose
 FLINK_SQL_CLIENT = MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
 
 .PHONY: help up down generate create-topics process process-bronze process-silver \
-        dbt-build benchmark logs status clean ps restart check-lag health
+        dbt-build benchmark logs status clean ps restart check-lag health \
+        compact-silver expire-snapshots vacuum maintain
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -118,8 +119,8 @@ benchmark: ## Full end-to-end benchmark: down -> up → topics → generate → 
 	echo "Waiting for Flink processing to catch up..." && \
 	sleep 10 && \
 	$(MAKE) process && \
-	echo "Waiting for Iceberg metadata to flush before dbt..." && \
-	sleep 5 && \
+	echo "Waiting for Iceberg metadata commits to finalize..." && \
+	sleep 15 && \
 	$(MAKE) dbt-build && \
 	END_TIME=$$(date +%s) && \
 	ELAPSED=$$((END_TIME - START_TIME)) && \
@@ -177,6 +178,47 @@ check-lag: ## Show Kafka consumer group lag
 	$(COMPOSE) exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
 		--bootstrap-server localhost:9092 \
 		--describe --group flink-consumer 2>/dev/null || echo "(No active consumer group 'flink-consumer')"
+
+# =============================================================================
+# Iceberg Maintenance (run periodically in production)
+# =============================================================================
+
+compact-silver: ## Compact Silver Iceberg files to target 128MB file size
+	@echo "=== Compacting Silver Iceberg table ==="
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql <<'EOF'
+	CALL iceberg_catalog.system.rewrite_data_files(
+	    table => 'silver.cleaned_trips',
+	    options => map['target-file-size-bytes', '134217728',
+	                   'min-file-size-threshold', '33554432']
+	);
+	EOF
+	@echo "Silver compaction complete."
+
+expire-snapshots: ## Expire Iceberg snapshots older than 7 days
+	@echo "=== Expiring old Iceberg snapshots ==="
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql <<'EOF'
+	CALL iceberg_catalog.system.expire_snapshots(
+	    table => 'silver.cleaned_trips',
+	    older_than => TIMESTAMPADD(DAY, -7, NOW())
+	);
+	CALL iceberg_catalog.system.expire_snapshots(
+	    table => 'bronze.raw_trips',
+	    older_than => TIMESTAMPADD(DAY, -7, NOW())
+	);
+	EOF
+	@echo "Snapshot expiry complete."
+
+vacuum: ## Remove orphan files from Iceberg warehouse (run weekly)
+	@echo "=== Removing orphan Iceberg files ==="
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql <<'EOF'
+	CALL iceberg_catalog.system.remove_orphan_files(
+	    table => 'silver.cleaned_trips',
+	    older_than => TIMESTAMPADD(DAY, -7, NOW())
+	);
+	EOF
+	@echo "Vacuum complete."
+
+maintain: compact-silver expire-snapshots ## Run all routine Iceberg maintenance
 
 # =============================================================================
 # Lakekeeper REST Catalog (opt-in)

@@ -1,0 +1,34 @@
+version: 2
+
+# =============================================================================
+# Template Pipeline: Seed Properties
+# =============================================================================
+# Seeds are static CSV lookup tables loaded into DuckDB by dbt.
+# Typical seeds for analytics pipelines: lookup codes, dimension tables.
+#
+# TODO: Replace DOMAIN_lookup with your actual seed name(s).
+#       Seed files live in dbt_project/seeds/*.csv
+#
+# Minimum tests to include:
+#   - Primary key columns: unique + not_null
+#   - Display name columns: not_null
+# =============================================================================
+
+seeds:
+  - name: DOMAIN_lookup              # TODO: replace (e.g., vendor_lookup, payment_type_lookup)
+    description: "TODO: describe what codes this lookup maps"
+    columns:
+      - name: DOMAIN_id              # TODO: replace (e.g., vendor_id, payment_type_id)
+        description: "Numeric ID code from the source data"
+        tests:
+          - unique
+          - not_null
+      - name: DOMAIN_name            # TODO: replace (e.g., vendor_name, payment_type_name)
+        description: "Human-readable display name"
+        tests:
+          - not_null
+      - name: DOMAIN_abbr            # TODO: replace or remove if no abbreviation needed
+        description: "Short abbreviation code"
+        tests:
+          - unique
+          - not_null

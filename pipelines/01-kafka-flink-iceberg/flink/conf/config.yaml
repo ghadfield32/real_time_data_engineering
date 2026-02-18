@@ -29,9 +29,10 @@ execution.checkpointing.interval: 30s
 execution.checkpointing.mode: EXACTLY_ONCE
 execution.checkpointing.min-pause: 10s
 execution.checkpointing.timeout: 5min
-state.backend: hashmap
-state.checkpoints.dir: file:///tmp/flink-checkpoints
-state.savepoints.dir: file:///tmp/flink-savepoints
+state.backend: rocksdb
+state.backend.incremental: true
+state.checkpoints.dir: s3a://warehouse/checkpoints
+state.savepoints.dir: s3a://warehouse/savepoints
 
 # Table / SQL Configuration
 table.exec.state.ttl: 0

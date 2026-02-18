@@ -1,0 +1,52 @@
+<?xml version="1.0"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  =============================================================================
+  Template Pipeline: Hadoop S3A Configuration (MinIO)
+  =============================================================================
+  This file is mounted into Flink containers at /opt/hadoop/conf/core-site.xml.
+  It configures the S3A filesystem driver so that Flink can read/write Iceberg
+  table files on MinIO using the s3a:// URL scheme.
+
+  HADOOP_CONF_DIR=/opt/hadoop/conf must be set in the Flink container environment
+  for Hadoop to discover this file.
+
+  For production use, replace minioadmin credentials with secrets management
+  (Docker secrets, Vault, or environment variable injection).
+  =============================================================================
+-->
+<configuration>
+    <!-- MinIO S3A endpoint — use internal Docker hostname, NOT localhost -->
+    <property>
+        <name>fs.s3a.endpoint</name>
+        <value>http://minio:9000</value>
+    </property>
+
+    <!-- MinIO credentials -->
+    <property>
+        <name>fs.s3a.access.key</name>
+        <value>minioadmin</value>
+    </property>
+    <property>
+        <name>fs.s3a.secret.key</name>
+        <value>minioadmin</value>
+    </property>
+
+    <!-- Path-style access required for MinIO (not virtual-hosted style) -->
+    <property>
+        <name>fs.s3a.path.style.access</name>
+        <value>true</value>
+    </property>
+
+    <!-- S3A implementation class from hadoop-aws -->
+    <property>
+        <name>fs.s3a.impl</name>
+        <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+    </property>
+
+    <!-- Disable SSL since MinIO runs on plain HTTP in local dev -->
+    <property>
+        <name>fs.s3a.connection.ssl.enabled</name>
+        <value>false</value>
+    </property>
+</configuration>

@@ -1,0 +1,292 @@
+# =============================================================================
+# Template Pipeline: Redpanda + Flink + Iceberg + dbt (DuckDB)
+# =============================================================================
+# Architecture: Redpanda → Flink SQL → Iceberg (on MinIO) → dbt (DuckDB)
+#
+# CUSTOMIZATION CHECKLIST (see SETUP.md for full guide):
+#   1. Replace PIPELINE_ID (e.g., "XX") throughout — container names, network name
+#   2. Replace DOMAIN (e.g., "stock_ticks") throughout — topic name, service names
+#   3. Adjust port mappings if running multiple pipelines in parallel
+#   4. Adjust resource limits to match your host machine capacity
+#   5. Update TOPIC and DATA_PATH in data-generator to point at your parquet file
+#   6. Change DBT_ADAPTER if not using dbt-duckdb (e.g., dbt-postgres for RisingWave)
+# =============================================================================
+
+x-flink-common: &flink-common
+  build:
+    context: .
+    dockerfile: ../../shared/docker/flink.Dockerfile
+  environment: &flink-env
+    # NOTE: These FLINK_PROPERTIES are overridden by the mounted config.yaml.
+    # They serve as a fallback reference only. The real config is in flink/conf/config.yaml.
+    FLINK_PROPERTIES: |
+      jobmanager.rpc.address: flink-jobmanager
+      taskmanager.numberOfTaskSlots: 4
+      parallelism.default: 2
+      classloader.check-leaked-classloader: false
+  networks:
+    - pipeline-net
+
+services:
+  # ---------------------------------------------------------------------------
+  # Redpanda (single node — replaces Kafka + Schema Registry + ZooKeeper)
+  # Provides: Kafka-compatible API, Pandaproxy (REST), Admin API, Schema Registry
+  # Advantage over Kafka: single binary, 25-35% less memory, no ZooKeeper
+  # ---------------------------------------------------------------------------
+  redpanda:
+    image: redpandadata/redpanda:v25.3.7    # TODO: pin to latest stable
+    container_name: pXX-redpanda            # TODO: replace XX with pipeline ID
+    hostname: redpanda
+    restart: unless-stopped
+    command:
+      - redpanda start
+      - --smp 1
+      - --memory 1G
+      - --overprovisioned
+      - --node-id 0
+      - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
+      - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
+      - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
+      - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
+    ports:
+      - "19092:19092"   # Kafka API (external)
+      - "18082:18082"   # Pandaproxy REST API
+      - "9644:9644"     # Admin API
+    volumes:
+      - redpanda-data:/var/lib/redpanda/data
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster health | grep -E 'Healthy:.+true' || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          memory: 1.5G
+        reservations:
+          memory: 512m
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Redpanda Console (web UI for topic browsing + consumer lag monitoring)
+  # ---------------------------------------------------------------------------
+  redpanda-console:
+    image: redpandadata/console:v3.2.2
+    container_name: pXX-redpanda-console    # TODO: replace XX
+    hostname: redpanda-console
+    restart: unless-stopped
+    ports:
+      - "8085:8080"   # TODO: change port if running alongside another pipeline
+    environment:
+      KAFKA_BROKERS: redpanda:9092
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO (S3-compatible object storage — Iceberg warehouse backend)
+  # Stores: Iceberg metadata files (.avro, .json), Parquet data files, checkpoints
+  # ---------------------------------------------------------------------------
+  minio:
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
+    container_name: pXX-minio              # TODO: replace XX
+    hostname: minio
+    restart: unless-stopped
+    ports:
+      - "9000:9000"   # S3 API
+      - "9001:9001"   # Web console (minioadmin / minioadmin)
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    command: server /data --console-address ":9001"
+    healthcheck:
+      test: mc ready local || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    volumes:
+      - minio-data:/data
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+        reservations:
+          memory: 256m
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # MinIO Client Init (one-shot: creates the warehouse bucket on startup)
+  # ---------------------------------------------------------------------------
+  mc-init:
+    image: minio/mc:RELEASE.2025-05-21T01-59-54Z
+    container_name: pXX-mc-init           # TODO: replace XX
+    depends_on:
+      minio:
+        condition: service_healthy
+    entrypoint: >
+      /bin/sh -c "
+      mc alias set myminio http://minio:9000 minioadmin minioadmin &&
+      mc mb myminio/warehouse --ignore-existing &&
+      mc anonymous set download myminio/warehouse &&
+      echo 'Bucket warehouse created.'
+      "
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Flink JobManager
+  # Role: coordinates task scheduling, accepts SQL submissions, exposes REST API
+  # Prometheus metrics scraped from port 9249
+  # ---------------------------------------------------------------------------
+  flink-jobmanager:
+    <<: *flink-common
+    container_name: pXX-flink-jobmanager  # TODO: replace XX
+    hostname: flink-jobmanager
+    restart: unless-stopped
+    command: jobmanager
+    ports:
+      - "8081:8081"   # Flink Dashboard + REST API — TODO: change if port conflicts
+      - "9249:9249"   # Prometheus metrics scrape endpoint
+    deploy:
+      resources:
+        limits:
+          memory: 2G
+          cpus: '1.0'
+        reservations:
+          memory: 1G
+    volumes:
+      - ./flink/sql:/opt/flink/sql:ro
+      - ./flink/conf/config.yaml:/opt/flink/conf/config.yaml:ro
+      - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
+      - flink-checkpoints:/tmp/flink-checkpoints
+    depends_on:
+      redpanda:
+        condition: service_healthy
+      mc-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test: curl -f http://localhost:8081/overview || exit 1
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 30s
+    environment:
+      <<: *flink-env
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_REGION: us-east-1
+      HADOOP_CONF_DIR: /opt/hadoop/conf  # Required for S3A filesystem initialization
+
+  # ---------------------------------------------------------------------------
+  # Flink TaskManager
+  # Role: executes Flink tasks (SQL operators), manages local state (RocksDB)
+  # CPU limit is important: prevents TaskManager from starving MinIO of CPU
+  # and causing S3A write timeouts during heavy Iceberg commits.
+  # ---------------------------------------------------------------------------
+  flink-taskmanager:
+    <<: *flink-common
+    container_name: pXX-flink-taskmanager # TODO: replace XX
+    hostname: flink-taskmanager
+    restart: unless-stopped
+    command: taskmanager
+    deploy:
+      resources:
+        limits:
+          memory: 2.5G
+          cpus: '2.0'
+        reservations:
+          memory: 2G
+    volumes:
+      - ./flink/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
+      - flink-checkpoints:/tmp/flink-checkpoints
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    environment:
+      <<: *flink-env
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_REGION: us-east-1
+      HADOOP_CONF_DIR: /opt/hadoop/conf
+
+  # ---------------------------------------------------------------------------
+  # dbt (DuckDB adapter — reads Iceberg tables via iceberg_scan() from MinIO)
+  # Profile: runs via `docker compose --profile dbt run --rm dbt`
+  # DuckDB extensions loaded at runtime: iceberg, httpfs
+  # ---------------------------------------------------------------------------
+  dbt:
+    build:
+      context: .
+      dockerfile: ../../shared/docker/dbt.Dockerfile
+      args:
+        DBT_ADAPTER: dbt-duckdb   # TODO: change to dbt-postgres if using RisingWave
+    container_name: pXX-dbt               # TODO: replace XX
+    volumes:
+      - ./dbt_project:/dbt
+    working_dir: /dbt
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."]
+    environment:
+      AWS_ACCESS_KEY_ID: minioadmin
+      AWS_SECRET_ACCESS_KEY: minioadmin
+      AWS_ENDPOINT_URL: http://minio:9000
+      AWS_REGION: us-east-1
+      DBT_PROFILES_DIR: /dbt
+    depends_on:
+      minio:
+        condition: service_healthy
+    profiles:
+      - dbt
+    networks:
+      - pipeline-net
+
+  # ---------------------------------------------------------------------------
+  # Data Generator (reads parquet file, produces JSON events to Redpanda)
+  # Profile: runs via `docker compose --profile generator run --rm data-generator`
+  # Modes: burst (as fast as possible), realtime (1x speed), batch (chunked)
+  # ---------------------------------------------------------------------------
+  data-generator:
+    build:
+      context: ../../shared/data-generator/
+      dockerfile: Dockerfile
+    container_name: pXX-data-generator    # TODO: replace XX
+    volumes:
+      - ../../data:/data:ro
+    environment:
+      BROKER_URL: redpanda:9092
+      TOPIC: DOMAIN.raw_events             # TODO: replace DOMAIN with your domain
+      MODE: burst
+      DATA_PATH: /data/YOUR_FILE.parquet   # TODO: replace with your parquet file path
+      MAX_EVENTS: 0                        # 0 = all events; set to 10000 for testing
+    depends_on:
+      redpanda:
+        condition: service_healthy
+    profiles:
+      - generator
+    networks:
+      - pipeline-net
+
+# =============================================================================
+# Volumes
+# =============================================================================
+volumes:
+  minio-data:
+    driver: local
+  flink-checkpoints:
+    driver: local
+  redpanda-data:
+    driver: local
+
+# =============================================================================
+# Networks
+# =============================================================================
+networks:
+  pipeline-net:
+    name: pXX-pipeline-net    # TODO: replace XX with pipeline ID
+    driver: bridge

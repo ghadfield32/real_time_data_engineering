@@ -1,0 +1,52 @@
+# =============================================================================
+# Template Pipeline: dbt Project Configuration
+# =============================================================================
+# TODO: Replace PIPELINE_NAME with your project name (e.g., stock_ticks_pipeline)
+# TODO: Replace PIPELINE_NAME in profile, dispatch, and models sections below
+# =============================================================================
+
+name: PIPELINE_NAME           # TODO: replace (e.g., stock_ticks_pipeline)
+version: "1.0.0"
+config-version: 2
+profile: PIPELINE_NAME        # TODO: match name above (referenced in profiles.yml)
+
+model-paths:      ["models"]
+analysis-paths:   ["analyses"]
+test-paths:       ["tests"]
+seed-paths:       ["seeds"]
+macro-paths:      ["macros"]
+snapshot-paths:   ["snapshots"]
+target-path:      "target"
+clean-targets:    ["target", "dbt_packages"]
+
+# Macro dispatch: allows this project to override macros from nyc_taxi_dbt (shared)
+# and fall back to the shared project for macros not defined locally.
+dispatch:
+  - macro_namespace: nyc_taxi_dbt
+    search_order: [PIPELINE_NAME, nyc_taxi_dbt]  # TODO: replace PIPELINE_NAME
+
+# =============================================================================
+# Schema configuration
+# =============================================================================
+# +schema adds a suffix to the DuckDB schema/namespace.
+# With dbt-duckdb, this maps to: main_staging, main_marts, etc.
+# This keeps all pipeline schemas logically separated.
+seeds:
+  PIPELINE_NAME:              # TODO: replace
+    +schema: raw              # Seeds land in the "raw" schema
+
+models:
+  PIPELINE_NAME:              # TODO: replace
+    staging:
+      +materialized: view     # Views: no storage cost, always fresh from source
+      +schema: staging
+    intermediate:
+      +materialized: view     # Views: lightweight transformations between staging + marts
+      +schema: intermediate
+    marts:
+      core:
+        +materialized: table  # Tables: materialized for query performance
+        +schema: marts
+      analytics:
+        +materialized: table  # Tables: aggregated analytics outputs
+        +schema: marts
