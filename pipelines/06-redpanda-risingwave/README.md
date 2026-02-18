@@ -82,7 +82,7 @@ make down
 
 ```bash
 # Via psql (from host)
-PGPASSWORD= psql -h localhost -p 4566 -U root -d dev
+psql -h localhost -p 4566 -U root -d dev
 
 # Check materialized view counts
 SELECT count(*) FROM bronze_raw_trips;

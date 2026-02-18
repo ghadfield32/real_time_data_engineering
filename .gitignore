@@ -6,6 +6,11 @@ __pycache__/
 dist/
 build/
 
+# Local env files (often contain secrets)
+.env
+.env.*
+!.env.example
+
 # dbt
 nyc_taxi_dbt/target/
 nyc_taxi_dbt/logs/

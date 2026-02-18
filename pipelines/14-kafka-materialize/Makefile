@@ -3,7 +3,6 @@ SHELL := bash
 .DEFAULT_GOAL := help
 
 COMPOSE := docker compose
-PSQL    := PGPASSWORD= psql -h localhost -p 6875 -U materialize -d materialize
 
 # ── Lifecycle ────────────────────────────────────────────────
 

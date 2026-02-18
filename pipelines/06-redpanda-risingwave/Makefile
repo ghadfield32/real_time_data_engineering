@@ -3,7 +3,6 @@ SHELL := bash
 .DEFAULT_GOAL := help
 
 COMPOSE := docker compose
-PSQL    := PGPASSWORD= psql -h localhost -p 4566 -U root -d dev
 
 # ── Lifecycle ────────────────────────────────────────────────
 
