@@ -1,7 +1,7 @@
 # =============================================================================
 # Pipeline 01: Flink Configuration
 # =============================================================================
-# Configuration for Flink 1.20 with Iceberg + Kafka connectors.
+# Configuration for Flink 2.0.1 with Iceberg + Kafka connectors.
 # This file is mounted into the JobManager container.
 # =============================================================================
 
@@ -41,6 +41,7 @@ table.exec.sink.not-null-enforcer: DROP
 classloader.check-leaked-classloader: false
 
 # S3 (MinIO) filesystem configuration
+# NOTE: Credentials hardcoded for local dev. Override via .env in production.
 s3.endpoint: http://minio:9000
 s3.access-key: minioadmin
 s3.secret-key: minioadmin

@@ -1,3 +1,4 @@
+-- REFERENCE ONLY: Use 00-init.sql for execution (includes watermarks + bounded mode).
 -- =============================================================================
 -- Pipeline 01: Flink SQL - Iceberg Catalog
 -- =============================================================================

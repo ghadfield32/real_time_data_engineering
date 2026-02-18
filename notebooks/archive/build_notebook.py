@@ -923,17 +923,15 @@ check_flink_health
 # Write the Airflow DAGs as reference files
 airflow_pipeline_dag = '''"""NYC Taxi Pipeline DAG - Production Orchestration.
 
-Runs every 10 minutes:
+Manual trigger (schedule=None):
   1. Check Flink cluster health
-  2. Run dbt build (Silver → Gold)
-  3. Run dbt tests (91 data quality assertions)
-  4. Alert if Flink is down
+  2. Run dbt build (Silver -> Gold, includes tests)
+  3. Alert if Flink is down
 """
 from airflow import DAG
 from airflow.operators.bash import BashOperator
 from airflow.operators.python import BranchPythonOperator
-from airflow.utils.dates import days_ago
-from datetime import timedelta
+from datetime import datetime, timedelta
 import requests
 
 
@@ -947,66 +945,49 @@ default_args = {
     'retry_delay': timedelta(minutes=5),
 }
 
-dag = DAG(
+with DAG(
     'nyc_taxi_pipeline',
     default_args=default_args,
     description='NYC Taxi Real-Time Pipeline Orchestration',
-    schedule_interval='*/10 * * * *',  # Every 10 minutes
-    start_date=days_ago(1),
+    schedule=None,
+    start_date=datetime(2024, 1, 1),
     catchup=False,
     max_active_runs=1,
     tags=['production', 'nyc-taxi', 'real-time'],
-)
+) as dag:
 
+    def check_flink_health(**context):
+        """Check if Flink cluster is healthy and jobs are running."""
+        try:
+            response = requests.get('http://flink-jobmanager:8081/jobs/overview')
+            response.raise_for_status()
+            jobs = response.json()['jobs']
+            running_jobs = [j for j in jobs if j['state'] == 'RUNNING']
+            if not running_jobs:
+                raise ValueError("No running Flink jobs found")
+            print(f"Flink healthy: {len(running_jobs)} jobs running")
+            return 'run_dbt'
+        except Exception as e:
+            print(f"Flink health check failed: {e}")
+            return 'alert_flink_down'
 
-def check_flink_health(**context):
-    """Check if Flink cluster is healthy and jobs are running."""
-    try:
-        response = requests.get('http://flink-jobmanager:8081/jobs/overview')
-        response.raise_for_status()
-        jobs = response.json()['jobs']
-        running_jobs = [j for j in jobs if j['state'] == 'RUNNING']
-        if not running_jobs:
-            raise ValueError("No running Flink jobs found")
-        print(f"Flink healthy: {len(running_jobs)} jobs running")
-        return 'run_dbt'
-    except Exception as e:
-        print(f"Flink health check failed: {e}")
-        return 'alert_flink_down'
+    health_check = BranchPythonOperator(
+        task_id='check_flink_health',
+        python_callable=check_flink_health,
+    )
 
+    # dbt build runs models + tests (no separate dbt test needed)
+    run_dbt = BashOperator(
+        task_id='run_dbt',
+        bash_command='cd /opt/airflow/dbt && dbt build --profiles-dir . --target prod',
+    )
 
-# Task 1: Health check (branch based on result)
-health_check = BranchPythonOperator(
-    task_id='check_flink_health',
-    python_callable=check_flink_health,
-    provide_context=True,
-    dag=dag,
-)
+    alert_flink_down = BashOperator(
+        task_id='alert_flink_down',
+        bash_command='echo "ALERT: Flink cluster unhealthy" && exit 1',
+    )
 
-# Task 2: Run dbt build (Silver → Gold)
-run_dbt = BashOperator(
-    task_id='run_dbt',
-    bash_command='cd /opt/airflow/dbt && dbt build --profiles-dir . --target prod',
-    dag=dag,
-)
-
-# Task 3: Run dbt tests
-run_dbt_tests = BashOperator(
-    task_id='run_dbt_tests',
-    bash_command='cd /opt/airflow/dbt && dbt test --profiles-dir . --target prod',
-    dag=dag,
-)
-
-# Task 4: Alert if Flink is unhealthy
-alert_flink_down = BashOperator(
-    task_id='alert_flink_down',
-    bash_command='echo "ALERT: Flink cluster unhealthy" && exit 1',
-    dag=dag,
-)
-
-# Dependencies
-health_check >> [run_dbt, alert_flink_down]
-run_dbt >> run_dbt_tests'''
+    health_check >> [run_dbt, alert_flink_down]'''
 
 code(f"%%writefile ../pipelines/01-kafka-flink-iceberg/airflow/dags/taxi_pipeline_dag.py\n{airflow_pipeline_dag}")
 
@@ -1019,14 +1000,14 @@ compact_silver → expire_snapshots → remove_orphan_files
 maintenance_dag = '''"""Iceberg Maintenance DAG - Daily at 2 AM.
 
 Operations:
-  1. Compact Silver table (merge small files for query performance)
-  2. Expire old snapshots (cleanup metadata, keep last 5)
-  3. Remove orphan files (reclaim unreferenced storage)
+  1. Compact Bronze table (merge small files)
+  2. Compact Silver table (merge small files for query performance)
+  3. Expire old snapshots (cleanup metadata, keep last 5)
+  4. Remove orphan files (reclaim unreferenced storage)
 """
 from airflow import DAG
 from airflow.operators.bash import BashOperator
-from airflow.utils.dates import days_ago
-from datetime import timedelta
+from datetime import datetime, timedelta
 
 
 default_args = {
@@ -1035,58 +1016,67 @@ default_args = {
     'retry_delay': timedelta(minutes=10),
 }
 
-dag = DAG(
+with DAG(
     'iceberg_maintenance',
     default_args=default_args,
     description='Iceberg table maintenance (compaction, expiration)',
-    schedule_interval='0 2 * * *',  # Daily at 2 AM
-    start_date=days_ago(1),
+    schedule='0 2 * * *',
+    start_date=datetime(2024, 1, 1),
     catchup=False,
     tags=['maintenance', 'iceberg'],
-)
+) as dag:
 
-compact_silver = BashOperator(
-    task_id='compact_silver_table',
-    bash_command="""
-    docker exec p01-flink-jobmanager /opt/flink/bin/sql-client.sh \\
-      -i /opt/flink/sql/00-init.sql \\
-      -e "CALL iceberg_catalog.system.rewrite_data_files(
-            table => 'nyc_taxi.silver.cleaned_trips',
-            strategy => 'sort',
-            sort_order => 'pickup_date,pickup_hour'
-          );"
-    """,
-    dag=dag,
-)
+    compact_bronze = BashOperator(
+        task_id='compact_bronze_table',
+        bash_command="""
+        docker exec p01-flink-jobmanager /opt/flink/bin/sql-client.sh \\
+          -i /opt/flink/sql/00-init.sql \\
+          -e "CALL iceberg_catalog.system.rewrite_data_files(
+                table => 'bronze.raw_trips',
+                strategy => 'binpack'
+              );"
+        """,
+    )
 
-expire_snapshots = BashOperator(
-    task_id='expire_old_snapshots',
-    bash_command="""
-    docker exec p01-flink-jobmanager /opt/flink/bin/sql-client.sh \\
-      -i /opt/flink/sql/00-init.sql \\
-      -e "CALL iceberg_catalog.system.expire_snapshots(
-            table => 'nyc_taxi.silver.cleaned_trips',
-            older_than => CURRENT_TIMESTAMP - INTERVAL '7' DAY,
-            retain_last => 5
-          );"
-    """,
-    dag=dag,
-)
+    compact_silver = BashOperator(
+        task_id='compact_silver_table',
+        bash_command="""
+        docker exec p01-flink-jobmanager /opt/flink/bin/sql-client.sh \\
+          -i /opt/flink/sql/00-init.sql \\
+          -e "CALL iceberg_catalog.system.rewrite_data_files(
+                table => 'silver.cleaned_trips',
+                strategy => 'sort',
+                sort_order => 'pickup_date'
+              );"
+        """,
+    )
 
-remove_orphans = BashOperator(
-    task_id='remove_orphan_files',
-    bash_command="""
-    docker exec p01-flink-jobmanager /opt/flink/bin/sql-client.sh \\
-      -i /opt/flink/sql/00-init.sql \\
-      -e "CALL iceberg_catalog.system.remove_orphan_files(
-            table => 'nyc_taxi.silver.cleaned_trips',
-            older_than => CURRENT_TIMESTAMP - INTERVAL '7' DAY
-          );"
-    """,
-    dag=dag,
-)
+    expire_snapshots = BashOperator(
+        task_id='expire_old_snapshots',
+        bash_command="""
+        docker exec p01-flink-jobmanager /opt/flink/bin/sql-client.sh \\
+          -i /opt/flink/sql/00-init.sql \\
+          -e "CALL iceberg_catalog.system.expire_snapshots(
+                table => 'silver.cleaned_trips',
+                older_than => CURRENT_TIMESTAMP - INTERVAL '7' DAY,
+                retain_last => 5
+              );"
+        """,
+    )
 
-compact_silver >> expire_snapshots >> remove_orphans'''
+    remove_orphans = BashOperator(
+        task_id='remove_orphan_files',
+        bash_command="""
+        docker exec p01-flink-jobmanager /opt/flink/bin/sql-client.sh \\
+          -i /opt/flink/sql/00-init.sql \\
+          -e "CALL iceberg_catalog.system.remove_orphan_files(
+                table => 'silver.cleaned_trips',
+                older_than => CURRENT_TIMESTAMP - INTERVAL '7' DAY
+              );"
+        """,
+    )
+
+    compact_bronze >> compact_silver >> expire_snapshots >> remove_orphans'''
 
 code(f"%%writefile ../pipelines/01-kafka-flink-iceberg/airflow/dags/iceberg_maintenance_dag.py\n{maintenance_dag}")
 

@@ -48,11 +48,11 @@ ${KAFKA_BIN}/kafka-topics.sh \
     --partitions 3 \
     --replication-factor 1 \
     --if-not-exists \
-    --config retention.ms=86400000 \
+    --config retention.ms=259200000 \
     --config cleanup.policy=delete \
     --config segment.bytes=104857600
 
-echo "  taxi.raw_trips created (3 partitions, 24h retention)"
+echo "  taxi.raw_trips created (3 partitions, 72h retention)"
 echo ""
 
 # ---------------------------------------------------------------------------

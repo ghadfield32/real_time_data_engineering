@@ -1,6 +1,6 @@
 services:
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.0.0
     container_name: p15-kafka
     hostname: kafka
     ports:
@@ -17,7 +17,7 @@ services:
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 3000
       KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
       CLUSTER_ID: "p15-kafka-streams-001"
     healthcheck:
@@ -29,11 +29,33 @@ services:
     networks:
       - pipeline-net
 
+  kafka-init:
+    image: apache/kafka:4.0.0
+    container_name: p15-kafka-init
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+          --create --if-not-exists --topic taxi.raw_trips --partitions 6 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+          --create --if-not-exists --topic taxi.bronze --partitions 6 --replication-factor 1
+        /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 \
+          --create --if-not-exists --topic taxi.silver --partitions 6 --replication-factor 1
+        echo "Topics created."
+    networks:
+      - pipeline-net
+
   streams-app:
     build:
       context: ./streams-app
     container_name: p15-streams-app
     hostname: streams-app
+    # Sleep 5s after kafka-init completes (topics pre-created) to allow
+    # __consumer_offsets leader election and group coordinator initialization.
+    command: ["/bin/sh", "-c", "sleep 5 && java -jar /app/app.jar"]
     environment:
       BOOTSTRAP_SERVERS: kafka:9092
       INPUT_TOPIC: taxi.raw_trips
@@ -41,8 +63,8 @@ services:
       SILVER_TOPIC: taxi.silver
       APPLICATION_ID: p15-taxi-processor
     depends_on:
-      kafka:
-        condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
     networks:
       - pipeline-net
 

@@ -38,6 +38,14 @@ CREATE TABLE IF NOT EXISTS raw_trips (
     congestion_surcharge    DOUBLE,
     Airport_fee             DOUBLE,
     ingestion_ts            TIMESTAMP(3)
+)
+WITH (
+    'format-version' = '1',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'write.metadata.delete-after-commit.enabled' = 'true',
+    'write.metadata.previous-versions-max' = '10',
+    'write.target-file-size-bytes' = '134217728'
 );
 
 -- Switch back to default catalog for the Kafka source table reference

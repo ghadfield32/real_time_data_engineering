@@ -10,7 +10,7 @@ services:
   # Kafka (KRaft mode - single node)
   # ---------------------------------------------------------------------------
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.0.0
     container_name: p19-kafka
     hostname: kafka
     ports:
@@ -38,7 +38,7 @@ services:
   # Mage AI (combined orchestrator + data pipeline)
   # ---------------------------------------------------------------------------
   mage:
-    image: mageai/mageai:latest
+    image: mageai/mageai:0.9.79
     container_name: p19-mage
     hostname: mage
     ports:

@@ -32,6 +32,11 @@ seeds:
       +column_types:
         rate_code_id: INTEGER
         rate_code_name: VARCHAR
+    vendor_lookup:
+      +column_types:
+        vendor_id: INTEGER
+        vendor_name: VARCHAR
+        vendor_abbr: VARCHAR
 
 models:
   nyc_taxi_dbt:

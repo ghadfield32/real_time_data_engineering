@@ -1,40 +1,28 @@
 """
 Silver Transform: Bronze Iceberg -> Silver Iceberg (Batch)
 
-Reads from the Bronze Iceberg table `warehouse.bronze.raw_trips` and applies
-transformations matching the shared dbt models (stg_yellow_trips.sql +
-int_trip_metrics.sql):
+Reads from Bronze Iceberg `warehouse.bronze.raw_trips` and applies data quality
+filters. Writes to Silver Iceberg `warehouse.silver.cleaned_trips` preserving
+original column names (VendorID, tpep_pickup_datetime, etc.) so that the dbt
+staging layer (stg_yellow_trips.sql) can apply the canonical rename + type casts.
 
-  1. Rename columns (VendorID -> vendor_id, etc.)
-  2. Cast types
-  3. Filter nulls, negative fares, date range
-  4. Generate surrogate key: md5(concat_ws('|', ...))
-  5. Compute derived metrics:
-     - duration_minutes
-     - avg_speed_mph
-     - cost_per_mile
-     - tip_percentage
-  6. Add time dimensions: pickup_date, pickup_hour, pickup_day_of_week, is_weekend
-  7. Filter impossible trips (duration < 1 or > 720, speed > 100)
+Architecture note: this pipeline (P02) uses dbt-duckdb reading Iceberg via
+iceberg_scan(), the same pattern as P01 (Flink). Spark's role is Bronze ingest +
+quality filtering; dbt handles all renaming, casting, and derived metrics.
 
-Writes to Silver Iceberg table `warehouse.silver.cleaned_trips` in overwrite mode.
-
-Usage:
-    spark-submit --packages ... silver_transform.py
+Filters applied (matching stg_yellow_trips.sql WHERE clause):
+  - Null pickup/dropoff datetimes excluded
+  - trip_distance >= 0
+  - fare_amount >= 0
+  - pickup date within January 2024 (data quality: ~18 out-of-range rows)
 """
 
 from pyspark.sql import SparkSession
 from pyspark.sql import functions as F
-from pyspark.sql.types import (
-    DecimalType,
-    DoubleType,
-    IntegerType,
-    TimestampType,
-)
+from pyspark.sql.types import TimestampType
 
 
 def create_spark_session() -> SparkSession:
-    """Create a Spark session with Iceberg catalog configuration."""
     return (
         SparkSession.builder
         .appName("Pipeline02_SilverTransform")
@@ -59,228 +47,100 @@ def create_spark_session() -> SparkSession:
 
 
 def ensure_silver_table(spark: SparkSession) -> None:
-    """Create the Silver namespace and table if they do not exist."""
+    """Create Silver namespace and table if they do not exist.
+
+    Column names match the Bronze table (original Parquet names). dbt's
+    stg_yellow_trips.sql performs the rename to snake_case at query time.
+    """
     spark.sql("CREATE NAMESPACE IF NOT EXISTS warehouse.silver")
     spark.sql("""
         CREATE TABLE IF NOT EXISTS warehouse.silver.cleaned_trips (
-            trip_id                  STRING,
-            vendor_id                INT,
-            rate_code_id             INT,
-            pickup_location_id       INT,
-            dropoff_location_id      INT,
-            payment_type_id          INT,
-            pickup_datetime          TIMESTAMP,
-            dropoff_datetime         TIMESTAMP,
-            passenger_count          INT,
-            trip_distance_miles      DOUBLE,
-            store_and_fwd_flag       STRING,
-            fare_amount              DECIMAL(10, 2),
-            extra_amount             DECIMAL(10, 2),
-            mta_tax                  DECIMAL(10, 2),
-            tip_amount               DECIMAL(10, 2),
-            tolls_amount             DECIMAL(10, 2),
-            improvement_surcharge    DECIMAL(10, 2),
-            total_amount             DECIMAL(10, 2),
-            congestion_surcharge     DECIMAL(10, 2),
-            airport_fee              DECIMAL(10, 2),
-            trip_duration_minutes    LONG,
-            avg_speed_mph            DOUBLE,
-            cost_per_mile            DOUBLE,
-            tip_percentage           DOUBLE,
-            pickup_date              DATE,
-            pickup_hour              INT,
-            pickup_day_of_week       STRING,
-            is_weekend               BOOLEAN
+            VendorID                BIGINT,
+            tpep_pickup_datetime    TIMESTAMP,
+            tpep_dropoff_datetime   TIMESTAMP,
+            passenger_count         DOUBLE,
+            trip_distance           DOUBLE,
+            RatecodeID              DOUBLE,
+            store_and_fwd_flag      STRING,
+            PULocationID            BIGINT,
+            DOLocationID            BIGINT,
+            payment_type            BIGINT,
+            fare_amount             DOUBLE,
+            extra                   DOUBLE,
+            mta_tax                 DOUBLE,
+            tip_amount              DOUBLE,
+            tolls_amount            DOUBLE,
+            improvement_surcharge   DOUBLE,
+            total_amount            DOUBLE,
+            congestion_surcharge    DOUBLE,
+            Airport_fee             DOUBLE
         ) USING iceberg
     """)
     print("Silver table warehouse.silver.cleaned_trips is ready.")
 
 
 def run_silver_transform(spark: SparkSession) -> None:
-    """Read Bronze table, apply staging + metric transformations, write Silver."""
+    """Read Bronze, apply quality filters, write Silver with original column names."""
 
-    # -------------------------------------------------------------------------
-    # 1. Read Bronze
-    # -------------------------------------------------------------------------
     bronze_df = spark.table("warehouse.bronze.raw_trips")
     bronze_count = bronze_df.count()
     print(f"Bronze rows read: {bronze_count:,}")
 
-    # -------------------------------------------------------------------------
-    # 2. Staging: rename, cast, filter (matches stg_yellow_trips.sql)
-    # -------------------------------------------------------------------------
-    staged_df = (
-        bronze_df
-        .select(
-            # Identifiers — rename and cast
-            F.col("VendorID").cast(IntegerType()).alias("vendor_id"),
-            F.col("RatecodeID").cast(IntegerType()).alias("rate_code_id"),
-            F.col("PULocationID").cast(IntegerType()).alias("pickup_location_id"),
-            F.col("DOLocationID").cast(IntegerType()).alias("dropoff_location_id"),
-            F.col("payment_type").cast(IntegerType()).alias("payment_type_id"),
-
-            # Timestamps
-            F.col("tpep_pickup_datetime").cast(TimestampType()).alias("pickup_datetime"),
-            F.col("tpep_dropoff_datetime").cast(TimestampType()).alias("dropoff_datetime"),
-
-            # Trip info
-            F.col("passenger_count").cast(IntegerType()).alias("passenger_count"),
-            F.col("trip_distance").cast(DoubleType()).alias("trip_distance_miles"),
-            F.col("store_and_fwd_flag"),
-
-            # Financials — cast to decimal(10,2) with rounding
-            F.round(F.col("fare_amount").cast(DecimalType(10, 2)), 2).alias("fare_amount"),
-            F.round(F.col("extra").cast(DecimalType(10, 2)), 2).alias("extra_amount"),
-            F.round(F.col("mta_tax").cast(DecimalType(10, 2)), 2).alias("mta_tax"),
-            F.round(F.col("tip_amount").cast(DecimalType(10, 2)), 2).alias("tip_amount"),
-            F.round(F.col("tolls_amount").cast(DecimalType(10, 2)), 2).alias("tolls_amount"),
-            F.round(
-                F.col("improvement_surcharge").cast(DecimalType(10, 2)), 2
-            ).alias("improvement_surcharge"),
-            F.round(F.col("total_amount").cast(DecimalType(10, 2)), 2).alias("total_amount"),
-            F.round(
-                F.col("congestion_surcharge").cast(DecimalType(10, 2)), 2
-            ).alias("congestion_surcharge"),
-            F.round(F.col("Airport_fee").cast(DecimalType(10, 2)), 2).alias("airport_fee"),
-        )
-        # Basic quality filters (matching stg_yellow_trips.sql WHERE clause)
-        .filter(F.col("pickup_datetime").isNotNull())
-        .filter(F.col("dropoff_datetime").isNotNull())
-        .filter(F.col("trip_distance_miles") >= 0)
-        .filter(F.col("fare_amount") >= 0)
-        # Date range filter: January 2024 only
-        .filter(F.col("pickup_datetime").cast("date") >= F.lit("2024-01-01"))
-        .filter(F.col("pickup_datetime").cast("date") < F.lit("2024-02-01"))
-    )
-
-    # -------------------------------------------------------------------------
-    # 3. Generate surrogate key: md5(concat_ws('|', ...))
-    #    Matches dbt_utils.generate_surrogate_key logic
-    # -------------------------------------------------------------------------
-    staged_with_key = staged_df.withColumn(
-        "trip_id",
-        F.md5(
-            F.concat_ws(
-                "|",
-                F.coalesce(F.col("vendor_id").cast("string"), F.lit("")),
-                F.coalesce(F.col("pickup_datetime").cast("string"), F.lit("")),
-                F.coalesce(F.col("dropoff_datetime").cast("string"), F.lit("")),
-                F.coalesce(F.col("pickup_location_id").cast("string"), F.lit("")),
-                F.coalesce(F.col("dropoff_location_id").cast("string"), F.lit("")),
-                F.coalesce(F.col("fare_amount").cast("string"), F.lit("")),
-                F.coalesce(F.col("total_amount").cast("string"), F.lit("")),
-            )
-        ),
-    )
-
-    # -------------------------------------------------------------------------
-    # 4. Compute derived metrics (matches int_trip_metrics.sql)
-    # -------------------------------------------------------------------------
-    enriched_df = (
-        staged_with_key
-        # Duration in minutes: (unix_ts(dropoff) - unix_ts(pickup)) / 60
-        .withColumn(
-            "trip_duration_minutes",
-            (
-                (F.unix_timestamp("dropoff_datetime") - F.unix_timestamp("pickup_datetime"))
-                / 60
-            ).cast("long"),
-        )
-        # Average speed: distance / (duration / 60)
-        .withColumn(
-            "avg_speed_mph",
-            F.when(
-                F.col("trip_duration_minutes") > 0,
-                F.round(
-                    F.col("trip_distance_miles") / (F.col("trip_duration_minutes") / 60.0),
-                    2,
-                ),
-            ).otherwise(F.lit(None)),
-        )
-        # Cost per mile
-        .withColumn(
-            "cost_per_mile",
-            F.when(
-                F.col("trip_distance_miles") > 0,
-                F.round(F.col("fare_amount") / F.col("trip_distance_miles"), 2),
-            ).otherwise(F.lit(None)),
-        )
-        # Tip percentage
-        .withColumn(
-            "tip_percentage",
-            F.when(
-                F.col("fare_amount") > 0,
-                F.round((F.col("tip_amount") / F.col("fare_amount")) * 100, 2),
-            ).otherwise(F.lit(None)),
-        )
-        # Time dimensions
-        .withColumn("pickup_date", F.to_date("pickup_datetime"))
-        .withColumn("pickup_hour", F.hour("pickup_datetime").cast(IntegerType()))
-        .withColumn("pickup_day_of_week", F.date_format("pickup_datetime", "EEEE"))
-        .withColumn(
-            "is_weekend",
-            F.dayofweek("pickup_datetime").isin([1, 7]),  # Spark: 1=Sun, 7=Sat
-        )
-    )
-
-    # -------------------------------------------------------------------------
-    # 5. Filter impossible trips (matches int_trip_metrics.sql WHERE clause)
-    # -------------------------------------------------------------------------
+    # Parse timestamp strings to proper TIMESTAMP type
     silver_df = (
-        enriched_df
-        .filter(
-            (F.col("trip_duration_minutes") >= 1) & (F.col("trip_duration_minutes") <= 720)
+        bronze_df
+        .withColumn(
+            "tpep_pickup_datetime",
+            F.to_timestamp(F.col("tpep_pickup_datetime")).cast(TimestampType()),
         )
-        .filter(
-            F.col("avg_speed_mph").isNull() | (F.col("avg_speed_mph") < 100)
+        .withColumn(
+            "tpep_dropoff_datetime",
+            F.to_timestamp(F.col("tpep_dropoff_datetime")).cast(TimestampType()),
+        )
+        # Quality filters matching stg_yellow_trips.sql WHERE clause
+        .filter(F.col("tpep_pickup_datetime").isNotNull())
+        .filter(F.col("tpep_dropoff_datetime").isNotNull())
+        .filter(F.col("trip_distance") >= 0)
+        .filter(F.col("fare_amount") >= 0)
+        # Date range: January 2024 only (~18 out-of-range rows in dataset)
+        .filter(F.col("tpep_pickup_datetime").cast("date") >= F.lit("2024-01-01"))
+        .filter(F.col("tpep_pickup_datetime").cast("date") < F.lit("2024-02-01"))
+        # Select original column names — dbt handles renaming
+        .select(
+            F.col("VendorID"),
+            F.col("tpep_pickup_datetime"),
+            F.col("tpep_dropoff_datetime"),
+            F.col("passenger_count"),
+            F.col("trip_distance"),
+            F.col("RatecodeID"),
+            F.col("store_and_fwd_flag"),
+            F.col("PULocationID"),
+            F.col("DOLocationID"),
+            F.col("payment_type"),
+            F.col("fare_amount"),
+            F.col("extra"),
+            F.col("mta_tax"),
+            F.col("tip_amount"),
+            F.col("tolls_amount"),
+            F.col("improvement_surcharge"),
+            F.col("total_amount"),
+            F.col("congestion_surcharge"),
+            F.col("Airport_fee"),
         )
     )
 
-    # -------------------------------------------------------------------------
-    # 6. Select final columns in correct order and write to Silver
-    # -------------------------------------------------------------------------
-    final_df = silver_df.select(
-        "trip_id",
-        "vendor_id",
-        "rate_code_id",
-        "pickup_location_id",
-        "dropoff_location_id",
-        "payment_type_id",
-        "pickup_datetime",
-        "dropoff_datetime",
-        "passenger_count",
-        "trip_distance_miles",
-        "store_and_fwd_flag",
-        "fare_amount",
-        "extra_amount",
-        "mta_tax",
-        "tip_amount",
-        "tolls_amount",
-        "improvement_surcharge",
-        "total_amount",
-        "congestion_surcharge",
-        "airport_fee",
-        "trip_duration_minutes",
-        "avg_speed_mph",
-        "cost_per_mile",
-        "tip_percentage",
-        "pickup_date",
-        "pickup_hour",
-        "pickup_day_of_week",
-        "is_weekend",
-    )
-
-    # Write to Silver Iceberg table (overwrite mode)
-    final_df.writeTo("warehouse.silver.cleaned_trips").overwritePartitions()
+    silver_df.writeTo("warehouse.silver.cleaned_trips").overwritePartitions()
 
     silver_count = spark.table("warehouse.silver.cleaned_trips").count()
+    filtered = bronze_count - silver_count
     print(f"Silver transform complete. Rows written: {silver_count:,}")
-    print(f"Rows filtered out: {bronze_count - silver_count:,}")
+    print(f"Rows filtered out: {filtered:,}")
 
 
 def main():
     print("=" * 60)
     print("  Pipeline 02 — Silver Transform (Bronze -> Silver Iceberg)")
+    print("  Column names preserved for dbt-duckdb consumption")
     print("=" * 60)
 
     spark = create_spark_session()

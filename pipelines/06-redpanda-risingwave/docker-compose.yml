@@ -7,7 +7,7 @@ version: "3.9"
 services:
   # ── Redpanda (Kafka-compatible streaming platform) ──────
   redpanda:
-    image: redpandadata/redpanda:latest
+    image: redpandadata/redpanda:v25.3.7
     container_name: p06-redpanda
     hostname: redpanda
     command:
@@ -18,12 +18,10 @@ services:
       - --node-id 0
       - --kafka-addr internal://0.0.0.0:9092,external://0.0.0.0:19092
       - --advertise-kafka-addr internal://redpanda:9092,external://localhost:19092
-      - --schema-registry-addr internal://0.0.0.0:8081,external://0.0.0.0:18081
       - --pandaproxy-addr internal://0.0.0.0:8082,external://0.0.0.0:18082
       - --advertise-pandaproxy-addr internal://redpanda:8082,external://localhost:18082
     ports:
       - "19092:19092"
-      - "18081:18081"
       - "18082:18082"
       - "9644:9644"
     volumes:
@@ -39,7 +37,7 @@ services:
 
   # ── RisingWave (streaming database, playground mode) ──────
   risingwave:
-    image: risingwavelabs/risingwave:latest
+    image: risingwavelabs/risingwave:v2.7.2
     container_name: p06-risingwave
     hostname: risingwave
     command: playground
@@ -50,7 +48,7 @@ services:
       - risingwave-data:/risingwave
       - ./risingwave/sql:/risingwave/sql:ro
     healthcheck:
-      test: pg_isready -h localhost -p 4566 -U root || exit 1
+      test: curl -sf http://localhost:5691/ > /dev/null || exit 1
       interval: 10s
       timeout: 5s
       retries: 12

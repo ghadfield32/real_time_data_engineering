@@ -24,7 +24,6 @@ up: ## Start all infrastructure services
 	@echo ""
 	@echo "=== Pipeline 01: Kafka + Flink + Iceberg ==="
 	@echo "Kafka:            localhost:9092"
-	@echo "Schema Registry:  http://localhost:8085"
 	@echo "Flink Dashboard:  http://localhost:8083"
 	@echo "MinIO Console:    http://localhost:9001  (minioadmin/minioadmin)"
 	@echo ""
@@ -52,22 +51,7 @@ restart: ## Restart all services
 # =============================================================================
 
 create-topics: ## Create Kafka topics (raw + DLQ)
-	$(COMPOSE) exec kafka /opt/kafka/bin/kafka-topics.sh \
-		--bootstrap-server localhost:9092 \
-		--create \
-		--topic taxi.raw_trips \
-		--partitions 3 \
-		--replication-factor 1 \
-		--if-not-exists
-	@echo "Topic taxi.raw_trips created (3 partitions)."
-	$(COMPOSE) exec kafka /opt/kafka/bin/kafka-topics.sh \
-		--bootstrap-server localhost:9092 \
-		--create \
-		--topic taxi.raw_trips.dlq \
-		--partitions 1 \
-		--replication-factor 1 \
-		--if-not-exists
-	@echo "Topic taxi.raw_trips.dlq created (1 partition, dead letter queue)."
+	$(COMPOSE) exec kafka /bin/bash /opt/kafka/scripts/create-topics.sh
 
 # =============================================================================
 # Data Generation
@@ -98,6 +82,10 @@ process-silver: ## Submit Silver layer Flink SQL jobs (batch mode)
 	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
 	@echo "Silver layer complete."
 
+process-streaming: ## Start continuous streaming Bronze job
+	@echo "=== Streaming Bronze: Kafka → Iceberg (continuous) ==="
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init-streaming.sql -f /opt/flink/sql/07-streaming-bronze.sql
+
 # =============================================================================
 # dbt Transformations
 # =============================================================================
@@ -126,12 +114,12 @@ benchmark: ## Full end-to-end benchmark: down -> up → topics → generate → 
 	echo "Waiting for services to stabilize..." && \
 	sleep 15 && \
 	$(MAKE) create-topics && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	echo "Waiting for Flink processing to catch up..." && \
 	sleep 10 && \
 	$(MAKE) process && \
-	echo "Waiting for streaming jobs to process data..." && \
-	sleep 30 && \
+	echo "Waiting for Iceberg metadata to flush before dbt..." && \
+	sleep 5 && \
 	$(MAKE) dbt-build && \
 	END_TIME=$$(date +%s) && \
 	ELAPSED=$$((END_TIME - START_TIME)) && \
@@ -140,6 +128,7 @@ benchmark: ## Full end-to-end benchmark: down -> up → topics → generate → 
 	echo "  BENCHMARK COMPLETE" && \
 	echo "  Total elapsed: $${ELAPSED}s" && \
 	echo "============================================================" && \
+	mkdir -p benchmark_results && \
 	echo "{\"pipeline\": \"01-kafka-flink-iceberg\", \"elapsed_seconds\": $$ELAPSED, \"timestamp\": \"$$(date -Iseconds)\"}" > benchmark_results/latest.json && \
 	echo "Results saved to benchmark_results/latest.json" && \
 	$(MAKE) down
@@ -181,7 +170,6 @@ ps: ## Show running containers
 health: ## Quick health check of all services
 	@echo "=== Pipeline 01: Health Check ==="
 	@echo -n "Kafka:           " && $(COMPOSE) exec -T kafka /opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server localhost:9092 > /dev/null 2>&1 && echo "OK" || echo "FAIL"
-	@echo -n "Schema Registry: " && curl -sf http://localhost:8085/subjects > /dev/null 2>&1 && echo "OK" || echo "FAIL"
 	@echo -n "MinIO:           " && curl -sf http://localhost:9000/minio/health/live > /dev/null 2>&1 && echo "OK" || echo "FAIL"
 	@echo -n "Flink Dashboard: " && curl -sf http://localhost:8083/overview > /dev/null 2>&1 && echo "OK" || echo "FAIL"
 

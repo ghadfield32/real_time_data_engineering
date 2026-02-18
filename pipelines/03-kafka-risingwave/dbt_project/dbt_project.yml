@@ -30,9 +30,9 @@ models:
       +materialized: view
     marts:
       core:
-        +materialized: table
+        +materialized: view
       analytics:
-        +materialized: table
+        +materialized: view
 
 seeds:
   nyc_taxi_pipeline_03:

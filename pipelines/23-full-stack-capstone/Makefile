@@ -28,7 +28,6 @@ up: ## Start all infrastructure services
 	@echo "=== Pipeline 23: Full Stack Capstone ==="
 	@echo "PostgreSQL:       localhost:5432  (taxi/taxi/taxidb)"
 	@echo "Kafka:            localhost:9092"
-	@echo "Schema Registry:  http://localhost:8085"
 	@echo "Kafka Connect:    http://localhost:8083"
 	@echo "Flink Dashboard:  http://localhost:8081"
 	@echo "MinIO Console:    http://localhost:9001  (minioadmin/minioadmin)"

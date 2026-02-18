@@ -20,3 +20,13 @@ seeds:
     columns:
       - name: rate_code_id
         tests: [unique, not_null]
+
+  - name: vendor_lookup
+    description: "TPEP vendor ID mapping (1=CMT, 2=VTS)"
+    columns:
+      - name: vendor_id
+        tests: [unique, not_null]
+      - name: vendor_name
+        tests: [not_null]
+      - name: vendor_abbr
+        tests: [unique, not_null]

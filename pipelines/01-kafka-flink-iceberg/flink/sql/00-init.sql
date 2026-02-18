@@ -52,6 +52,8 @@ CREATE TABLE IF NOT EXISTS kafka_raw_trips (
 );
 
 -- Create Iceberg catalog backed by MinIO
+-- NOTE: Credentials hardcoded (SQL doesn't support env var substitution).
+-- Override via .env file in production or use Lakekeeper REST catalog.
 CREATE CATALOG iceberg_catalog WITH (
     'type' = 'iceberg',
     'catalog-type' = 'hadoop',

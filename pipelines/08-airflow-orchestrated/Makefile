@@ -9,7 +9,7 @@ SHELL := bash
 COMPOSE = docker compose
 FLINK_SQL_CLIENT = MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
 
-.PHONY: help up down generate create-topics process process-bronze process-silver \
+.PHONY: help up down generate generate-limited create-topics process process-bronze process-silver \
         dbt-build benchmark logs status clean ps restart airflow-ui
 
 help: ## Show this help
@@ -75,6 +75,10 @@ generate: ## Produce taxi trip events to Kafka (burst mode)
 	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
 	@echo "Data generation complete."
 
+generate-limited: ## Produce limited events for testing (10k)
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+	@echo "Limited data generation complete (10k events)."
+
 # =============================================================================
 # Flink SQL Processing
 # =============================================================================
@@ -126,12 +130,10 @@ benchmark: ## Full end-to-end benchmark: up -> topics -> generate -> process -> 
 	echo "Waiting for services to stabilize..." && \
 	sleep 15 && \
 	$(MAKE) create-topics && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	echo "Waiting for Flink processing to catch up..." && \
 	sleep 10 && \
 	$(MAKE) process && \
-	echo "Waiting for streaming jobs to process data..." && \
-	sleep 30 && \
 	$(MAKE) dbt-build && \
 	END_TIME=$$(date +%s) && \
 	ELAPSED=$$((END_TIME - START_TIME)) && \

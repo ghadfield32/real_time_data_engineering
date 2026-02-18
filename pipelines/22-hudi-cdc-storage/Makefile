@@ -5,7 +5,7 @@ SHELL := bash
 
 COMPOSE = docker compose
 
-.PHONY: help up down generate process process-bronze process-silver \
+.PHONY: help up down generate generate-limited process process-bronze process-silver \
         dbt-build benchmark logs status clean topics
 
 help: ## Show this help
@@ -43,6 +43,13 @@ generate: ## Produce taxi events to Kafka
 		data-generator
 	@echo "Data generation complete."
 
+generate-limited: ## Produce limited events for testing (10k)
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm \
+		-e MODE=burst \
+		-e MAX_EVENTS=10000 \
+		data-generator
+	@echo "Limited data generation complete (10k events)."
+
 process: process-bronze process-silver ## Run Bronze + Silver Spark jobs
 
 process-bronze: ## Bronze: Kafka -> Hudi (Copy-on-Write)
@@ -68,7 +75,7 @@ benchmark: ## Full end-to-end benchmark (down -> up)
 	@START_TIME=$$(date +%s) && \
 	$(MAKE) down 2>/dev/null || true && \
 	$(MAKE) up && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	$(MAKE) process && \
 	$(MAKE) dbt-build && \
 	END_TIME=$$(date +%s) && \

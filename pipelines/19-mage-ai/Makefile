@@ -1,7 +1,7 @@
 SHELL := bash
 COMPOSE = docker compose
 
-.PHONY: help up down generate topics benchmark logs status
+.PHONY: help up down generate generate-limited topics benchmark logs status
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -30,6 +30,10 @@ generate: ## Produce taxi events
 	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
 	@echo "Data generation complete."
 
+generate-limited: ## Produce limited events for testing (10k)
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+	@echo "Limited data generation complete (10k events)."
+
 mage-ui: ## Show Mage UI URL
 	@echo "Mage UI: http://localhost:6789"
 
@@ -41,7 +45,7 @@ benchmark: ## Full benchmark (down -> up -> topics)
 	$(MAKE) down 2>/dev/null || true && \
 	$(MAKE) up && \
 	$(MAKE) topics && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	echo "Mage AI is a visual pipeline tool." && \
 	echo "Open Mage UI at http://localhost:6789 and trigger taxi_pipeline." && \
 	END_TIME=$$(date +%s) && \

@@ -43,13 +43,16 @@ CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
     total_amount            DECIMAL(10, 2),
     congestion_surcharge    DECIMAL(10, 2),
     airport_fee             DECIMAL(10, 2),
-    duration_minutes        BIGINT,
-    avg_speed_mph           DOUBLE,
-    cost_per_mile           DOUBLE,
-    tip_percentage          DOUBLE,
-    pickup_date             DATE,
-    pickup_hour             INT,
-    is_weekend              BOOLEAN
+    pickup_date             DATE
+)
+PARTITIONED BY (pickup_date)
+WITH (
+    'format-version' = '2',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'write.metadata.delete-after-commit.enabled' = 'true',
+    'write.metadata.previous-versions-max' = '10',
+    'write.target-file-size-bytes' = '134217728'
 );
 
 -- Parse CDC JSON and extract after-image fields, apply quality filters
@@ -96,76 +99,13 @@ SELECT
     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.congestion_surcharge') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS congestion_surcharge,
     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.Airport_fee') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS airport_fee,
 
-    -- Derived: duration in minutes
-    CAST(
-        (CAST(JSON_VALUE(cdc_payload, '$.after.tpep_dropoff_datetime') AS BIGINT)
-         - CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT))
-        / 60000000
-    AS BIGINT) AS duration_minutes,
-
-    -- Derived: average speed in mph
-    CASE
-        WHEN (CAST(JSON_VALUE(cdc_payload, '$.after.tpep_dropoff_datetime') AS BIGINT)
-              - CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT)) > 0
-        THEN ROUND(
-            CAST(JSON_VALUE(cdc_payload, '$.after.trip_distance') AS DOUBLE) /
-            (CAST(
-                (CAST(JSON_VALUE(cdc_payload, '$.after.tpep_dropoff_datetime') AS BIGINT)
-                 - CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT))
-            AS DOUBLE) / 3600000000.0),
-            2
-        )
-        ELSE NULL
-    END AS avg_speed_mph,
-
-    -- Derived: cost per mile
-    CASE
-        WHEN CAST(JSON_VALUE(cdc_payload, '$.after.trip_distance') AS DOUBLE) > 0
-        THEN ROUND(
-            CAST(JSON_VALUE(cdc_payload, '$.after.fare_amount') AS DOUBLE) /
-            CAST(JSON_VALUE(cdc_payload, '$.after.trip_distance') AS DOUBLE),
-            2
-        )
-        ELSE NULL
-    END AS cost_per_mile,
-
-    -- Derived: tip percentage
-    CASE
-        WHEN CAST(JSON_VALUE(cdc_payload, '$.after.fare_amount') AS DOUBLE) > 0
-        THEN ROUND(
-            (CAST(JSON_VALUE(cdc_payload, '$.after.tip_amount') AS DOUBLE) /
-             CAST(JSON_VALUE(cdc_payload, '$.after.fare_amount') AS DOUBLE)) * 100,
-            2
-        )
-        ELSE NULL
-    END AS tip_percentage,
-
-    -- Derived: pickup date
+    -- Derived: pickup date (for partitioning)
     CAST(
         TO_TIMESTAMP_LTZ(
             CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT) / 1000000,
             0
         ) AS DATE
-    ) AS pickup_date,
-
-    -- Derived: pickup hour
-    CAST(EXTRACT(HOUR FROM
-        TO_TIMESTAMP_LTZ(
-            CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT) / 1000000,
-            0
-        )
-    ) AS INT) AS pickup_hour,
-
-    -- Derived: is weekend
-    CASE
-        WHEN DAYOFWEEK(
-            TO_TIMESTAMP_LTZ(
-                CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT) / 1000000,
-                0
-            )
-        ) IN (1, 7) THEN TRUE
-        ELSE FALSE
-    END AS is_weekend
+    ) AS pickup_date
 
 FROM iceberg_catalog.bronze.cdc_raw_trips
 WHERE JSON_VALUE(cdc_payload, '$.after.VendorID') IS NOT NULL

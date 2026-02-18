@@ -27,6 +27,14 @@ CREATE DATABASE IF NOT EXISTS bronze;
 CREATE TABLE IF NOT EXISTS bronze.cdc_raw_trips (
     cdc_payload       STRING,
     ingested_at       TIMESTAMP(3)
+)
+WITH (
+    'format-version' = '1',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'write.metadata.delete-after-commit.enabled' = 'true',
+    'write.metadata.previous-versions-max' = '10',
+    'write.target-file-size-bytes' = '134217728'
 );
 
 USE CATALOG default_catalog;

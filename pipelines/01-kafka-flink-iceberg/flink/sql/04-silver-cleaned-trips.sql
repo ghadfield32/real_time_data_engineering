@@ -13,13 +13,7 @@
 --      - Reject negative fare amounts and trip distances
 --      - Reject pickup dates outside January 2024
 --   4. Surrogate key: MD5 hash of composite natural key
---   5. Computed columns:
---      - duration_minutes
---      - avg_speed_mph
---      - cost_per_mile
---      - tip_percentage
---      - pickup_date, pickup_hour
---      - is_weekend
+--   5. Partition column: pickup_date (for Iceberg partitioning)
 -- =============================================================================
 
 -- Use the Iceberg catalog
@@ -61,16 +55,16 @@ CREATE TABLE IF NOT EXISTS cleaned_trips (
     congestion_surcharge    DECIMAL(10, 2),
     airport_fee             DECIMAL(10, 2),
 
-    -- computed: enrichments
-    duration_minutes        BIGINT,
-    avg_speed_mph           DOUBLE,
-    cost_per_mile           DOUBLE,
-    tip_percentage          DOUBLE,
-
-    -- computed: time dimensions
-    pickup_date             DATE,
-    pickup_hour             INT,
-    is_weekend              BOOLEAN
+    -- partition column
+    pickup_date             DATE
+) PARTITIONED BY (pickup_date)
+WITH (
+    'format-version' = '2',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'write.metadata.delete-after-commit.enabled' = 'true',
+    'write.metadata.previous-versions-max' = '10',
+    'write.target-file-size-bytes' = '134217728'
 );
 
 -- Continuous INSERT from Bronze into Silver with transformations
@@ -114,40 +108,8 @@ SELECT
     CAST(ROUND(congestion_surcharge, 2)    AS DECIMAL(10, 2)) AS congestion_surcharge,
     CAST(ROUND(Airport_fee, 2)             AS DECIMAL(10, 2)) AS airport_fee,
 
-    -- Computed: duration in minutes
-    TIMESTAMPDIFF(MINUTE, tpep_pickup_datetime, tpep_dropoff_datetime) AS duration_minutes,
-
-    -- Computed: average speed in mph (avoid division by zero)
-    CASE
-        WHEN TIMESTAMPDIFF(MINUTE, tpep_pickup_datetime, tpep_dropoff_datetime) > 0
-        THEN ROUND(
-            trip_distance / (CAST(TIMESTAMPDIFF(MINUTE, tpep_pickup_datetime, tpep_dropoff_datetime) AS DOUBLE) / 60.0),
-            2
-        )
-        ELSE NULL
-    END AS avg_speed_mph,
-
-    -- Computed: cost per mile (avoid division by zero)
-    CASE
-        WHEN trip_distance > 0
-        THEN ROUND(fare_amount / trip_distance, 2)
-        ELSE NULL
-    END AS cost_per_mile,
-
-    -- Computed: tip percentage (avoid division by zero)
-    CASE
-        WHEN fare_amount > 0
-        THEN ROUND((tip_amount / fare_amount) * 100, 2)
-        ELSE NULL
-    END AS tip_percentage,
-
-    -- Computed: date dimensions
-    CAST(tpep_pickup_datetime AS DATE) AS pickup_date,
-    EXTRACT(HOUR FROM tpep_pickup_datetime) AS pickup_hour,
-    CASE
-        WHEN DAYOFWEEK(tpep_pickup_datetime) IN (1, 7) THEN TRUE
-        ELSE FALSE
-    END AS is_weekend
+    -- Partition column
+    CAST(tpep_pickup_datetime AS DATE) AS pickup_date
 
 FROM iceberg_catalog.bronze.raw_trips
 

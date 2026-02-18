@@ -7,7 +7,7 @@ PSQL    := PGPASSWORD= psql -h localhost -p 6875 -U materialize -d materialize
 
 # ── Lifecycle ────────────────────────────────────────────────
 
-.PHONY: up down generate process dbt-build benchmark logs status help topics
+.PHONY: up down generate generate-limited process dbt-build benchmark logs status help topics
 
 up: ## Start Kafka + Materialize infrastructure
 	$(COMPOSE) up -d kafka materialize
@@ -37,6 +37,10 @@ generate: ## Produce taxi events into Kafka
 	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
 	@echo "Event generation complete."
 
+generate-limited: ## Produce limited events for testing (10k)
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+	@echo "Limited data generation complete (10k events)."
+
 process: ## Submit Materialize SQL init scripts (connection + source + materialized views)
 	@echo "Submitting Materialize SQL scripts..."
 	MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T materialize \
@@ -64,7 +68,7 @@ benchmark: ## Run full pipeline benchmark (down -> up, generate + process + dbt)
 	echo "[2/4] Creating Materialize streaming objects..." && \
 	$(MAKE) process && \
 	echo "[3/4] Generating events..." && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	echo "[4/4] Running dbt build..." && \
 	$(MAKE) dbt-build && \
 	END_TIME=$$(date +%s) && \

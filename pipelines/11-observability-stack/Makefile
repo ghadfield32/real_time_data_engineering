@@ -3,7 +3,7 @@ SHELL := bash
 COMPOSE := docker compose
 FLINK_SQL_CLIENT = MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
 
-.PHONY: up down generate create-topics process process-bronze process-silver dbt-build soda-check elementary-report benchmark logs status help
+.PHONY: up down generate generate-limited create-topics process process-bronze process-silver dbt-build soda-check elementary-report benchmark logs status help
 
 up: ## Start all infrastructure services
 	$(COMPOSE) up -d
@@ -24,6 +24,10 @@ create-topics: ## Create Kafka topics
 
 generate: ## Produce taxi events to Kafka
 	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
+
+generate-limited: ## Produce limited events for testing (10k)
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+	@echo "Limited data generation complete (10k events)."
 
 process-bronze: ## Submit Bronze layer Flink SQL jobs (batch mode)
 	@echo "=== Bronze: Kafka → Iceberg ==="
@@ -61,15 +65,13 @@ benchmark: ## Full E2E: generate -> process -> dbt -> quality checks
 	echo "Waiting for services to stabilize..." && \
 	sleep 15 && \
 	$(MAKE) create-topics && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	echo "Waiting for Flink processing to catch up..." && \
 	sleep 10 && \
 	$(MAKE) process-bronze && \
 	echo "Waiting for Bronze data to settle..." && \
 	sleep 10 && \
 	$(MAKE) process-silver && \
-	echo "Waiting for Silver data to settle..." && \
-	sleep 30 && \
 	$(MAKE) dbt-build && \
 	$(MAKE) soda-check && \
 	END_TIME=$$(date +%s) && \

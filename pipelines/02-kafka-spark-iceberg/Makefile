@@ -91,11 +91,9 @@ process-silver:
 # dbt
 # ---------------------------------------------------------------------------
 
-## Install dbt dependencies and run full build
+## Install dbt dependencies and run full build (dbt-duckdb, reads Iceberg via iceberg_scan)
 dbt-build:
-	$(COMPOSE) exec dbt dbt deps --profiles-dir .
-	$(COMPOSE) exec dbt dbt seed --profiles-dir .
-	$(COMPOSE) exec dbt dbt build --full-refresh --profiles-dir .
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --profiles-dir ."
 
 ## Run dbt tests only
 dbt-test:
@@ -115,7 +113,7 @@ benchmark:
 	@START_TIME=$$(date +%s) && \
 	$(MAKE) down 2>/dev/null || true && \
 	$(MAKE) up && \
-	$(MAKE) generate && \
+	$(MAKE) generate-sample && \
 	$(MAKE) process && \
 	$(MAKE) dbt-build && \
 	END_TIME=$$(date +%s) && \

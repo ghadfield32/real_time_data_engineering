@@ -64,32 +64,8 @@ services:
       timeout: 10s
       retries: 15
       start_period: 30s
-    networks:
-      - pipeline-net
-
-  # ---------------------------------------------------------------------------
-  # Schema Registry (Confluent)
-  # ---------------------------------------------------------------------------
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.9.0
-    container_name: p01-schema-registry
-    hostname: schema-registry
-    restart: unless-stopped
-    ports:
-      - "8085:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-    depends_on:
-      kafka:
-        condition: service_healthy
-    healthcheck:
-      test: curl -f http://localhost:8081/subjects || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
+    volumes:
+      - ./kafka/create-topics.sh:/opt/kafka/scripts/create-topics.sh:ro
     networks:
       - pipeline-net
 
@@ -97,7 +73,7 @@ services:
   # MinIO (S3-compatible object storage for Iceberg warehouse)
   # ---------------------------------------------------------------------------
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: p01-minio
     hostname: minio
     restart: unless-stopped
@@ -128,7 +104,7 @@ services:
   # MinIO Client Init (create warehouse bucket)
   # ---------------------------------------------------------------------------
   mc-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-05-21T01-59-54Z
     container_name: p01-mc-init
     depends_on:
       minio:
@@ -174,7 +150,7 @@ services:
     environment:
       LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
       LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
-      LAKEKEEPER__PG_ENCRYPTION_KEY: "this-is-NOT-secure-change-in-prod!!"
+      LAKEKEEPER__PG_ENCRYPTION_KEY: "${LAKEKEEPER_ENCRYPTION_KEY:-this-is-NOT-secure-change-in-prod!!}"
     depends_on:
       lakekeeper-db:
         condition: service_healthy
@@ -194,7 +170,7 @@ services:
     environment:
       LAKEKEEPER__PG_DATABASE_URL_READ: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
       LAKEKEEPER__PG_DATABASE_URL_WRITE: postgresql://lakekeeper:lakekeeper@lakekeeper-db:5432/lakekeeper
-      LAKEKEEPER__PG_ENCRYPTION_KEY: "this-is-NOT-secure-change-in-prod!!"
+      LAKEKEEPER__PG_ENCRYPTION_KEY: "${LAKEKEEPER_ENCRYPTION_KEY:-this-is-NOT-secure-change-in-prod!!}"
       LAKEKEEPER__LISTEN_PORT: 8181
     depends_on:
       lakekeeper-migrate:
@@ -211,7 +187,7 @@ services:
       - pipeline-net
 
   lakekeeper-init:
-    image: curlimages/curl:latest
+    image: curlimages/curl:8.17.0
     container_name: p01-lakekeeper-init
     depends_on:
       lakekeeper:
@@ -265,6 +241,7 @@ services:
     command: jobmanager
     ports:
       - "8083:8081"
+      - "9249:9249"  # Prometheus metrics
     volumes:
       - ./flink/sql:/opt/flink/sql:ro
       - ./flink/conf/config.yaml:/opt/flink/conf/config.yaml:ro

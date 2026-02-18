@@ -1,7 +1,7 @@
 # =============================================================================
 # Pipeline 04: Flink Configuration
 # =============================================================================
-# Configuration for Flink 1.20 with Iceberg + Kafka connectors.
+# Configuration for Flink 2.0.1 with Iceberg + Redpanda connectors.
 # This file is mounted into the JobManager container.
 # =============================================================================
 
@@ -49,3 +49,7 @@ s3.path.style.access: true
 # Logging
 env.log.max: 5
 env.log.dir: /opt/flink/log
+
+# Metrics: Prometheus reporter (scrape port 9249 on JobManager + TaskManager)
+metrics.reporter.prom.factory.class: org.apache.flink.metrics.prometheus.PrometheusReporterFactory
+metrics.reporter.prom.port: 9249

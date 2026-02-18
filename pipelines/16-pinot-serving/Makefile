@@ -6,7 +6,7 @@ SHELL := bash
 COMPOSE = docker compose
 FLINK_SQL_CLIENT = MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
 
-.PHONY: help up down generate create-topics process process-bronze process-silver \
+.PHONY: help up down generate generate-limited create-topics process process-bronze process-silver \
         setup-pinot query-pinot benchmark logs status
 
 help: ## Show this help
@@ -32,6 +32,10 @@ create-topics: ## Create Redpanda topics
 
 generate: ## Produce taxi events
 	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+
+generate-limited: ## Produce limited events for testing (10k)
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+	@echo "Limited data generation complete (10k events)."
 
 process: process-bronze process-silver ## Flink Bronze + Silver
 
@@ -79,7 +83,7 @@ benchmark: ## Full E2E benchmark (down -> up -> create-topics -> setup-pinot)
 	$(MAKE) up && \
 	$(MAKE) create-topics && \
 	$(MAKE) setup-pinot && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	echo "Waiting for Pinot ingestion (15s)..." && \
 	sleep 15 && \
 	$(MAKE) query-pinot && \

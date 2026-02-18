@@ -2,7 +2,10 @@
 -- Materialize requires an explicit CONNECTION object before creating a SOURCE.
 
 -- Create connection to the Kafka broker
-CREATE CONNECTION IF NOT EXISTS kafka_conn TO KAFKA (BROKER 'kafka:9092');
+CREATE CONNECTION IF NOT EXISTS kafka_conn TO KAFKA (
+    BROKER 'kafka:9092',
+    SECURITY PROTOCOL = 'PLAINTEXT'
+);
 
 -- Create source from Kafka topic
 -- Materialize ingests each Kafka message as raw TEXT; we parse JSON downstream.

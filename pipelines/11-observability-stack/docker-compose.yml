@@ -26,7 +26,7 @@ services:
   # Kafka (KRaft mode - single node)
   # ---------------------------------------------------------------------------
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.0.0
     container_name: p11-kafka
     hostname: kafka
     ports:
@@ -56,35 +56,10 @@ services:
       - pipeline-net
 
   # ---------------------------------------------------------------------------
-  # Schema Registry (Confluent)
-  # ---------------------------------------------------------------------------
-  schema-registry:
-    image: confluentinc/cp-schema-registry:7.6.0
-    container_name: p11-schema-registry
-    hostname: schema-registry
-    ports:
-      - "8085:8081"
-    environment:
-      SCHEMA_REGISTRY_HOST_NAME: schema-registry
-      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: kafka:9092
-      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
-    depends_on:
-      kafka:
-        condition: service_healthy
-    healthcheck:
-      test: curl -f http://localhost:8081/subjects || exit 1
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
-    networks:
-      - pipeline-net
-
-  # ---------------------------------------------------------------------------
   # MinIO (S3-compatible object storage for Iceberg warehouse)
   # ---------------------------------------------------------------------------
   minio:
-    image: minio/minio:latest
+    image: minio/minio:RELEASE.2025-04-22T22-12-26Z
     container_name: p11-minio
     hostname: minio
     ports:
@@ -109,7 +84,7 @@ services:
   # MinIO Client Init (create warehouse bucket)
   # ---------------------------------------------------------------------------
   mc-init:
-    image: minio/mc:latest
+    image: minio/mc:RELEASE.2025-05-21T01-59-54Z
     container_name: p11-mc-init
     depends_on:
       minio:

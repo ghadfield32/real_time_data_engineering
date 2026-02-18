@@ -2,23 +2,14 @@
 -- Pipeline 01: Streaming Bronze Layer (Kafka → Iceberg, continuous)
 -- =============================================================================
 -- Alternative to 05-bronze.sql that runs in STREAMING mode.
--- Uses event_time watermarks defined in 00-init.sql for event-time processing.
+-- Uses event_time watermarks defined in 00-init-streaming.sql for event-time processing.
 --
 -- Run: sql-client.sh embedded -i 00-init-streaming.sql -f 07-streaming-bronze.sql
---   (or override execution.runtime-mode inline)
 --
 -- NOTE: This job runs continuously until cancelled. It will process new Kafka
 -- events as they arrive and write them to the Bronze Iceberg table.
+-- Streaming config (runtime-mode, checkpointing) is set in 00-init-streaming.sql.
 -- =============================================================================
-
--- Override to streaming mode (00-init.sql sets batch by default)
-SET 'execution.runtime-mode' = 'streaming';
-
--- Don't wait for each INSERT to complete (streaming jobs run indefinitely)
-RESET 'table.dml-sync';
-
--- Checkpoint every 30s for exactly-once guarantees
-SET 'execution.checkpointing.interval' = '30s';
 
 USE CATALOG iceberg_catalog;
 CREATE DATABASE IF NOT EXISTS bronze;
@@ -44,6 +35,14 @@ CREATE TABLE IF NOT EXISTS bronze.raw_trips (
     congestion_surcharge    DOUBLE,
     Airport_fee             DOUBLE,
     ingestion_ts            TIMESTAMP(3)
+)
+WITH (
+    'format-version' = '1',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'write.metadata.delete-after-commit.enabled' = 'true',
+    'write.metadata.previous-versions-max' = '10',
+    'write.target-file-size-bytes' = '134217728'
 );
 
 -- Switch back to default catalog for Kafka source table reference

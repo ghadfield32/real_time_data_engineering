@@ -1,18 +1,26 @@
-# Pipeline 05: dbt-spark profile reading Silver Iceberg tables via Spark Thrift Server
+# Pipeline 05: dbt-duckdb reading Iceberg Silver tables from MinIO via iceberg_scan()
 #
-# dbt-spark connects to Spark Thrift Server, which can natively read Iceberg tables
-# written by Spark Structured Streaming. This avoids DuckDB version-hint compatibility issues.
+# Same pattern as P04 (Flink). Spark writes Iceberg to MinIO; DuckDB reads it
+# directly via the iceberg extension — no Spark Thrift Server needed for dbt.
+# The Spark Thrift Server service has been removed from docker-compose.yml.
 
 nyc_taxi_pipeline_05:
   target: dev
   outputs:
     dev:
-      type: spark
-      method: thrift
-      schema: default
-      host: spark-thrift
-      port: 10000
-      user: dbt
+      type: duckdb
+      path: /tmp/p05_dbt.duckdb
+      schema: main
       threads: 4
-      connect_timeout: 60
-      connect_retries: 5
+      extensions:
+        - httpfs
+        - parquet
+        - iceberg
+      settings:
+        memory_limit: "2GB"
+        s3_endpoint: "minio:9000"
+        s3_access_key_id: "{{ env_var('AWS_ACCESS_KEY_ID', 'minioadmin') }}"
+        s3_secret_access_key: "{{ env_var('AWS_SECRET_ACCESS_KEY', 'minioadmin') }}"
+        s3_url_style: "path"
+        s3_use_ssl: false
+        s3_region: "us-east-1"

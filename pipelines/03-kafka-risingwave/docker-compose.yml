@@ -6,7 +6,7 @@ version: "3.9"
 services:
   # ── Kafka (KRaft mode, single node) ───────────────────────
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.0.0
     container_name: p03-kafka
     hostname: kafka
     ports:
@@ -43,7 +43,7 @@ services:
 
   # ── RisingWave (streaming database, playground mode) ──────
   risingwave:
-    image: risingwavelabs/risingwave:latest
+    image: risingwavelabs/risingwave:v2.7.2
     container_name: p03-risingwave
     hostname: risingwave
     command: playground
@@ -54,7 +54,7 @@ services:
       - risingwave-data:/risingwave
       - ./risingwave/sql:/risingwave/sql:ro
     healthcheck:
-      test: pg_isready -h localhost -p 4566 -U root || exit 1
+      test: curl -sf http://localhost:5691/ > /dev/null || exit 1
       interval: 10s
       timeout: 5s
       retries: 12

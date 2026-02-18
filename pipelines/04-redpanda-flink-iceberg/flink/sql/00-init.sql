@@ -15,6 +15,8 @@ SET 'execution.runtime-mode' = 'batch';
 SET 'table.dml-sync' = 'true';
 
 -- Create Kafka source table
+-- NOTE: event_time computed column + WATERMARK enables event-time processing
+-- in streaming mode. In batch mode (default), the watermark is simply ignored.
 CREATE TABLE IF NOT EXISTS kafka_raw_trips (
     VendorID                BIGINT,
     tpep_pickup_datetime    STRING,
@@ -34,7 +36,11 @@ CREATE TABLE IF NOT EXISTS kafka_raw_trips (
     improvement_surcharge   DOUBLE,
     total_amount            DOUBLE,
     congestion_surcharge    DOUBLE,
-    Airport_fee             DOUBLE
+    Airport_fee             DOUBLE,
+    -- Computed column for event-time processing
+    event_time AS TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss'),
+    -- Watermark: allow 10s late arrivals (ignored in batch mode)
+    WATERMARK FOR event_time AS event_time - INTERVAL '10' SECOND
 ) WITH (
     'connector' = 'kafka',
     'topic' = 'taxi.raw_trips',

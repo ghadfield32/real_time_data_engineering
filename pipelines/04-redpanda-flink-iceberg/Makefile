@@ -10,7 +10,7 @@ COMPOSE = docker compose
 FLINK_SQL_CLIENT = MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded
 
 .PHONY: help up down generate create-topics process process-bronze process-silver \
-        dbt-build benchmark logs status clean ps restart
+        process-streaming dbt-build benchmark logs status clean ps restart
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -54,12 +54,21 @@ restart: ## Restart all services
 # Topic Management
 # =============================================================================
 
-create-topics: ## Create Redpanda topics
+create-topics: ## Create Redpanda topics (primary + Dead Letter Queue)
 	$(COMPOSE) exec redpanda rpk topic create taxi.raw_trips \
 		--brokers localhost:9092 \
 		--partitions 3 \
-		--replicas 1 || true
-	@echo "Topic taxi.raw_trips created (3 partitions)."
+		--replicas 1 \
+		--topic-config retention.ms=259200000 \
+		--topic-config cleanup.policy=delete || true
+	$(COMPOSE) exec redpanda rpk topic create taxi.raw_trips.dlq \
+		--brokers localhost:9092 \
+		--partitions 1 \
+		--replicas 1 \
+		--topic-config retention.ms=604800000 \
+		--topic-config cleanup.policy=delete || true
+	@$(COMPOSE) exec redpanda rpk topic list --brokers localhost:9092
+	@echo "Topics created: taxi.raw_trips (3 partitions) + taxi.raw_trips.dlq (DLQ, 7-day retention)."
 
 # =============================================================================
 # Data Generation
@@ -90,6 +99,11 @@ process-silver: ## Submit Silver layer Flink SQL jobs (batch mode)
 	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
 	@echo "Silver layer complete."
 
+process-streaming: ## Start continuous streaming Bronze job (Redpanda → Iceberg, runs indefinitely)
+	@echo "=== Streaming Bronze: Redpanda → Iceberg (continuous) ==="
+	@echo "NOTE: This job runs indefinitely. Cancel with Ctrl+C or kill the Flink job."
+	$(FLINK_SQL_CLIENT) -i /opt/flink/sql/00-init-streaming.sql -f /opt/flink/sql/07-streaming-bronze.sql
+
 # =============================================================================
 # dbt Transformations
 # =============================================================================
@@ -118,12 +132,12 @@ benchmark: ## Full end-to-end benchmark: down -> up → topics → generate → 
 	echo "Waiting for services to stabilize..." && \
 	sleep 15 && \
 	$(MAKE) create-topics && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	echo "Waiting for Flink processing to catch up..." && \
 	sleep 10 && \
 	$(MAKE) process && \
-	echo "Waiting for streaming jobs to process data..." && \
-	sleep 30 && \
+	echo "Waiting for Iceberg metadata commits to finalize..." && \
+	sleep 15 && \
 	$(MAKE) dbt-build && \
 	END_TIME=$$(date +%s) && \
 	ELAPSED=$$((END_TIME - START_TIME)) && \
@@ -132,6 +146,7 @@ benchmark: ## Full end-to-end benchmark: down -> up → topics → generate → 
 	echo "  BENCHMARK COMPLETE" && \
 	echo "  Total elapsed: $${ELAPSED}s" && \
 	echo "============================================================" && \
+	mkdir -p benchmark_results && \
 	echo "{\"pipeline\": \"04-redpanda-flink-iceberg\", \"elapsed_seconds\": $$ELAPSED, \"timestamp\": \"$$(date -Iseconds)\"}" > benchmark_results/latest.json && \
 	echo "Results saved to benchmark_results/latest.json" && \
 	$(MAKE) down

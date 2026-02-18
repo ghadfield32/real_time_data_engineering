@@ -15,14 +15,22 @@ dispatch:
   - macro_namespace: nyc_taxi_dbt
     search_order: [nyc_taxi_pipeline_04, nyc_taxi_dbt]
 
+seeds:
+  nyc_taxi_pipeline_04:
+    +schema: raw
+
 models:
   nyc_taxi_pipeline_04:
     staging:
       +materialized: view
+      +schema: staging
     intermediate:
       +materialized: view
+      +schema: intermediate
     marts:
       core:
         +materialized: table
+        +schema: marts
       analytics:
         +materialized: table
+        +schema: marts

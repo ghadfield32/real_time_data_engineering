@@ -6,7 +6,7 @@ version: "3.9"
 services:
   # ── Kafka (KRaft mode, single node) ───────────────────────
   kafka:
-    image: apache/kafka:latest
+    image: apache/kafka:4.0.0
     container_name: p14-kafka
     hostname: kafka
     ports:
@@ -43,7 +43,7 @@ services:
 
   # ── Materialize (streaming database) ────────────────────────
   materialize:
-    image: materialize/materialized:latest
+    image: materialize/materialized:v0.112.2
     container_name: p14-materialize
     hostname: materialize
     ports:

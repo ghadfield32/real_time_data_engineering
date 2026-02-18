@@ -32,6 +32,14 @@ CREATE TABLE IF NOT EXISTS bronze.raw_trips (
     congestion_surcharge    DOUBLE,
     Airport_fee             DOUBLE,
     ingestion_ts            TIMESTAMP(3)
+)
+WITH (
+    'format-version' = '1',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'write.metadata.delete-after-commit.enabled' = 'true',
+    'write.metadata.previous-versions-max' = '10',
+    'write.target-file-size-bytes' = '134217728'
 );
 
 -- Switch back to default catalog for Kafka source table reference
@@ -91,13 +99,15 @@ CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
     total_amount            DECIMAL(10, 2),
     congestion_surcharge    DECIMAL(10, 2),
     airport_fee             DECIMAL(10, 2),
-    duration_minutes        BIGINT,
-    avg_speed_mph           DOUBLE,
-    cost_per_mile           DOUBLE,
-    tip_percentage          DOUBLE,
-    pickup_date             DATE,
-    pickup_hour             INT,
-    is_weekend              BOOLEAN
+    pickup_date             DATE
+) PARTITIONED BY (pickup_date)
+WITH (
+    'format-version' = '2',
+    'write.format.default' = 'parquet',
+    'write.parquet.compression-codec' = 'zstd',
+    'write.metadata.delete-after-commit.enabled' = 'true',
+    'write.metadata.previous-versions-max' = '10',
+    'write.target-file-size-bytes' = '134217728'
 );
 
 -- Deduplication: ROW_NUMBER partitioned by natural key, keeping latest ingestion
@@ -146,30 +156,6 @@ SELECT
     CAST(ROUND(total_amount, 2)            AS DECIMAL(10, 2)) AS total_amount,
     CAST(ROUND(congestion_surcharge, 2)    AS DECIMAL(10, 2)) AS congestion_surcharge,
     CAST(ROUND(Airport_fee, 2)             AS DECIMAL(10, 2)) AS airport_fee,
-    CAST(TIMESTAMPDIFF(MINUTE, tpep_pickup_datetime, tpep_dropoff_datetime) AS BIGINT) AS duration_minutes,
-    CASE
-        WHEN TIMESTAMPDIFF(MINUTE, tpep_pickup_datetime, tpep_dropoff_datetime) > 0
-        THEN ROUND(
-            trip_distance / (CAST(TIMESTAMPDIFF(MINUTE, tpep_pickup_datetime, tpep_dropoff_datetime) AS DOUBLE) / 60.0),
-            2
-        )
-        ELSE NULL
-    END AS avg_speed_mph,
-    CASE
-        WHEN trip_distance > 0
-        THEN ROUND(fare_amount / trip_distance, 2)
-        ELSE NULL
-    END AS cost_per_mile,
-    CASE
-        WHEN fare_amount > 0
-        THEN ROUND((tip_amount / fare_amount) * 100, 2)
-        ELSE NULL
-    END AS tip_percentage,
-    CAST(tpep_pickup_datetime AS DATE) AS pickup_date,
-    CAST(EXTRACT(HOUR FROM tpep_pickup_datetime) AS INT) AS pickup_hour,
-    CASE
-        WHEN DAYOFWEEK(tpep_pickup_datetime) IN (1, 7) THEN TRUE
-        ELSE FALSE
-    END AS is_weekend
+    CAST(tpep_pickup_datetime AS DATE) AS pickup_date
 FROM deduped
 WHERE rn = 1;

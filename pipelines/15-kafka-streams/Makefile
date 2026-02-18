@@ -5,7 +5,7 @@ SHELL := bash
 
 COMPOSE = docker compose
 
-.PHONY: help up down generate topics process status logs benchmark count-messages
+.PHONY: help up down generate generate-limited topics process status logs benchmark count-messages
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -42,6 +42,10 @@ generate: ## Produce 10k taxi events
 	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
 	@echo "Data generation complete. Kafka Streams will auto-process."
 
+generate-limited: ## Produce limited events for testing (10k)
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+	@echo "Limited data generation complete (10k events)."
+
 count-messages: ## Count messages in each topic
 	@echo "=== Message Counts ==="
 	@echo -n "raw_trips: " && MSYS_NO_PATHCONV=1 $(COMPOSE) exec -T kafka /opt/kafka/bin/kafka-run-class.sh \
@@ -62,7 +66,7 @@ benchmark: ## Full benchmark (down -> up -> topics)
 	$(MAKE) down 2>/dev/null || true && \
 	$(MAKE) up && \
 	$(MAKE) topics && \
-	$(MAKE) generate && \
+	$(MAKE) generate-limited && \
 	echo "Waiting for Kafka Streams processing (10s)..." && \
 	sleep 10 && \
 	$(MAKE) count-messages && \

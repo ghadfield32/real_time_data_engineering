@@ -35,6 +35,10 @@ generate: ## Produce taxi events into Redpanda
 	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm data-generator
 	@echo "Event generation complete."
 
+generate-limited: ## Produce limited events (10k) for benchmarking
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm -e MAX_EVENTS=10000 data-generator
+	@echo "Limited generation complete (10k events)."
+
 process: ## Submit RisingWave SQL init scripts (source + materialized views)
 	@echo "Submitting RisingWave SQL scripts..."
 	MSYS_NO_PATHCONV=1 docker run --rm --network 06-redpanda-risingwave_pipeline-net \
@@ -61,8 +65,8 @@ benchmark: ## Run full pipeline benchmark (down -> up, generate + process + dbt)
 	$(MAKE) up
 	@echo "[2/4] Creating RisingWave streaming objects..."
 	$(MAKE) process
-	@echo "[3/4] Generating events..."
-	$(MAKE) generate
+	@echo "[3/4] Generating events (10k)..."
+	$(MAKE) generate-limited
 	@echo "[4/4] Running dbt build..."
 	$(MAKE) dbt-build
 	@echo "=== Benchmark complete ==="

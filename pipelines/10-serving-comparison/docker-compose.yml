@@ -4,7 +4,7 @@
 services:
   # --- ClickHouse OLAP engine ---
   clickhouse:
-    image: clickhouse/clickhouse-server:latest
+    image: clickhouse/clickhouse-server:24.8.6.70-alpine
     container_name: p10-clickhouse
     ports:
       - "8123:8123"   # HTTP interface
@@ -30,7 +30,7 @@ services:
 
   # --- Metabase BI ---
   metabase:
-    image: metabase/metabase:latest
+    image: metabase/metabase:v0.58.6
     container_name: p10-metabase
     ports:
       - "3030:3000"
@@ -47,7 +47,7 @@ services:
 
   # --- Apache Superset ---
   superset:
-    image: apache/superset:latest
+    image: apache/superset:6.0.0
     container_name: p10-superset
     ports:
       - "8088:8088"

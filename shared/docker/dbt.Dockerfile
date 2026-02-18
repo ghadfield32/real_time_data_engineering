@@ -21,8 +21,5 @@ RUN if [ "$DBT_ADAPTER" = "dbt-duckdb" ]; then \
 # Copy dbt project (mounted or copied at build time)
 COPY dbt_project/ /dbt/
 
-# Install dbt packages
-RUN dbt deps --profiles-dir . 2>/dev/null || true
-
 ENTRYPOINT ["dbt"]
 CMD ["build", "--profiles-dir", "."]

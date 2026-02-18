@@ -2,10 +2,15 @@ version: 2
 
 sources:
   - name: raw_nyc_taxi
-    description: "NYC TLC Yellow Taxi data - Iceberg Bronze table via DuckDB iceberg_scan"
+    description: "NYC TLC Yellow Taxi data - Iceberg Silver table via DuckDB iceberg_scan"
     schema: main
+    freshness:
+      # Adjust thresholds for your SLA (generous window for historical data)
+      warn_after: {count: 30, period: day}
+      error_after: {count: 365, period: day}
+    loaded_at_field: pickup_datetime
     tables:
       - name: raw_yellow_trips
-        description: "Bronze-layer raw trips from Iceberg (Flink-processed, original column names)"
+        description: "Silver-layer cleaned trips from Iceberg (Flink-filtered, deduplicated, snake_case columns)"
         config:
-          external_location: "iceberg_scan('s3://warehouse/bronze/raw_trips', allow_moved_paths = true)"
+          external_location: "iceberg_scan('s3://warehouse/silver/cleaned_trips', allow_moved_paths = true)"
