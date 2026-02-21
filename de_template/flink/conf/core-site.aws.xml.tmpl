@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  core-site.aws.xml.tmpl — Hadoop S3A config for AWS S3 (STORAGE=aws_s3)
+  Also used as a baseline for gcs/azure (requires additional connector JARs).
+  Rendered by scripts/render_sql.py → build/conf/core-site.xml
+
+  No endpoint override — AWS SDK resolves regional endpoint from AWS_REGION env var.
+  Credentials: DefaultAWSCredentialsProviderChain tries (in order):
+    1. Environment variables: AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY
+    2. Java system properties
+    3. AWS credentials file (~/.aws/credentials)
+    4. ECS task role credentials
+    5. EC2 instance profile / EKS IRSA web identity token
+
+  For IAM-based auth (EC2/ECS/EKS): leave AWS_ACCESS_KEY_ID/SECRET blank in .env.
+  For explicit keys (CI/CD): set them in .env or inject via secrets manager.
+
+  S3_ENDPOINT and S3_PATH_STYLE are intentionally NOT substituted here —
+  AWS S3 does not need a custom endpoint and uses virtual-hosted style by default.
+-->
+<configuration>
+  <property>
+    <name>fs.s3a.path.style.access</name>
+    <value>false</value>
+    <description>false for AWS S3 (virtual-hosted style). MinIO requires true.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.connection.ssl.enabled</name>
+    <value>true</value>
+    <description>true for AWS S3 (TLS required). MinIO local uses false.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.impl</name>
+    <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.aws.credentials.provider</name>
+    <value>com.amazonaws.auth.DefaultAWSCredentialsProviderChain</value>
+    <description>
+      Tries env vars first (AWS_ACCESS_KEY_ID/SECRET), then instance profile,
+      then ECS task role, then IRSA web identity token.
+      Works for both explicit-key and IAM-role auth without code changes.
+    </description>
+  </property>
+</configuration>

@@ -1,0 +1,13 @@
+
+    
+    
+    
+    create table "de_pipeline"."main_raw"."taxi_zone_lookup" ("LocationID" INTEGER,"Borough" VARCHAR,"Zone" VARCHAR,"service_zone" VARCHAR)
+  ;
+    -- dbt seed --
+    
+          COPY "de_pipeline"."main_raw"."taxi_zone_lookup" FROM '/dbt/seeds/taxi_zone_lookup.csv' (FORMAT CSV, HEADER TRUE, DELIMITER ',')
+        
+
+;
+  

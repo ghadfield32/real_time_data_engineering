@@ -1,0 +1,28 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TaxiTrip",
+  "description": "NYC Yellow Taxi trip record. Field names match the raw parquet source exactly.",
+  "type": "object",
+  "properties": {
+    "VendorID": {"type": ["integer", "null"], "description": "TPEP provider: 1=Creative Mobile Technologies, 2=VeriFone Inc."},
+    "tpep_pickup_datetime": {"type": "string", "format": "date-time", "description": "Meter engaged timestamp (ISO 8601)"},
+    "tpep_dropoff_datetime": {"type": "string", "format": "date-time", "description": "Meter disengaged timestamp (ISO 8601)"},
+    "passenger_count": {"type": ["integer", "null"], "description": "Number of passengers (driver-entered)"},
+    "trip_distance": {"type": ["number", "null"], "description": "Trip distance in miles from taximeter"},
+    "RatecodeID": {"type": ["integer", "null"], "description": "Rate code: 1=Standard, 2=JFK, 3=Newark, 4=Nassau/Westchester, 5=Negotiated, 6=Group"},
+    "store_and_fwd_flag": {"type": ["string", "null"], "description": "Y=stored then forwarded, N=not a store-and-forward trip"},
+    "PULocationID": {"type": ["integer", "null"], "description": "TLC Taxi Zone pickup location ID"},
+    "DOLocationID": {"type": ["integer", "null"], "description": "TLC Taxi Zone dropoff location ID"},
+    "payment_type": {"type": ["integer", "null"], "description": "Payment method: 1=Credit, 2=Cash, 3=No charge, 4=Dispute, 5=Unknown, 6=Voided"},
+    "fare_amount": {"type": ["number", "null"], "description": "Time-and-distance fare in dollars"},
+    "extra": {"type": ["number", "null"], "description": "Misc extras and surcharges"},
+    "mta_tax": {"type": ["number", "null"], "description": "MTA tax"},
+    "tip_amount": {"type": ["number", "null"], "description": "Tip amount"},
+    "tolls_amount": {"type": ["number", "null"], "description": "Total tolls paid during trip"},
+    "improvement_surcharge": {"type": ["number", "null"], "description": "$0.30 improvement surcharge"},
+    "total_amount": {"type": ["number", "null"], "description": "Total amount charged to passengers"},
+    "congestion_surcharge": {"type": ["number", "null"], "description": "NYC congestion surcharge"},
+    "Airport_fee": {"type": ["number", "null"], "description": "$1.25 for pickups at LaGuardia and JFK"}
+  },
+  "required": ["tpep_pickup_datetime", "tpep_dropoff_datetime"]
+}

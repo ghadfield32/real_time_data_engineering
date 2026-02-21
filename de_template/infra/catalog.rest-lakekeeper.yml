@@ -1,0 +1,56 @@
+services:
+  # =============================================================================
+  # Lakekeeper — Iceberg REST Catalog (optional, --profile catalog-rest)
+  # =============================================================================
+  # Requires: CATALOG=rest in .env
+  # Start with: docker compose ... --profile catalog-rest up
+  # Flink uses: 00_catalog_rest.sql (rendered by render_sql.py when CATALOG=rest)
+  lakekeeper:
+    image: quay.io/lakekeeper/catalog:v0.11.2
+    container_name: template-lakekeeper
+    environment:
+      LAKEKEEPER__BASE_URI: http://lakekeeper:8181
+      LAKEKEEPER__AUTHZ_BACKEND: allow_all
+      LAKEKEEPER__CATALOG_NAME: iceberg_catalog
+      LAKEKEEPER__PG_ENCRYPTION_KEY: lakekeeper-dev-key
+      DATABASE_URL: postgresql://lakekeeper:lakekeeper@lakekeeper-postgres:5432/lakekeeper
+    ports:
+      - "8181:8181"
+    depends_on:
+      lakekeeper-postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8181/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    profiles:
+      - catalog-rest
+    networks:
+      - pipeline-net
+
+  # =============================================================================
+  # PostgreSQL — Lakekeeper metadata backend
+  # =============================================================================
+  lakekeeper-postgres:
+    image: postgres:16-alpine
+    container_name: template-lakekeeper-pg
+    environment:
+      POSTGRES_USER: lakekeeper
+      POSTGRES_PASSWORD: lakekeeper
+      POSTGRES_DB: lakekeeper
+    volumes:
+      - lakekeeper-pg-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U lakekeeper"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    profiles:
+      - catalog-rest
+    networks:
+      - pipeline-net
+
+volumes:
+  lakekeeper-pg-data:

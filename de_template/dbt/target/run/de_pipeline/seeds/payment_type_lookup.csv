@@ -1,0 +1,13 @@
+
+    
+    
+    
+    create table "de_pipeline"."main_raw"."payment_type_lookup" ("payment_type_id" INTEGER,"payment_type_name" VARCHAR)
+  ;
+    -- dbt seed --
+    
+          COPY "de_pipeline"."main_raw"."payment_type_lookup" FROM '/dbt/seeds/payment_type_lookup.csv' (FORMAT CSV, HEADER TRUE, DELIMITER ',')
+        
+
+;
+  

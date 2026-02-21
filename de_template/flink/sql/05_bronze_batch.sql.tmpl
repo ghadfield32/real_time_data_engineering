@@ -1,0 +1,120 @@
+-- =============================================================================
+-- 05_bronze_batch.sql.tmpl — Bronze Layer: Kafka → Iceberg (batch, raw landing)
+-- =============================================================================
+-- Self-contained: sets session mode, defines Kafka source, creates bronze table,
+-- and runs the INSERT. No dependency on 01_source.sql as a separate -i init script.
+-- This matches the proven P01/P04 pattern (single self-contained execute file).
+--
+-- *** CRITICAL: Column names must match JSON keys from Kafka EXACTLY (case-sensitive). ***
+-- The generator serialises Parquet column names as-is into JSON keys.
+-- NYC Taxi Parquet uses mixed case: VendorID, RatecodeID, PULocationID, DOLocationID,
+-- Airport_fee. Use these original names — do NOT rename here.
+-- All snake_case renaming happens in Silver (06_silver.sql.tmpl).
+--
+-- *** CRITICAL: Timestamp format from Python datetime.isoformat() is 'T'-separated. ***
+-- Use 'yyyy-MM-dd''T''HH:mm:ss' (note double-quoted T in Flink SQL string literals).
+-- Using 'yyyy-MM-dd HH:mm:ss' (space separator) will produce all-NULL timestamps.
+--
+-- CUSTOMIZE THIS FILE for a new dataset:
+--   1. Update kafka_raw_trips column list (match JSON keys exactly)
+--   2. Update timestamp field name and TO_TIMESTAMP() format pattern
+--   3. Rename bronze.raw_trips → bronze.raw_{your_domain}
+--   4. Match column list in the INSERT below to the kafka_raw_trips DDL above
+--   '${TOPIC}' stays as-is — substituted from .env by render_sql.py
+-- =============================================================================
+
+-- Batch session settings (table.dml-sync blocks until INSERT finishes)
+SET 'execution.runtime-mode' = 'batch';
+SET 'table.dml-sync' = 'true';
+
+-- Kafka source: bounded scan (reads all existing messages and stops)
+-- Column names match Parquet/JSON keys EXACTLY (case-sensitive Kafka JSON connector)
+CREATE TABLE IF NOT EXISTS kafka_raw_trips (
+    VendorID                BIGINT,          -- JSON key: "VendorID"
+    tpep_pickup_datetime    STRING,          -- raw ISO timestamp: "2024-01-01T00:32:47"
+    tpep_dropoff_datetime   STRING,          -- raw ISO timestamp
+    passenger_count         BIGINT,
+    trip_distance           DOUBLE,
+    RatecodeID              BIGINT,          -- JSON key: "RatecodeID"
+    store_and_fwd_flag      STRING,
+    PULocationID            BIGINT,          -- JSON key: "PULocationID"
+    DOLocationID            BIGINT,          -- JSON key: "DOLocationID"
+    payment_type            BIGINT,
+    fare_amount             DOUBLE,
+    extra                   DOUBLE,
+    mta_tax                 DOUBLE,
+    tip_amount              DOUBLE,
+    tolls_amount            DOUBLE,
+    improvement_surcharge   DOUBLE,
+    total_amount            DOUBLE,
+    congestion_surcharge    DOUBLE,
+    Airport_fee             DOUBLE,          -- JSON key: "Airport_fee"
+
+    -- Computed: event time for watermarking (ignored in batch mode but required by DDL)
+    event_time AS TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss'),
+    WATERMARK FOR event_time AS event_time - INTERVAL '10' SECOND
+) WITH (
+    'connector'                     = 'kafka',
+    'topic'                         = '${TOPIC}',
+    'properties.bootstrap.servers'  = 'broker:9092',
+    'properties.group.id'           = 'flink-consumer',
+    'scan.startup.mode'             = 'earliest-offset',
+    'scan.bounded.mode'             = 'latest-offset',   -- batch: stop at current end
+    'format'                        = 'json',
+    'json.ignore-parse-errors'      = 'true'
+);
+
+-- Bronze table (unpartitioned — raw append-only landing zone)
+-- Column names match the Kafka source JSON keys (original Parquet names, no renaming)
+CREATE TABLE IF NOT EXISTS iceberg_catalog.bronze.raw_trips (
+    VendorID                BIGINT,
+    tpep_pickup_datetime    TIMESTAMP(3),
+    tpep_dropoff_datetime   TIMESTAMP(3),
+    passenger_count         BIGINT,
+    trip_distance           DOUBLE,
+    RatecodeID              BIGINT,
+    store_and_fwd_flag      STRING,
+    PULocationID            BIGINT,
+    DOLocationID            BIGINT,
+    payment_type            BIGINT,
+    fare_amount             DOUBLE,
+    extra                   DOUBLE,
+    mta_tax                 DOUBLE,
+    tip_amount              DOUBLE,
+    tolls_amount            DOUBLE,
+    improvement_surcharge   DOUBLE,
+    total_amount            DOUBLE,
+    congestion_surcharge    DOUBLE,
+    Airport_fee             DOUBLE,
+    ingestion_ts            TIMESTAMP(3)
+) WITH (
+    'format-version'                    = '2',
+    'write.format.default'              = 'parquet',
+    'write.parquet.compression-codec'   = 'snappy'
+);
+
+-- Insert: parse raw ISO timestamps (T-separated), add ingestion timestamp
+-- Python datetime.isoformat() → 'yyyy-MM-dd''T''HH:mm:ss' (note escaped T)
+INSERT INTO iceberg_catalog.bronze.raw_trips
+SELECT
+    VendorID,
+    TO_TIMESTAMP(tpep_pickup_datetime,  'yyyy-MM-dd''T''HH:mm:ss') AS tpep_pickup_datetime,
+    TO_TIMESTAMP(tpep_dropoff_datetime, 'yyyy-MM-dd''T''HH:mm:ss') AS tpep_dropoff_datetime,
+    passenger_count,
+    trip_distance,
+    RatecodeID,
+    store_and_fwd_flag,
+    PULocationID,
+    DOLocationID,
+    payment_type,
+    fare_amount,
+    extra,
+    mta_tax,
+    tip_amount,
+    tolls_amount,
+    improvement_surcharge,
+    total_amount,
+    congestion_surcharge,
+    Airport_fee,
+    CURRENT_TIMESTAMP AS ingestion_ts
+FROM kafka_raw_trips;

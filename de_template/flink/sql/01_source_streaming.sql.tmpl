@@ -1,0 +1,49 @@
+-- =============================================================================
+-- 01_source_streaming.sql.tmpl — Kafka Source Table (STREAMING mode)
+-- =============================================================================
+-- Rendered by scripts/render_sql.py when MODE=streaming_bronze.
+-- Sets streaming execution mode (no table.dml-sync — jobs run indefinitely).
+-- No scan.bounded.mode — reads continuously from Kafka.
+--
+-- Keep this file in sync with 01_source.sql.tmpl for column definitions.
+-- Same CRITICAL notes apply: column names match JSON keys exactly, T-format timestamps.
+-- =============================================================================
+
+-- Streaming session settings (jobs run indefinitely)
+SET 'execution.runtime-mode' = 'streaming';
+
+-- Kafka source: unbounded stream (no scan.bounded.mode)
+CREATE TABLE IF NOT EXISTS kafka_raw_trips (
+    -- NYC Yellow Taxi fields — names match Parquet column names / JSON keys EXACTLY
+    VendorID                BIGINT,          -- JSON key: "VendorID"
+    tpep_pickup_datetime    STRING,          -- raw ISO timestamp: "2024-01-01T00:32:47"
+    tpep_dropoff_datetime   STRING,          -- raw ISO timestamp
+    passenger_count         BIGINT,
+    trip_distance           DOUBLE,
+    RatecodeID              BIGINT,          -- JSON key: "RatecodeID"
+    store_and_fwd_flag      STRING,
+    PULocationID            BIGINT,          -- JSON key: "PULocationID"
+    DOLocationID            BIGINT,          -- JSON key: "DOLocationID"
+    payment_type            BIGINT,
+    fare_amount             DOUBLE,
+    extra                   DOUBLE,
+    mta_tax                 DOUBLE,
+    tip_amount              DOUBLE,
+    tolls_amount            DOUBLE,
+    improvement_surcharge   DOUBLE,
+    total_amount            DOUBLE,
+    congestion_surcharge    DOUBLE,
+    Airport_fee             DOUBLE,          -- JSON key: "Airport_fee"
+
+    -- Computed: event time for watermarking
+    event_time AS TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss'),
+    WATERMARK FOR event_time AS event_time - INTERVAL '10' SECOND
+) WITH (
+    'connector'                     = 'kafka',
+    'topic'                         = '${TOPIC}',
+    'properties.bootstrap.servers'  = 'broker:9092',
+    'properties.group.id'           = 'flink-consumer',
+    'scan.startup.mode'             = 'earliest-offset',
+    'format'                        = 'json',
+    'json.ignore-parse-errors'      = 'true'
+);

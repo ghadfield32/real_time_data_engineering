@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  Hadoop core-site.xml — S3A filesystem configuration for Flink + Iceberg.
+  Mounted at /opt/hadoop/conf/ via HADOOP_CONF_DIR=/opt/hadoop/conf.
+
+  Local MinIO defaults shown. For cloud S3:
+    - Remove fs.s3a.endpoint, fs.s3a.path.style.access, fs.s3a.connection.ssl.enabled
+    - Remove fs.s3a.access.key, fs.s3a.secret.key (use IAM instance profile)
+    - Set AWS_REGION env var on Flink containers
+
+  See docs/06_cloud_storage.md for cloud configuration details.
+-->
+<configuration>
+  <property>
+    <name>fs.s3a.endpoint</name>
+    <value>http://minio:9000</value>
+    <description>MinIO S3-compatible endpoint (local). Remove for cloud S3.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.path.style.access</name>
+    <value>true</value>
+    <description>Required for MinIO. Set to false for AWS S3 (virtual-hosted style).</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.connection.ssl.enabled</name>
+    <value>false</value>
+    <description>Disable SSL for local MinIO. Enable (true) for cloud S3.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.access.key</name>
+    <value>minioadmin</value>
+    <description>MinIO access key (local only). Remove for IAM-based cloud auth.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.secret.key</name>
+    <value>minioadmin</value>
+    <description>MinIO secret key (local only). Remove for IAM-based cloud auth.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.impl</name>
+    <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.aws.credentials.provider</name>
+    <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+    <description>
+      Local MinIO: use SimpleAWSCredentialsProvider.
+      Cloud: use InstanceProfileCredentialsProvider or WebIdentityTokenCredentialsProvider.
+    </description>
+  </property>
+</configuration>

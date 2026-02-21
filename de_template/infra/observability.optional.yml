@@ -1,0 +1,48 @@
+services:
+  # =============================================================================
+  # Prometheus — Scrapes Flink metrics (--profile obs)
+  # =============================================================================
+  # Start with: docker compose ... --profile obs up
+  # Flink JobManager exposes metrics at port 9249 (set in flink/conf/config.yaml)
+  prometheus:
+    image: prom/prometheus:v2.50.1
+    container_name: template-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --web.console.libraries=/usr/share/prometheus/console_libraries
+      - --web.console.templates=/usr/share/prometheus/consoles
+    profiles:
+      - obs
+    networks:
+      - pipeline-net
+
+  # =============================================================================
+  # Grafana — Visualize Flink + Kafka metrics (--profile obs)
+  # =============================================================================
+  grafana:
+    image: grafana/grafana:10.3.1
+    container_name: template-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    profiles:
+      - obs
+    networks:
+      - pipeline-net
+
+volumes:
+  prometheus-data:
+  grafana-data:

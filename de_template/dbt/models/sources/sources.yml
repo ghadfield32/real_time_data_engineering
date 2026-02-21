@@ -1,0 +1,14 @@
+version: 2
+
+sources:
+  - name: raw_nyc_taxi
+    description: "Silver Iceberg table written by Flink — cleaned, deduplicated NYC taxi trips"
+    loaded_at_field: pickup_datetime
+    freshness:
+      warn_after: {count: 24, period: hour}
+      error_after: {count: 48, period: hour}
+    tables:
+      - name: raw_yellow_trips
+        description: "Silver layer: cleaned_trips Iceberg table (January 2024)"
+        config:
+          external_location: "iceberg_scan('s3://warehouse/silver/cleaned_trips', allow_moved_paths = true)"

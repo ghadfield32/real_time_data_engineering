@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<!--
+  core-site.minio.xml.tmpl — Hadoop S3A config for MinIO (STORAGE=minio)
+  Rendered by scripts/render_sql.py → build/conf/core-site.xml
+
+  Variables substituted from .env:
+    S3_ENDPOINT          e.g. http://minio:9000
+    S3_PATH_STYLE        true (required for MinIO)
+    S3_USE_SSL           false (MinIO local has no cert)
+    AWS_ACCESS_KEY_ID    MinIO root user
+    AWS_SECRET_ACCESS_KEY MinIO root password
+
+  For cloud: use core-site.aws.xml.tmpl (STORAGE=aws_s3) or adapt for GCS/Azure.
+-->
+<configuration>
+  <property>
+    <name>fs.s3a.endpoint</name>
+    <value>${S3_ENDPOINT}</value>
+    <description>MinIO S3-compatible endpoint. Remove for AWS S3 (let SDK resolve regionally).</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.path.style.access</name>
+    <value>${S3_PATH_STYLE}</value>
+    <description>true for MinIO. false for AWS S3 (virtual-hosted style).</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.connection.ssl.enabled</name>
+    <value>${S3_USE_SSL}</value>
+    <description>false for local MinIO. true for cloud endpoints with TLS.</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.access.key</name>
+    <value>${AWS_ACCESS_KEY_ID}</value>
+    <description>MinIO access key (or AWS key for explicit-credential mode).</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.secret.key</name>
+    <value>${AWS_SECRET_ACCESS_KEY}</value>
+    <description>MinIO secret key (or AWS secret for explicit-credential mode).</description>
+  </property>
+
+  <property>
+    <name>fs.s3a.impl</name>
+    <value>org.apache.hadoop.fs.s3a.S3AFileSystem</value>
+  </property>
+
+  <property>
+    <name>fs.s3a.aws.credentials.provider</name>
+    <value>org.apache.hadoop.fs.s3a.SimpleAWSCredentialsProvider</value>
+    <description>Use explicit key/secret credentials (MinIO and dev).</description>
+  </property>
+</configuration>

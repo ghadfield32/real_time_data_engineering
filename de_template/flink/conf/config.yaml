@@ -1,0 +1,47 @@
+# =============================================================================
+# Flink 2.0.x Configuration (config.yaml — NOT flink-conf.yaml)
+# =============================================================================
+# Standard YAML 1.2 format. Used by JobManager and TaskManager.
+# Production patterns applied:
+#   - RocksDB state backend (spills to disk, handles large state)
+#   - S3A checkpoints (survives container restart)
+#   - Prometheus metrics on port 9249
+#   - classloader.check-leaked-classloader: false (required for Iceberg)
+#   - CPU + memory limits set in docker-compose overlays
+# =============================================================================
+
+# --- Cluster ---
+jobmanager.rpc.address: flink-jobmanager
+jobmanager.rpc.port: 6123
+jobmanager.bind-host: 0.0.0.0
+jobmanager.memory.process.size: 1g
+
+taskmanager.bind-host: 0.0.0.0
+taskmanager.host: flink-taskmanager
+taskmanager.memory.process.size: 2g
+taskmanager.numberOfTaskSlots: 4
+
+parallelism.default: 1
+
+# --- State Backend (RocksDB + S3A checkpoints) ---
+state.backend: rocksdb
+state.backend.incremental: true
+state.checkpoints.dir: s3a://warehouse/checkpoints
+state.savepoints.dir: s3a://warehouse/savepoints
+
+# --- S3A plugin (MinIO local; override core-site.xml for cloud) ---
+s3.endpoint: http://minio:9000
+s3.path.style.access: true
+s3.access-key: minioadmin
+s3.secret-key: minioadmin
+s3.connection.ssl.enabled: false
+
+# --- Iceberg + dynamic classloading ---
+classloader.check-leaked-classloader: false
+
+# --- Prometheus metrics ---
+metrics.reporter.prom.class: org.apache.flink.metrics.prometheus.PrometheusReporter
+metrics.reporter.prom.port: 9249
+
+# --- Logging ---
+env.log.level: INFO

@@ -1,0 +1,28 @@
+-- =============================================================================
+-- 00_catalog.sql.tmpl — Iceberg Hadoop Catalog Init (CATALOG=hadoop)
+-- =============================================================================
+-- Rendered by scripts/render_sql.py from environment variables.
+-- Sets up the Iceberg catalog and creates bronze + silver databases.
+-- Session runtime mode and dml-sync are NOT set here — see 01_source.sql.tmpl.
+-- =============================================================================
+
+-- NOTE: S3FileIO uses 's3.*' catalog keys (NOT 'fs.s3a.*' — those are Hadoop FileSystem properties).
+-- Verified against working P01/P04 pipelines.
+CREATE CATALOG IF NOT EXISTS iceberg_catalog WITH (
+    'type'                  = 'iceberg',
+    'catalog-type'          = 'hadoop',
+    'warehouse'             = '${WAREHOUSE}',
+    'io-impl'               = 'org.apache.iceberg.aws.s3.S3FileIO',
+    's3.endpoint'           = '${S3_ENDPOINT}',
+    's3.path-style-access'  = '${S3_PATH_STYLE}',
+    's3.access-key-id'      = '${AWS_ACCESS_KEY_ID}',
+    's3.secret-access-key'  = '${AWS_SECRET_ACCESS_KEY}'
+);
+
+-- CRITICAL: Do NOT call USE CATALOG iceberg_catalog here.
+-- After USE CATALOG, the current database becomes 'default', which does not exist in
+-- iceberg_catalog. Any unqualified table (e.g. kafka_raw_trips in 01_source.sql) would
+-- then be resolved as iceberg_catalog.default.<table> → "Object 'default' not found".
+-- Use fully-qualified catalog.database names everywhere instead (P01 pattern).
+CREATE DATABASE IF NOT EXISTS iceberg_catalog.bronze;
+CREATE DATABASE IF NOT EXISTS iceberg_catalog.silver;

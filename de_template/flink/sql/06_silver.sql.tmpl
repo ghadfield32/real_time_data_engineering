@@ -1,0 +1,125 @@
+-- =============================================================================
+-- 06_silver.sql.tmpl — Silver Layer: Bronze → Cleaned, Deduplicated, Partitioned
+-- =============================================================================
+-- Silver = clean, typed, deduplicated, partitioned analytical table.
+-- Reads from bronze.raw_trips (Iceberg); writes to silver.cleaned_trips.
+-- Runs in batch mode using the iceberg catalog.
+--
+-- Column naming: all snake_case renaming from original Parquet names happens HERE.
+--   VendorID        → vendor_id
+--   RatecodeID      → rate_code_id
+--   PULocationID    → pickup_location_id
+--   DOLocationID    → dropoff_location_id
+--   payment_type    → payment_type_id
+--   trip_distance   → trip_distance_miles
+--   extra           → extra_amount
+--   Airport_fee     → airport_fee
+--   tpep_pickup_datetime  → pickup_datetime
+--   tpep_dropoff_datetime → dropoff_datetime
+--
+-- dbt staging expects these exact column names. Do not change silver DDL
+-- without also updating dbt/models/staging/stg_yellow_trips.sql.
+--
+-- CUSTOMIZE THIS FILE for a new dataset:
+--   1. TODO (1/5): Silver table column list (snake_case, correct types)
+--   2. TODO (2/5): Natural key for ROW_NUMBER() deduplication
+--   3. TODO (3/5): Data quality filters (nulls, ranges, date bounds)
+--   4. TODO (4/5): MD5 surrogate key fields (same as PARTITION BY above)
+--   5. TODO (5/5): Column mapping and type casts from bronze → silver
+-- =============================================================================
+
+SET 'execution.runtime-mode' = 'batch';
+SET 'table.dml-sync' = 'true';
+
+-- TODO (1/5): Silver table column list
+-- Pattern: trip_id (MD5 surrogate) first, pickup_date (partition DATE) last
+-- Column names below are what dbt/models/staging/stg_yellow_trips.sql expects.
+CREATE TABLE IF NOT EXISTS iceberg_catalog.silver.cleaned_trips (
+    trip_id                 STRING,          -- MD5 surrogate key
+    vendor_id               INT,             -- renamed from VendorID
+    rate_code_id            INT,             -- renamed from RatecodeID
+    pickup_location_id      INT,             -- renamed from PULocationID
+    dropoff_location_id     INT,             -- renamed from DOLocationID
+    payment_type_id         INT,             -- renamed from payment_type
+    pickup_datetime         TIMESTAMP(3),    -- renamed from tpep_pickup_datetime
+    dropoff_datetime        TIMESTAMP(3),    -- renamed from tpep_dropoff_datetime
+    passenger_count         INT,
+    trip_distance_miles     DOUBLE,          -- renamed from trip_distance
+    store_and_fwd_flag      STRING,
+    fare_amount             DECIMAL(10, 2),
+    extra_amount            DECIMAL(10, 2),  -- renamed from extra
+    mta_tax                 DECIMAL(10, 2),
+    tip_amount              DECIMAL(10, 2),
+    tolls_amount            DECIMAL(10, 2),
+    improvement_surcharge   DECIMAL(10, 2),
+    total_amount            DECIMAL(10, 2),
+    congestion_surcharge    DECIMAL(10, 2),
+    airport_fee             DECIMAL(10, 2),  -- renamed from Airport_fee (lowercase)
+    ingestion_ts            TIMESTAMP(3),
+    pickup_date             DATE             -- partition column (always last)
+) PARTITIONED BY (pickup_date)
+WITH (
+    'format-version'                    = '2',
+    'write.format.default'              = 'parquet',
+    'write.parquet.compression-codec'   = 'snappy'
+);
+
+-- Deduplicate and clean bronze data
+-- Reads from bronze using original column names (VendorID, RatecodeID, etc.)
+-- Writes to silver using renamed, snake_case columns
+INSERT INTO iceberg_catalog.silver.cleaned_trips
+SELECT
+    -- TODO (4/5): MD5 surrogate key — use fields that uniquely identify a record
+    MD5(CONCAT_WS('|',
+        COALESCE(CAST(VendorID AS STRING), ''),
+        COALESCE(CAST(tpep_pickup_datetime AS STRING), ''),
+        COALESCE(CAST(tpep_dropoff_datetime AS STRING), ''),
+        COALESCE(CAST(PULocationID AS STRING), ''),
+        COALESCE(CAST(DOLocationID AS STRING), ''),
+        COALESCE(CAST(fare_amount AS STRING), ''),
+        COALESCE(CAST(total_amount AS STRING), '')
+    )) AS trip_id,
+    -- TODO (5/5): Column mapping and type casts
+    CAST(VendorID AS INT)                           AS vendor_id,
+    CAST(RatecodeID AS INT)                         AS rate_code_id,
+    CAST(PULocationID AS INT)                       AS pickup_location_id,
+    CAST(DOLocationID AS INT)                       AS dropoff_location_id,
+    CAST(payment_type AS INT)                       AS payment_type_id,
+    tpep_pickup_datetime                            AS pickup_datetime,
+    tpep_dropoff_datetime                           AS dropoff_datetime,
+    CAST(passenger_count AS INT)                    AS passenger_count,
+    trip_distance                                   AS trip_distance_miles,
+    store_and_fwd_flag,
+    CAST(fare_amount AS DECIMAL(10, 2))             AS fare_amount,
+    CAST(extra AS DECIMAL(10, 2))                   AS extra_amount,
+    CAST(mta_tax AS DECIMAL(10, 2))                 AS mta_tax,
+    CAST(tip_amount AS DECIMAL(10, 2))              AS tip_amount,
+    CAST(tolls_amount AS DECIMAL(10, 2))            AS tolls_amount,
+    CAST(improvement_surcharge AS DECIMAL(10, 2))   AS improvement_surcharge,
+    CAST(total_amount AS DECIMAL(10, 2))            AS total_amount,
+    CAST(congestion_surcharge AS DECIMAL(10, 2))    AS congestion_surcharge,
+    CAST(Airport_fee AS DECIMAL(10, 2))             AS airport_fee,
+    ingestion_ts,
+    CAST(tpep_pickup_datetime AS DATE)              AS pickup_date
+FROM (
+    SELECT
+        *,
+        -- TODO (2/5): Natural key for deduplication
+        ROW_NUMBER() OVER (
+            PARTITION BY VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
+                         PULocationID, DOLocationID, fare_amount, total_amount
+            ORDER BY ingestion_ts DESC
+        ) AS rn
+    FROM iceberg_catalog.bronze.raw_trips
+    WHERE
+        -- TODO (3/5): Data quality filters
+        tpep_pickup_datetime IS NOT NULL
+        AND tpep_dropoff_datetime IS NOT NULL
+        AND total_amount > 0
+        AND trip_distance >= 0
+        AND passenger_count >= 0
+        -- Date range filter: adjust to match your data's actual date range
+        AND CAST(tpep_pickup_datetime AS DATE) >= DATE '2024-01-01'
+        AND CAST(tpep_pickup_datetime AS DATE) <  DATE '2024-02-01'
+) t
+WHERE rn = 1;

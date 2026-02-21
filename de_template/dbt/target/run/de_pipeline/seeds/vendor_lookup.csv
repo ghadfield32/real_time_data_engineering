@@ -1,0 +1,13 @@
+
+    
+    
+    
+    create table "de_pipeline"."main_raw"."vendor_lookup" ("vendor_id" INTEGER,"vendor_name" VARCHAR,"vendor_abbr" VARCHAR)
+  ;
+    -- dbt seed --
+    
+          COPY "de_pipeline"."main_raw"."vendor_lookup" FROM '/dbt/seeds/vendor_lookup.csv' (FORMAT CSV, HEADER TRUE, DELIMITER ',')
+        
+
+;
+  

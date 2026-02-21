@@ -1,0 +1,103 @@
+-- =============================================================================
+-- 07_bronze_streaming.sql.tmpl — Streaming Bronze (continuous Kafka → Iceberg)
+-- =============================================================================
+-- Self-contained: sets streaming session mode, defines Kafka source, creates
+-- bronze table (idempotent), and runs the streaming INSERT.
+-- Runs indefinitely — cancel from Flink Dashboard or via Ctrl+C.
+-- Use: make process-streaming (after make up + make create-topics)
+--
+-- Same critical notes as 05_bronze.sql.tmpl:
+--   - Column names match JSON keys EXACTLY (case-sensitive)
+--   - Timestamp format: 'yyyy-MM-dd''T''HH:mm:ss' (T separator)
+--   - No scan.bounded.mode here — unbounded streaming read
+-- =============================================================================
+
+-- Streaming session settings (jobs run indefinitely, no dml-sync)
+SET 'execution.runtime-mode' = 'streaming';
+
+-- Kafka source: unbounded stream (no scan.bounded.mode — continuous read)
+CREATE TABLE IF NOT EXISTS kafka_raw_trips (
+    VendorID                BIGINT,
+    tpep_pickup_datetime    STRING,
+    tpep_dropoff_datetime   STRING,
+    passenger_count         BIGINT,
+    trip_distance           DOUBLE,
+    RatecodeID              BIGINT,
+    store_and_fwd_flag      STRING,
+    PULocationID            BIGINT,
+    DOLocationID            BIGINT,
+    payment_type            BIGINT,
+    fare_amount             DOUBLE,
+    extra                   DOUBLE,
+    mta_tax                 DOUBLE,
+    tip_amount              DOUBLE,
+    tolls_amount            DOUBLE,
+    improvement_surcharge   DOUBLE,
+    total_amount            DOUBLE,
+    congestion_surcharge    DOUBLE,
+    Airport_fee             DOUBLE,
+    event_time AS TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss'),
+    WATERMARK FOR event_time AS event_time - INTERVAL '10' SECOND
+) WITH (
+    'connector'                     = 'kafka',
+    'topic'                         = '${TOPIC}',
+    'properties.bootstrap.servers'  = 'broker:9092',
+    'properties.group.id'           = 'flink-consumer',
+    'scan.startup.mode'             = 'earliest-offset',
+    'format'                        = 'json',
+    'json.ignore-parse-errors'      = 'true'
+);
+
+-- Bronze table DDL (idempotent — same DDL as 05_bronze.sql.tmpl)
+-- Required here in case streaming mode runs without a prior batch Bronze job.
+CREATE TABLE IF NOT EXISTS iceberg_catalog.bronze.raw_trips (
+    VendorID                BIGINT,
+    tpep_pickup_datetime    TIMESTAMP(3),
+    tpep_dropoff_datetime   TIMESTAMP(3),
+    passenger_count         BIGINT,
+    trip_distance           DOUBLE,
+    RatecodeID              BIGINT,
+    store_and_fwd_flag      STRING,
+    PULocationID            BIGINT,
+    DOLocationID            BIGINT,
+    payment_type            BIGINT,
+    fare_amount             DOUBLE,
+    extra                   DOUBLE,
+    mta_tax                 DOUBLE,
+    tip_amount              DOUBLE,
+    tolls_amount            DOUBLE,
+    improvement_surcharge   DOUBLE,
+    total_amount            DOUBLE,
+    congestion_surcharge    DOUBLE,
+    Airport_fee             DOUBLE,
+    ingestion_ts            TIMESTAMP(3)
+) WITH (
+    'format-version'                    = '2',
+    'write.format.default'              = 'parquet',
+    'write.parquet.compression-codec'   = 'snappy'
+);
+
+-- Insert stream: parse raw ISO timestamps, append continuously to bronze
+INSERT INTO iceberg_catalog.bronze.raw_trips
+SELECT
+    VendorID,
+    TO_TIMESTAMP(tpep_pickup_datetime,  'yyyy-MM-dd''T''HH:mm:ss') AS tpep_pickup_datetime,
+    TO_TIMESTAMP(tpep_dropoff_datetime, 'yyyy-MM-dd''T''HH:mm:ss') AS tpep_dropoff_datetime,
+    passenger_count,
+    trip_distance,
+    RatecodeID,
+    store_and_fwd_flag,
+    PULocationID,
+    DOLocationID,
+    payment_type,
+    fare_amount,
+    extra,
+    mta_tax,
+    tip_amount,
+    tolls_amount,
+    improvement_surcharge,
+    total_amount,
+    congestion_surcharge,
+    Airport_fee,
+    CURRENT_TIMESTAMP AS ingestion_ts
+FROM kafka_raw_trips;

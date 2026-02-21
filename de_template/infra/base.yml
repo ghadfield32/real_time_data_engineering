@@ -1,0 +1,116 @@
+services:
+  # =============================================================================
+  # Flink JobManager
+  # =============================================================================
+  flink-jobmanager:
+    build:
+      context: ../docker
+      dockerfile: flink.Dockerfile
+    container_name: template-flink-jm
+    hostname: flink-jobmanager
+    command: jobmanager
+    ports:
+      - "8081:8081"   # Flink Dashboard + REST API
+      - "9249:9249"   # Prometheus metrics endpoint
+    environment:
+      HADOOP_CONF_DIR: /opt/hadoop/conf
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+    volumes:
+      - ../build/sql:/opt/flink/sql:ro
+      - ../flink/conf/config.yaml:/opt/flink/conf/config.yaml:ro
+      - ../build/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
+    cpus: "1.0"
+    mem_limit: 1g
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8081/overview"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+    networks:
+      - pipeline-net
+
+  # =============================================================================
+  # Flink TaskManager
+  # =============================================================================
+  flink-taskmanager:
+    build:
+      context: ../docker
+      dockerfile: flink.Dockerfile
+    container_name: template-flink-tm
+    hostname: flink-taskmanager
+    command: taskmanager
+    environment:
+      HADOOP_CONF_DIR: /opt/hadoop/conf
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+      AWS_REGION: ${AWS_REGION:-us-east-1}
+    volumes:
+      - ../build/sql:/opt/flink/sql:ro
+      - ../flink/conf/config.yaml:/opt/flink/conf/config.yaml:ro
+      - ../build/conf/core-site.xml:/opt/hadoop/conf/core-site.xml:ro
+    cpus: "2.0"
+    mem_limit: 2g
+    depends_on:
+      flink-jobmanager:
+        condition: service_healthy
+    networks:
+      - pipeline-net
+
+  # =============================================================================
+  # dbt (ad-hoc profile — started via: docker compose run --rm dbt ...)
+  # =============================================================================
+  dbt:
+    build:
+      context: ../docker
+      dockerfile: dbt.Dockerfile
+      args:
+        DBT_ADAPTER: dbt-duckdb
+        DBT_ADAPTER_VERSION: ">=1.8.0,<2.0.0"
+    container_name: template-dbt
+    working_dir: /dbt
+    volumes:
+      - ../dbt:/dbt
+      - ../scripts:/scripts
+      - metrics-vol:/metrics:ro
+    environment:
+      AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID:-minioadmin}
+      AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY:-minioadmin}
+      DUCKDB_S3_ENDPOINT: ${DUCKDB_S3_ENDPOINT:-minio:9000}
+      DUCKDB_S3_USE_SSL: ${DUCKDB_S3_USE_SSL:-false}
+      WAREHOUSE: ${WAREHOUSE:-s3a://warehouse/}
+    profiles:
+      - dbt
+    networks:
+      - pipeline-net
+
+  # =============================================================================
+  # Data Generator (ad-hoc profile — started via: docker compose run --rm ...)
+  # =============================================================================
+  data-generator:
+    build:
+      context: ../generator
+    container_name: template-generator
+    environment:
+      BROKER_URL: broker:9092
+      TOPIC: ${TOPIC:-taxi.raw_trips}
+      DLQ_TOPIC: ${DLQ_TOPIC:-taxi.raw_trips.dlq}
+      DATA_PATH: ${DATA_PATH:-/data/yellow_tripdata_2024-01.parquet}
+      MAX_EVENTS: ${MAX_EVENTS:-0}
+      METRICS_PATH: /metrics/latest.json
+    volumes:
+      - ${HOST_DATA_DIR}:/data:ro   # absolute path set by Makefile (repo-root data/)
+      - metrics-vol:/metrics
+    profiles:
+      - generator
+    networks:
+      - pipeline-net
+
+volumes:
+  metrics-vol:
+
+networks:
+  pipeline-net:
+    driver: bridge

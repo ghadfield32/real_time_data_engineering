@@ -1,0 +1,32 @@
+version: 2
+
+seeds:
+  - name: taxi_zone_lookup
+    description: "NYC TLC Taxi Zone lookup table (~265 zones)"
+    columns:
+      - name: LocationID
+        tests: [unique, not_null]
+      - name: Borough
+        tests: [not_null]
+
+  - name: payment_type_lookup
+    description: "Payment type ID to description mapping"
+    columns:
+      - name: payment_type_id
+        tests: [unique, not_null]
+
+  - name: rate_code_lookup
+    description: "Rate code ID to description mapping"
+    columns:
+      - name: rate_code_id
+        tests: [unique, not_null]
+
+  - name: vendor_lookup
+    description: "TPEP vendor ID mapping (1=CMT, 2=VTS)"
+    columns:
+      - name: vendor_id
+        tests: [unique, not_null]
+      - name: vendor_name
+        tests: [not_null]
+      - name: vendor_abbr
+        tests: [unique, not_null]

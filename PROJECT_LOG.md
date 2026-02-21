@@ -1,6 +1,6 @@
 # Real-Time Data Engineering — Project Log
 
-> Last updated: 2026-02-17
+> Last updated: 2026-02-19
 
 ---
 
@@ -285,6 +285,50 @@ DuckDB can scan Iceberg tables natively via the `iceberg` extension. This means 
 ---
 
 ## Session History
+
+### Session 3 (Feb 2026 — de_template Build + Debug)
+
+**de_template created**: Standalone dual-broker (Redpanda/Kafka) pipeline template. 76 files: compose overlays, SQL templates (`.sql.tmpl → build/sql/`), 16 dbt models, 4-axis config (BROKER/CATALOG/STORAGE/MODE), strict render pipeline, 4-stage validation.
+
+**Static audit (7 bugs fixed before first live run)**:
+- `infra/base.yml`: `./build/sql` → `../build/sql` (compose resolves relative to file dir, not CWD)
+- `01_source*.sql.tmpl`: snake_case column names → original Parquet names (`VendorID`, `RatecodeID`, `PULocationID`, `DOLocationID`, `Airport_fee`) — Flink JSON connector is case-sensitive
+- All 4 SQL templates: `'yyyy-MM-dd HH:mm:ss'` → `'yyyy-MM-dd''T''HH:mm:ss'` — Python `datetime.isoformat()` uses T separator
+- `06_silver.sql.tmpl`: full rewrite — DDL column names now match dbt staging expectations (`pickup_datetime`, `dropoff_datetime`, `trip_distance_miles`, `payment_type_id`, `extra_amount`)
+- `scripts/validate.sh`: removed `--profile dbt` from `docker compose run` subcommand (it's a global flag, not a run flag)
+- `scripts/render_sql.py`: `→` (U+2192) → `->` (Windows CP-1252 UnicodeEncodeError fix)
+- `scripts/render_sql.py`: `load_env` now strips inline comments via `re.sub(r'\s+#.*$', '', v)`
+
+**Live run debugging (first benchmark attempt)**:
+- **Bug 1**: GNU make `include .env` leaves trailing whitespace in values from inline-commented lines (`BROKER=redpanda  # comment` → `BROKER=redpanda  `). Trailing spaces break all `ifeq` comparisons → wrong broker file, no storage overlay. Fix: `BROKER := $(strip $(BROKER))` for all 4 axes.
+- **Bug 2**: `infra/base.yml` volume `../data:/data:ro` creates empty `de_template/data/` — parquet file lives at repo root `data/`. Fix: `HOST_DATA_DIR := $(abspath $(CURDIR)/../data)` exported from Makefile; `base.yml` uses `${HOST_DATA_DIR}:/data:ro`.
+- Added `make debug-env` target (shows raw variable values with `[brackets]` to expose whitespace).
+- Added `validate-config` data file preflight check with clear error message if parquet not found.
+
+**Validated** (via Python subprocess): `COMPOSE_FILES = [-f infra/base.yml -f infra/broker.redpanda.yml -f infra/storage.minio.yml]` and `HOST_DATA_DIR = [C:/docker_projects/real_time_data_engineering/data]` correct.
+
+**Note**: GNU make for Windows32 cannot spawn bash subshells from within Claude Code's Bash tool sandbox — use user's terminal for `make` targets.
+- **Bug 3**: `storage.minio.yml` stale MinIO tags (`RELEASE.2024-01-16T...`) — Docker Hub purges old tags. Fixed to `minio/minio:RELEASE.2025-04-22T22-12-26Z` + `minio/mc:RELEASE.2025-05-21T01-59-54Z` (matches all 14 verified pipelines).
+- **Bug 4**: `broker.redpanda.yml` outdated Redpanda `v24.3.1`/console `v2.7.2` — updated to `v25.3.7`/`v3.2.2` (verified P04 versions).
+- **Bug 5**: `broker.redpanda.yml` healthcheck used `rpk cluster health --brokers localhost:9092` — `--brokers` flag was removed from `rpk cluster health` subcommand in rpk v25+. Container started fine but healthcheck always exited non-zero, causing `template-redpanda is unhealthy` after 156.9s. Fix: `rpk cluster health | grep -E 'Healthy:.+true'` (no `--brokers` flag; grep checks value=true not just key presence). Same broken pattern also found and fixed in `health` Makefile target and Stage 1 of `scripts/validate.sh`.
+- **Bug 6**: `00_catalog.sql.tmpl` used `fs.s3a.*` catalog properties (`fs.s3a.endpoint`, `fs.s3a.access.key`, `fs.s3a.secret.key`, `fs.s3a.path.style.access`). These are Hadoop FileSystem keys. With `io-impl = 'org.apache.iceberg.aws.s3.S3FileIO'`, Iceberg uses `s3.*` keys (`s3.endpoint`, `s3.access-key-id`, `s3.secret-access-key`, `s3.path-style-access`). Wrong keys → catalog created but all S3 writes fail silently. Fixed by cross-referencing P01 working `00-init.sql`.
+- **Bug 7**: `00_catalog.sql.tmpl` called `USE CATALOG iceberg_catalog` after creating the catalog. This switches the current catalog to `iceberg_catalog`, whose only databases are `bronze` and `silver` — no `default`. When `01_source.sql` creates `kafka_raw_trips` (unqualified), Flink resolves it to `iceberg_catalog.default.kafka_raw_trips`. `default` doesn't exist → the CREATE TABLE fails silently in the `-i` init script → Bronze INSERT fails: `Object 'default' not found within 'iceberg_catalog'`. Fix: removed `USE CATALOG`; changed `CREATE DATABASE bronze` → `CREATE DATABASE iceberg_catalog.bronze` (fully qualified). P01 never calls `USE CATALOG` for this reason.
+- **Bug 8**: `docker/dbt.Dockerfile` had `COPY dbt/ /dbt/` but build context is `de_template/docker/` (not `de_template/`), so `dbt/` doesn't exist in the context → build fails. The Dockerfile comment even noted it was only for "non-mounted builds" — but we always use volume mount (`../dbt:/dbt`). Fix: removed the COPY line entirely.
+- **Bug 9**: Multi-`-i` init script fragility: splitting Kafka source DDL into a separate `-i 01_source.sql` init file caused `kafka_raw_trips` to not appear in the Flink session → Bronze INSERT: `Object 'kafka_raw_trips' not found`. When `00_catalog.sql` (first `-i`) creates databases that touch S3, it affects the client state and `01_source.sql` (second `-i`) doesn't complete initialization. Fix: merged SET statements + `CREATE TABLE kafka_raw_trips` into `05_bronze.sql.tmpl` directly (P01/P04 pattern: single self-contained `-f` file, no `-i 01_source.sql`). Same fix for streaming: merged into `07_streaming_bronze.sql.tmpl`.
+
+### Session 4 (Feb 2026 — de_template Audit + Hardening)
+
+Applied production audit recommendations to de_template:
+
+- **core-site.xml templating**: Created `flink/conf/core-site.minio.xml.tmpl` (explicit creds + MinIO endpoint) and `flink/conf/core-site.aws.xml.tmpl` (DefaultAWSCredentialsProviderChain for IAM). `render_sql.py` now renders `build/conf/core-site.xml` based on STORAGE axis. `base.yml` mounts `build/conf/core-site.xml` — credentials no longer hardcoded in static file.
+- **SQL template rename**: `05_bronze.sql.tmpl` → `05_bronze_batch.sql.tmpl`; `07_streaming_bronze.sql.tmpl` → `07_bronze_streaming.sql.tmpl`. Names now reflect mode (batch vs streaming). Makefile process targets updated accordingly.
+- **validate-config STORAGE checks**: Added `STORAGE=minio` requires `S3_ENDPOINT` + `S3_PATH_STYLE=true`; `STORAGE=aws_s3` warns if endpoint contains `minio`.
+- **Flink job lifecycle targets**: Added `flink-jobs` (list jobs), `flink-cancel JOB=<id>` (cancel via REST), `flink-restart-streaming` (cancel all RUNNING + start fresh).
+- **show-sql target**: `make show-sql` prints all rendered SQL + active config axes — no more guessing what ran.
+- **validate.sh streaming stability**: Stage 2 now queries `/jobs/{jid}` REST endpoint for `numRestarts`; fails if any RUNNING job has >0 restarts.
+- **validate.sh Iceberg metadata**: Stage 3 now checks `metadata/*.json` glob in Silver table root — confirms Iceberg snapshot was committed (not just "files exist").
+- **docs/03_add_new_dataset.md**: Rewritten as 4-file changeset (removed deprecated `01_source.sql.tmpl` reference). Added partition column selection rules, dedup key selection rules, and explicit "no transform partitioning" guidance.
+- **README.md**: Full rewrite — updated Redpanda to v25.3.7, new template filenames, new make targets, STORAGE-aware core-site.xml rendering, expanded "Adapting for Your Dataset" section.
 
 ### Session 1 (Feb 2025 — Initial Setup)
 - Built core 12 pipelines (P00-P11)

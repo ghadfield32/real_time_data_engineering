@@ -1,0 +1,35 @@
+# =============================================================================
+# dbt Profile for de_template
+# =============================================================================
+# Uses DuckDB with iceberg and httpfs extensions to read Iceberg tables
+# from MinIO (local) or cloud object storage.
+#
+# Credentials are read from environment variables (injected by docker-compose).
+# For local MinIO: AWS_ACCESS_KEY_ID=minioadmin, AWS_SECRET_ACCESS_KEY=minioadmin
+# For cloud: rely on IAM instance profile (leave env vars empty).
+#
+# DUCKDB_S3_ENDPOINT must NOT have http:// prefix (DuckDB httpfs format).
+# For MinIO: minio:9000
+# For AWS S3: s3.amazonaws.com
+# =============================================================================
+
+de_pipeline:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: /dbt/de_pipeline.duckdb
+      schema: main
+      threads: 4
+      extensions:
+        - httpfs
+        - parquet
+        - iceberg
+      settings:
+        memory_limit: "2GB"
+        s3_endpoint: "{{ env_var('DUCKDB_S3_ENDPOINT', 'minio:9000') }}"
+        s3_access_key_id: "{{ env_var('AWS_ACCESS_KEY_ID', 'minioadmin') }}"
+        s3_secret_access_key: "{{ env_var('AWS_SECRET_ACCESS_KEY', 'minioadmin') }}"
+        s3_url_style: "path"
+        s3_use_ssl: false
+        s3_region: "us-east-1"
