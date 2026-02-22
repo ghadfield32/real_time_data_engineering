@@ -1,0 +1,471 @@
+docker compose --profile generate --profile dbt down -v
+time="2026-02-21T10:03:57-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+docker compose up -d kafka materialize
+time="2026-02-21T10:04:00-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network p14-pipeline-net  Creating
+ Network p14-pipeline-net  Created
+ Volume 14-kafka-materialize_kafka-data  Creating
+ Volume 14-kafka-materialize_kafka-data  Created
+ Volume 14-kafka-materialize_materialize-data  Creating
+ Volume 14-kafka-materialize_materialize-data  Created
+ Container p14-kafka  Creating
+ Container p14-kafka  Created
+ Container p14-materialize  Creating
+ Container p14-materialize  Created
+ Container p14-kafka  Starting
+ Container p14-kafka  Started
+ Container p14-kafka  Waiting
+ Container p14-kafka  Healthy
+ Container p14-materialize  Starting
+ Container p14-materialize  Started
+Waiting for services to be healthy...
+time="2026-02-21T10:04:07-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+
+Kafka is ready.
+Creating Kafka topics...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe topics
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.raw_trips \
+	--partitions 3 \
+	--replication-factor 1
+time="2026-02-21T10:04:13-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+Topics created.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+============================================================
+  Pipeline 14 Benchmark: Kafka + Materialize
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+docker compose --profile generate --profile dbt down -v
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+[1/4] Infrastructure up...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+docker compose up -d kafka materialize
+time="2026-02-21T10:04:27-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network p14-pipeline-net  Creating
+ Network p14-pipeline-net  Created
+ Volume 14-kafka-materialize_kafka-data  Creating
+ Volume 14-kafka-materialize_kafka-data  Created
+ Volume 14-kafka-materialize_materialize-data  Creating
+ Volume 14-kafka-materialize_materialize-data  Created
+ Container p14-kafka  Creating
+ Container p14-kafka  Created
+ Container p14-materialize  Creating
+ Container p14-materialize  Created
+ Container p14-kafka  Starting
+ Container p14-kafka  Started
+ Container p14-kafka  Waiting
+ Container p14-kafka  Healthy
+ Container p14-materialize  Starting
+ Container p14-materialize  Started
+Waiting for services to be healthy...
+time="2026-02-21T10:04:35-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+
+Kafka is ready.
+Creating Kafka topics...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe topics
+make[2]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.raw_trips \
+	--partitions 3 \
+	--replication-factor 1
+time="2026-02-21T10:04:41-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+Topics created.
+make[2]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+[2/4] Creating Materialize streaming objects...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+Submitting Materialize SQL scripts...
+MSYS_NO_PATHCONV=1 docker compose exec -T materialize \
+	psql -h localhost -p 6875 -U materialize -d materialize -f /materialize/sql/01-create-source.sql || true
+time="2026-02-21T10:04:43-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+CREATE CONNECTION
+CREATE SOURCE
+[1/3] Kafka connection and source created.
+MSYS_NO_PATHCONV=1 docker compose exec -T materialize \
+	psql -h localhost -p 6875 -U materialize -d materialize -f /materialize/sql/02-mv-bronze-trips.sql || true
+time="2026-02-21T10:04:44-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+CREATE MATERIALIZED VIEW
+[2/3] Bronze materialized view created.
+MSYS_NO_PATHCONV=1 docker compose exec -T materialize \
+	psql -h localhost -p 6875 -U materialize -d materialize -f /materialize/sql/03-mv-silver-metrics.sql || true
+time="2026-02-21T10:04:44-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+CREATE MATERIALIZED VIEW
+[3/3] Silver materialized view created.
+All Materialize objects created. MVs will update automatically as Kafka events arrive.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+[3/4] Generating events...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+time="2026-02-21T10:04:45-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container p14-kafka  Running
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     kafka:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.40s
+  Rate:    24,811 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited data generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+[4/4] Running dbt build...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+MSYS_NO_PATHCONV=1 docker compose run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
+time="2026-02-21T10:04:47-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container p14-kafka  Running
+ Container p14-materialize  Running
+ Container p14-kafka  Waiting
+ Container p14-kafka  Healthy
+[0m15:04:50  Running with dbt=1.11.5
+[0m15:04:51  Installing dbt-labs/dbt_utils
+[0m15:04:54  Installed from version 1.3.3
+[0m15:04:54  Up to date!
+[0m15:04:57  Running with dbt=1.11.5
+[0m15:04:57  Registered adapter: postgres=1.10.0
+[0m15:04:58  Found 14 models, 67 data tests, 3 seeds, 1 source, 590 macros
+[0m15:04:58  
+[0m15:04:58  Concurrency: 1 threads (target='dev')
+[0m15:04:58  
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+[0m15:05:01  1 of 84 START sql table model public.dim_dates ................................. [RUN]
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+[0m15:05:01  1 of 84 ERROR creating sql table model public.dim_dates ........................ [[31mERROR[0m in 0.12s]
+[0m15:05:01  2 of 84 START sql view model public.stg_yellow_trips ........................... [RUN]
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+[0m15:05:01  2 of 84 ERROR creating sql view model public.stg_yellow_trips .................. [[31mERROR[0m in 0.10s]
+[0m15:05:01  3 of 84 START seed file public_public.payment_type_lookup ...................... [RUN]
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+[0m15:05:01  3 of 84 ERROR loading seed file public_public.payment_type_lookup .............. [[31mERROR[0m in 0.08s]
+[0m15:05:01  4 of 84 START seed file public_public.rate_code_lookup ......................... [RUN]
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+[0m15:05:01  4 of 84 ERROR loading seed file public_public.rate_code_lookup ................. [[31mERROR[0m in 0.11s]
+[0m15:05:01  5 of 84 START seed file public_public.taxi_zone_lookup ......................... [RUN]
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+[0m15:05:01  5 of 84 ERROR loading seed file public_public.taxi_zone_lookup ................. [[31mERROR[0m in 0.12s]
+[0m15:05:01  6 of 84 SKIP test not_null_dim_dates_date_key .................................. [[33mSKIP[0m]
+[0m15:05:01  7 of 84 SKIP test not_null_dim_dates_day_of_week_name .......................... [[33mSKIP[0m]
+[0m15:05:01  8 of 84 SKIP test not_null_dim_dates_is_holiday ................................ [[33mSKIP[0m]
+[0m15:05:01  9 of 84 SKIP test not_null_dim_dates_is_weekend ................................ [[33mSKIP[0m]
+[0m15:05:01  10 of 84 SKIP test unique_dim_dates_date_key ................................... [[33mSKIP[0m]
+[0m15:05:01  11 of 84 SKIP test assert_fare_not_exceeds_total ............................... [[33mSKIP[0m]
+[0m15:05:01  12 of 84 SKIP test not_null_stg_yellow_trips_dropoff_datetime .................. [[33mSKIP[0m]
+[0m15:05:01  13 of 84 SKIP test not_null_stg_yellow_trips_dropoff_location_id ............... [[33mSKIP[0m]
+[0m15:05:01  14 of 84 SKIP test not_null_stg_yellow_trips_fare_amount ....................... [[33mSKIP[0m]
+[0m15:05:01  15 of 84 SKIP test not_null_stg_yellow_trips_pickup_datetime ................... [[33mSKIP[0m]
+[0m15:05:01  16 of 84 SKIP test not_null_stg_yellow_trips_pickup_location_id ................ [[33mSKIP[0m]
+[0m15:05:01  17 of 84 SKIP test not_null_stg_yellow_trips_total_amount ...................... [[33mSKIP[0m]
+[0m15:05:01  18 of 84 SKIP test not_null_stg_yellow_trips_trip_distance_miles ............... [[33mSKIP[0m]
+[0m15:05:01  19 of 84 SKIP test not_null_stg_yellow_trips_trip_id ........................... [[33mSKIP[0m]
+[0m15:05:01  20 of 84 SKIP test not_null_stg_yellow_trips_vendor_id ......................... [[33mSKIP[0m]
+[0m15:05:01  21 of 84 SKIP test unique_stg_yellow_trips_trip_id ............................. [[33mSKIP[0m]
+[0m15:05:01  22 of 84 SKIP test not_null_payment_type_lookup_payment_type_id ................ [[33mSKIP[0m]
+[0m15:05:01  23 of 84 SKIP test unique_payment_type_lookup_payment_type_id .................. [[33mSKIP[0m]
+[0m15:05:01  24 of 84 SKIP test not_null_rate_code_lookup_rate_code_id ...................... [[33mSKIP[0m]
+[0m15:05:01  25 of 84 SKIP test unique_rate_code_lookup_rate_code_id ........................ [[33mSKIP[0m]
+[0m15:05:01  26 of 84 SKIP test not_null_taxi_zone_lookup_Borough ........................... [[33mSKIP[0m]
+[0m15:05:01  27 of 84 SKIP test not_null_taxi_zone_lookup_LocationID ........................ [[33mSKIP[0m]
+[0m15:05:01  28 of 84 SKIP test unique_taxi_zone_lookup_LocationID .......................... [[33mSKIP[0m]
+[0m15:05:01  29 of 84 SKIP relation public.int_trip_metrics ................................. [[33mSKIP[0m]
+[0m15:05:01  30 of 84 SKIP relation public.stg_payment_types ................................ [[33mSKIP[0m]
+[0m15:05:01  31 of 84 SKIP relation public.stg_rate_codes ................................... [[33mSKIP[0m]
+[0m15:05:01  32 of 84 SKIP relation public.stg_taxi_zones ................................... [[33mSKIP[0m]
+[0m15:05:01  33 of 84 SKIP test assert_trip_duration_positive ............................... [[33mSKIP[0m]
+[0m15:05:01  34 of 84 SKIP test not_null_int_trip_metrics_is_weekend ........................ [[33mSKIP[0m]
+[0m15:05:01  35 of 84 SKIP test not_null_int_trip_metrics_pickup_date ....................... [[33mSKIP[0m]
+[0m15:05:01  36 of 84 SKIP test not_null_int_trip_metrics_pickup_hour ....................... [[33mSKIP[0m]
+[0m15:05:01  37 of 84 SKIP test not_null_int_trip_metrics_trip_duration_minutes ............. [[33mSKIP[0m]
+[0m15:05:01  38 of 84 SKIP test not_null_int_trip_metrics_trip_id ........................... [[33mSKIP[0m]
+[0m15:05:01  39 of 84 SKIP test not_null_stg_payment_types_payment_type_id .................. [[33mSKIP[0m]
+[0m15:05:01  40 of 84 SKIP test not_null_stg_payment_types_payment_type_name ................ [[33mSKIP[0m]
+[0m15:05:01  41 of 84 SKIP test unique_stg_payment_types_payment_type_id .................... [[33mSKIP[0m]
+[0m15:05:01  42 of 84 SKIP test not_null_stg_rate_codes_rate_code_id ........................ [[33mSKIP[0m]
+[0m15:05:01  43 of 84 SKIP test not_null_stg_rate_codes_rate_code_name ...................... [[33mSKIP[0m]
+[0m15:05:01  44 of 84 SKIP test unique_stg_rate_codes_rate_code_id .......................... [[33mSKIP[0m]
+[0m15:05:01  45 of 84 SKIP test not_null_stg_taxi_zones_borough ............................. [[33mSKIP[0m]
+[0m15:05:01  46 of 84 SKIP test not_null_stg_taxi_zones_location_id ......................... [[33mSKIP[0m]
+[0m15:05:01  47 of 84 SKIP test not_null_stg_taxi_zones_zone_name ........................... [[33mSKIP[0m]
+[0m15:05:01  48 of 84 SKIP test relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [[33mSKIP[0m]
+[0m15:05:01  49 of 84 SKIP test relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [[33mSKIP[0m]
+[0m15:05:01  50 of 84 SKIP test unique_stg_taxi_zones_location_id ........................... [[33mSKIP[0m]
+[0m15:05:01  51 of 84 SKIP relation public.int_daily_summary ................................ [[33mSKIP[0m]
+[0m15:05:01  52 of 84 SKIP relation public.int_hourly_patterns .............................. [[33mSKIP[0m]
+[0m15:05:01  53 of 84 SKIP relation public.dim_payment_types ................................ [[33mSKIP[0m]
+[0m15:05:01  54 of 84 SKIP relation public.dim_locations .................................... [[33mSKIP[0m]
+[0m15:05:01  55 of 84 SKIP test not_null_int_daily_summary_pickup_date ...................... [[33mSKIP[0m]
+[0m15:05:01  56 of 84 SKIP test not_null_int_daily_summary_total_revenue .................... [[33mSKIP[0m]
+[0m15:05:01  57 of 84 SKIP test not_null_int_daily_summary_total_trips ...................... [[33mSKIP[0m]
+[0m15:05:01  58 of 84 SKIP test unique_int_daily_summary_pickup_date ........................ [[33mSKIP[0m]
+[0m15:05:01  59 of 84 SKIP test not_null_int_hourly_patterns_pickup_date .................... [[33mSKIP[0m]
+[0m15:05:01  60 of 84 SKIP test not_null_int_hourly_patterns_pickup_hour .................... [[33mSKIP[0m]
+[0m15:05:01  61 of 84 SKIP test not_null_int_hourly_patterns_total_trips .................... [[33mSKIP[0m]
+[0m15:05:01  62 of 84 SKIP test not_null_dim_payment_types_payment_type_id .................. [[33mSKIP[0m]
+[0m15:05:01  63 of 84 SKIP test not_null_dim_payment_types_payment_type_name ................ [[33mSKIP[0m]
+[0m15:05:01  64 of 84 SKIP test unique_dim_payment_types_payment_type_id .................... [[33mSKIP[0m]
+[0m15:05:01  65 of 84 SKIP test not_null_dim_locations_borough .............................. [[33mSKIP[0m]
+[0m15:05:01  66 of 84 SKIP test not_null_dim_locations_location_id .......................... [[33mSKIP[0m]
+[0m15:05:01  67 of 84 SKIP test not_null_dim_locations_zone_name ............................ [[33mSKIP[0m]
+[0m15:05:01  68 of 84 SKIP test unique_dim_locations_location_id ............................ [[33mSKIP[0m]
+[0m15:05:01  69 of 84 SKIP relation public.mart_daily_revenue ............................... [[33mSKIP[0m]
+[0m15:05:01  70 of 84 SKIP relation public.mart_hourly_demand ............................... [[33mSKIP[0m]
+[0m15:05:01  71 of 84 SKIP relation public.fct_trips ........................................ [[33mSKIP[0m]
+[0m15:05:01  72 of 84 SKIP test not_null_mart_daily_revenue_date_key ........................ [[33mSKIP[0m]
+[0m15:05:01  73 of 84 SKIP test not_null_mart_daily_revenue_total_revenue ................... [[33mSKIP[0m]
+[0m15:05:01  74 of 84 SKIP test unique_mart_daily_revenue_date_key .......................... [[33mSKIP[0m]
+[0m15:05:01  75 of 84 SKIP test not_null_mart_hourly_demand_is_weekend ...................... [[33mSKIP[0m]
+[0m15:05:01  76 of 84 SKIP test not_null_mart_hourly_demand_pickup_hour ..................... [[33mSKIP[0m]
+[0m15:05:01  77 of 84 SKIP test not_null_fct_trips_pickup_datetime .......................... [[33mSKIP[0m]
+[0m15:05:01  78 of 84 SKIP test not_null_fct_trips_total_amount ............................. [[33mSKIP[0m]
+[0m15:05:01  79 of 84 SKIP test not_null_fct_trips_trip_id .................................. [[33mSKIP[0m]
+[0m15:05:01  80 of 84 SKIP test unique_fct_trips_trip_id .................................... [[33mSKIP[0m]
+[0m15:05:01  81 of 84 SKIP relation public.mart_location_performance ........................ [[33mSKIP[0m]
+[0m15:05:01  82 of 84 SKIP test not_null_mart_location_performance_pickup_location_id ....... [[33mSKIP[0m]
+[0m15:05:01  83 of 84 SKIP test not_null_mart_location_performance_total_pickups ............ [[33mSKIP[0m]
+[0m15:05:01  84 of 84 SKIP test unique_mart_location_performance_pickup_location_id ......... [[33mSKIP[0m]
+NOTICE:  connected to Materialize v0.112.2
+  Org ID: 668c2cac-3f32-4ad5-b8ce-839081a9e5f6
+  Region: docker/container
+  User: materialize
+  Cluster: quickstart
+  Database: materialize
+  Schema: public
+
+Issue a SQL query to get started. Need help?
+  View documentation: https://materialize.com/s/docs
+  Join our Slack community: https://materialize.com/s/chat
+    
+[0m15:05:01  
+[0m15:05:01  Finished running 3 seeds, 7 table models, 67 data tests, 7 view models in 0 hours 0 minutes and 2.89 seconds (2.89s).
+[0m15:05:01  
+[0m15:05:01  [31mCompleted with 5 errors, 0 partial successes, and 0 warnings:[0m
+[0m15:05:01  
+[0m15:05:01  [31mFailure in model dim_dates (models/marts/core/dim_dates.sql)[0m
+[0m15:05:01    Database Error in model dim_dates (models/marts/core/dim_dates.sql)
+  Expected a list of columns in parentheses, found AS
+  LINE 9:     as
+              ^
+  compiled code at target/run/nyc_taxi_pipeline_14/models/marts/core/dim_dates.sql
+[0m15:05:01  
+[0m15:05:01    compiled code at target/compiled/nyc_taxi_pipeline_14/models/marts/core/dim_dates.sql
+[0m15:05:01  
+[0m15:05:01  [31mFailure in model stg_yellow_trips (models/staging/stg_yellow_trips.sql)[0m
+[0m15:05:01    Database Error in model stg_yellow_trips (models/staging/stg_yellow_trips.sql)
+  this transaction can only execute a single statement
+  compiled code at target/run/nyc_taxi_pipeline_14/models/staging/stg_yellow_trips.sql
+[0m15:05:01  
+[0m15:05:01    compiled code at target/compiled/nyc_taxi_pipeline_14/models/staging/stg_yellow_trips.sql
+[0m15:05:01  
+[0m15:05:01  [31mFailure in seed payment_type_lookup (seeds/payment_type_lookup.csv)[0m
+[0m15:05:01    Database Error in seed payment_type_lookup (seeds/payment_type_lookup.csv)
+  unknown catalog item 'materialize.public_public.payment_type_lookup'
+[0m15:05:01  
+[0m15:05:01  [31mFailure in seed rate_code_lookup (seeds/rate_code_lookup.csv)[0m
+[0m15:05:01    Database Error in seed rate_code_lookup (seeds/rate_code_lookup.csv)
+  unknown catalog item 'materialize.public_public.rate_code_lookup'
+[0m15:05:01  
+[0m15:05:01  [31mFailure in seed taxi_zone_lookup (seeds/taxi_zone_lookup.csv)[0m
+[0m15:05:01    Database Error in seed taxi_zone_lookup (seeds/taxi_zone_lookup.csv)
+  unknown catalog item 'materialize.public_public.taxi_zone_lookup'
+[0m15:05:01  
+[0m15:05:01  Done. PASS=0 WARN=0 ERROR=5 SKIP=79 NO-OP=0 TOTAL=84
+
+make[1]: *** [Makefile:57: dbt-build] Error 1
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/14-kafka-materialize'
+make: *** [Makefile:63: benchmark] Error 2
+docker compose --profile generate --profile dbt down -v
+time="2026-02-21T10:05:02-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\14-kafka-materialize\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container p14-materialize  Stopping
+ Container p14-materialize  Stopped
+ Container p14-materialize  Removing
+ Container p14-materialize  Removed
+ Container p14-kafka  Stopping
+ Container p14-kafka  Stopped
+ Container p14-kafka  Removing
+ Container p14-kafka  Removed
+ Network p14-pipeline-net  Removing
+ Volume 14-kafka-materialize_materialize-data  Removing
+ Volume 14-kafka-materialize_kafka-data  Removing
+ Volume 14-kafka-materialize_kafka-data  Removed
+ Volume 14-kafka-materialize_materialize-data  Removed
+ Network p14-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.

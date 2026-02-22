@@ -2,7 +2,7 @@
 
 Compare **30+ streaming technologies** across **24 complete pipelines** using identical NYC Yellow Taxi workloads. Every pipeline implements the same Medallion Architecture (Bronze / Silver / Gold) with the same business logic, enabling direct "apples-to-apples" performance and complexity comparisons.
 
-**Latest Benchmark:** 2026-02-16 | **10 pipelines fully passing** (dbt tests green) | **8 partial** | **6 known failures**
+**Latest Benchmark:** 2026-02-22 | **22 pipelines PASS** | **2 partial** (P11 Elementary/DuckDB, P14 Materialize/dbt) | **0 failures**
 
 ---
 
@@ -10,15 +10,15 @@ Compare **30+ streaming technologies** across **24 complete pipelines** using id
 
 | Use Case | Pipeline | Stack | E2E Time |
 |----------|----------|-------|----------|
-| Production-grade streaming | **P01** | Kafka + Flink 2.0.1 + Iceberg 1.10.1 + dbt | 175s |
-| Fastest streaming | **P15** | Kafka Streams (Java) | 30s |
-| Fastest with orchestration | **P09** | Dagster + Kafka + Flink + Iceberg | 109s |
-| Lightest footprint | **P06** | Redpanda + RisingWave (449 MB, 3 services) | ~5s |
-| CDC / change capture | **P12** | Debezium + Flink + Iceberg | 112s |
-| End-to-end with dashboards | **P23** | CDC + Flink + Iceberg + dbt + ClickHouse + Grafana | 155s |
-| Python-native streaming | **P20** | Kafka + Bytewax | 40s |
-| Batch baseline (dbt only) | **P00** | Parquet + DuckDB + dbt | 19s |
-| Redpanda over Kafka | **P04** | Redpanda + Flink + Iceberg (14% faster than P01) | 151s |
+| Production-grade streaming | **P01** | Kafka + Flink 2.0.1 + Iceberg 1.10.1 + dbt | 151s |
+| Fastest streaming (RisingWave) | **P03/P06** | Kafka/Redpanda + RisingWave | 93s |
+| Fastest with orchestration | **P09** | Dagster + Kafka + Flink + Iceberg | 97s |
+| Lightest footprint | **P20** | Kafka + Bytewax (2.2 GB, 6 services) | 62s |
+| CDC / change capture | **P12** | Debezium + Flink + Iceberg | 139s |
+| End-to-end with dashboards | **P23** | CDC + Flink + Iceberg + dbt + ClickHouse + Grafana | 176s |
+| Python-native streaming | **P20** | Kafka + Bytewax | 62s |
+| Batch baseline (dbt only) | **P00** | Parquet + DuckDB + dbt | 89s |
+| Redpanda over Kafka | **P04** | Redpanda + Flink + Iceberg | 147s |
 
 > **Recommended production stack:** `Kafka 4.0 (KRaft) -> Flink 2.0.1 -> Iceberg 1.10.1 (Lakekeeper) -> dbt-duckdb` (P01) -- 94/94 dbt tests, idempotent producer, DLQ, watermarks, dedup, Prometheus metrics.
 
@@ -56,43 +56,54 @@ cat pipelines/comparison/comparison_report.md
 
 ---
 
-## Benchmark Results (2026-02-16)
+## Benchmark Results (2026-02-22)
 
-**Full details:** [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md)
+**Full details:** [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) | [Comparison Report](pipelines/comparison/comparison_report.md)
 
 ### Results at a Glance
 
 | Status | Count | Pipelines |
 |--------|-------|-----------|
-| **Full PASS** (E2E + dbt green) | 10 | P00, P01, P04, P07, P09, P12, P15, P16, P17, P23 |
-| **Partial** (processing OK, dbt issues) | 8 | P02, P05, P11, P13, P14, P20, P21, P22 |
-| **Known Failures** | 6 | P03, P06 (RisingWave), P08 (Astronomer TTY), P10 (needs data), P18 (Prefect), P19 (deps) |
+| **Full PASS** (E2E + dbt green) | 22 | P00-P10, P12-P13, P15-P23 |
+| **Partial** (processing OK, dbt adapter issues) | 2 | P11 (Elementary+DuckDB), P14 (Materialize dbt) |
+| **Known Failures** | 0 | -- |
 
 ### Top Performers
 
 | Metric | Pipeline | Value |
 |--------|----------|-------|
-| **Fastest E2E** | P00 (Batch Baseline) | 19s |
-| **Fastest Streaming** | P15 (Kafka Streams) | 30s |
-| **Best Full Pipeline** | P09 (Dagster) | 109s, 91/91 PASS |
-| **Best Production Stack** | P01 (Kafka+Flink+Iceberg) | 175s, 94/94 PASS |
-| **Lightest Footprint** | P15/P20 (Streams/Bytewax) | 4-6 containers |
-| **Highest Ingestion** | P05 (Redpanda+Spark) | 133,477 evt/s |
+| **Fastest E2E** | P10 (Serving Comparison) | 35s |
+| **Fastest Streaming** | P19 (Mage AI) | 51s |
+| **Fastest Full Pipeline** | P20 (Bytewax) | 62s |
+| **Best Orchestrated** | P09 (Dagster) | 97s, 91/91 PASS |
+| **Best Production Stack** | P01 (Kafka+Flink+Iceberg) | 151s, 94/94 PASS |
+| **Lightest Memory** | P20 (Bytewax) | 2,173 MB |
 
 ### E2E Time (lower is better)
 
 ```
-P00  ||||                                        19s  (Batch baseline)
-P15  ||||||                                      30s  (Kafka Streams)
-P20  ||||||||                                    40s  (Bytewax)
-P17  ||||||||||||||                              70s  (Druid)
-P16  ||||||||||||||||||                          94s  (Pinot)
-P09  ||||||||||||||||||||||                     109s  (Dagster)
-P12  ||||||||||||||||||||||                     112s  (Debezium CDC)
-P04  ||||||||||||||||||||||||||||||             151s  (Redpanda+Flink)
-P23  ||||||||||||||||||||||||||||||             155s  (Full Stack Capstone)
-P07  |||||||||||||||||||||||||||||||            158s  (Kestra)
-P01  ||||||||||||||||||||||||||||||||||         175s  (Kafka+Flink PROD)
+P10  |||||                                      35s  (Serving)
+P19  |||||||                                    51s  (Mage AI)
+P20  ||||||||                                   62s  (Bytewax)
+P14  |||||||||                                  63s  (Materialize)
+P00  |||||||||||                                89s  (Batch baseline)
+P02  ||||||||||||                               93s  (Kafka+Spark)
+P03  ||||||||||||                               93s  (Kafka+RisingWave)
+P06  ||||||||||||                               93s  (Redpanda+RisingWave)
+P09  |||||||||||||                              97s  (Dagster)
+P07  ||||||||||||||                            100s  (Kestra)
+P17  ||||||||||||||                            101s  (Druid)
+P22  |||||||||||||||                           110s  (Hudi)
+P13  ||||||||||||||||                          112s  (Delta Lake)
+P15  ||||||||||||||||                          115s  (Kafka Streams)
+P18  |||||||||||||||||                         116s  (Prefect)
+P21  |||||||||||||||||                         116s  (Feast)
+P08  |||||||||||||||||                         119s  (Airflow)
+P16  |||||||||||||||||||                       136s  (Pinot)
+P12  ||||||||||||||||||||                      139s  (Debezium CDC)
+P04  |||||||||||||||||||||                     147s  (Redpanda+Flink)
+P01  ||||||||||||||||||||||                    151s  (Kafka+Flink PROD)
+P23  ||||||||||||||||||||||||||                176s  (Full Stack Capstone)
 ```
 
 ### Production Recommendations
@@ -108,7 +119,7 @@ Kafka 4.0 (KRaft) -> Flink 2.0.1 -> Iceberg 1.10.1 (Lakekeeper) -> dbt-duckdb
 
 | Stack | Pipeline | Notes |
 |-------|----------|-------|
-| Redpanda + Flink + Iceberg | P04 | 14% faster than Kafka |
+| Redpanda + Flink + Iceberg | P04 | 147s, slight edge over Kafka P01 |
 | Kafka + Flink + Iceberg + Dagster | P09 | Best with orchestration |
 | Debezium CDC + Flink + Iceberg | P12 | For CDC use cases |
 | Full Stack (CDC + Flink + Iceberg + dbt + ClickHouse + Grafana) | P23 | End-to-end reference |
@@ -117,8 +128,8 @@ Kafka 4.0 (KRaft) -> Flink 2.0.1 -> Iceberg 1.10.1 (Lakekeeper) -> dbt-duckdb
 
 | Stack | Pipeline | Best For |
 |-------|----------|----------|
-| Kafka Streams (Java) | P15 | Simple transformations, 30s E2E |
-| Kafka + Bytewax (Python) | P20 | Python-native streaming, 40s E2E |
+| Kafka Streams (Java) | P15 | Simple transformations, 115s E2E |
+| Kafka + Bytewax (Python) | P20 | Python-native streaming, 62s E2E |
 
 ---
 
@@ -148,7 +159,7 @@ The foundational streaming pipelines comparing brokers and processing engines:
 
 - **P04: Redpanda + Flink + Iceberg**
   - Redpanda as Kafka-compatible broker (C++ implementation)
-  - 14% faster than P01 (151s vs 175s), 25-35% less memory
+  - Comparable to P01 (147s vs 151s), 25-35% less memory
 
 - **P05: Redpanda + Spark + Iceberg**
   - Redpanda with Spark Structured Streaming
@@ -171,7 +182,7 @@ Event-driven and DAG-based workflow orchestration:
 
 - **P09: Dagster Orchestrated**
   - Asset-based orchestration with data lineage
-  - Fastest orchestrated pipeline (109s, 91/91 PASS)
+  - Fastest orchestrated pipeline (97s, 91/91 PASS)
 
 ### Tier 3-4: Serving & Observability (P10-P11)
 
@@ -190,18 +201,18 @@ Analytics serving and data quality monitoring:
 
 Advanced patterns and emerging technologies:
 
-- **P12: Debezium CDC** -- PostgreSQL WAL-based Change Data Capture (112s, 91/91 PASS)
-- **P13: Delta Lake** -- Kafka + Spark + Delta Lake (alternative to Iceberg)
-- **P14: Materialize** -- Streaming SQL database with incrementally maintained views
-- **P15: Kafka Streams** -- Lightweight Java stream processing, fastest at 30s
-- **P16: Apache Pinot** -- Real-time OLAP analytics database (94s)
-- **P17: Apache Druid** -- Timeseries-optimized OLAP with Grafana dashboards (70s)
-- **P18: Prefect 3.x** -- Modern Python-first orchestration platform
-- **P19: Mage AI** -- Visual pipeline builder with Jupyter-style notebooks
-- **P20: Bytewax** -- Pure Python streaming framework (40s)
-- **P21: Feast** -- ML feature store with online/offline serving
-- **P22: Apache Hudi** -- Upsert-optimized table format
-- **P23: Full-Stack Capstone** -- CDC + Flink + Iceberg + dbt + ClickHouse + Grafana (155s, 91/91 PASS)
+- **P12: Debezium CDC** -- PostgreSQL WAL-based Change Data Capture (139s, 91/91 PASS)
+- **P13: Delta Lake** -- Kafka + Spark + Delta Lake (112s, 91/91 PASS)
+- **P14: Materialize** -- Streaming SQL database with incrementally maintained views (63s, PARTIAL)
+- **P15: Kafka Streams** -- Lightweight Java stream processing (115s)
+- **P16: Apache Pinot** -- Real-time OLAP analytics database (136s)
+- **P17: Apache Druid** -- Timeseries-optimized OLAP with Grafana dashboards (101s)
+- **P18: Prefect 3.x** -- Modern Python-first orchestration (116s, 91/91 PASS)
+- **P19: Mage AI** -- Visual pipeline builder (51s)
+- **P20: Bytewax** -- Pure Python streaming framework (62s)
+- **P21: Feast** -- ML feature store with online/offline serving (116s)
+- **P22: Apache Hudi** -- Upsert-optimized table format (110s, 91/91 PASS)
+- **P23: Full-Stack Capstone** -- CDC + Flink + Iceberg + dbt + ClickHouse + Grafana (176s, 91/91 PASS)
 
 ---
 
@@ -265,7 +276,7 @@ The framework enables direct "apples-to-apples" comparisons:
 - **P01 vs. P04**: Kafka + Flink vs. Redpanda + Flink
 - **P02 vs. P05**: Kafka + Spark vs. Redpanda + Spark
 - **P03 vs. P06**: Kafka + RisingWave vs. Redpanda + RisingWave
-- **Result**: Redpanda 14% faster, 25-35% less memory, same API
+- **Result**: Redpanda 3% faster (147s vs 151s), 25-35% less memory, same API
 
 #### Processors: Flink vs. Spark vs. RisingWave
 - **P01 vs. P02 vs. P03**: Same Kafka broker, different processors
@@ -387,29 +398,29 @@ real_time_data_engineering/
 │
 ├── pipelines/                             # 24 pipeline implementations
 │   ├── 00-batch-baseline/                 # DuckDB batch reference (19s)
-│   ├── 01-kafka-flink-iceberg/            # Production stack (175s, 94/94 PASS)
+│   ├── 01-kafka-flink-iceberg/            # Production stack (151s, 94/94 PASS)
 │   ├── 02-kafka-spark-iceberg/            # Spark variant
 │   ├── 03-kafka-risingwave/               # Real-time SQL (~2s processing)
 │   ├── 04-redpanda-flink-iceberg/         # Optimized broker (151s)
 │   ├── 05-redpanda-spark-iceberg/         # Spark + Redpanda
 │   ├── 06-redpanda-risingwave/            # Lightest (449 MB)
-│   ├── 07-kestra-orchestrated/            # Event-driven (158s)
+│   ├── 07-kestra-orchestrated/            # Event-driven (100s)
 │   ├── 08-airflow-orchestrated/           # DAG-based
-│   ├── 09-dagster-orchestrated/           # Asset-centric (109s)
+│   ├── 09-dagster-orchestrated/           # Asset-centric (97s)
 │   ├── 10-clickhouse-serving/             # OLAP analytics
 │   ├── 11-observability-stack/            # Elementary + Soda
-│   ├── 12-cdc-debezium-pipeline/          # PostgreSQL CDC (112s)
+│   ├── 12-cdc-debezium-pipeline/          # PostgreSQL CDC (139s)
 │   ├── 13-kafka-spark-delta-lake/         # Delta alternative
 │   ├── 14-kafka-materialize/              # Streaming SQL MVs
-│   ├── 15-kafka-streams/                  # Java lightweight (30s)
-│   ├── 16-pinot-serving/                  # Real-time OLAP (94s)
-│   ├── 17-druid-timeseries/               # Timeseries OLAP (70s)
+│   ├── 15-kafka-streams/                  # Java lightweight (115s)
+│   ├── 16-pinot-serving/                  # Real-time OLAP (136s)
+│   ├── 17-druid-timeseries/               # Timeseries OLAP (101s)
 │   ├── 18-prefect-orchestrated/           # Modern orchestration
 │   ├── 19-mage-ai/                        # Visual builder
-│   ├── 20-kafka-bytewax/                  # Python streaming (40s)
+│   ├── 20-kafka-bytewax/                  # Python streaming (62s)
 │   ├── 21-feast-feature-store/            # ML features
 │   ├── 22-hudi-cdc-storage/               # Upsert storage
-│   ├── 23-full-stack-capstone/            # End-to-end (155s)
+│   ├── 23-full-stack-capstone/            # End-to-end (176s)
 │   └── comparison/                        # Benchmark results & report
 │
 ├── shared/                                # Shared infrastructure

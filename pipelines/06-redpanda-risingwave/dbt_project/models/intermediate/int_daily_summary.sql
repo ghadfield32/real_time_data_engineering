@@ -16,15 +16,15 @@ daily_agg as (
         count(*) as total_trips,
         sum(passenger_count) as total_passengers,
 
-        round(avg(trip_distance_miles), 2) as avg_trip_distance,
-        round(avg(trip_duration_minutes), 2) as avg_trip_duration_min,
-        round(avg(avg_speed_mph), 2) as avg_speed_mph,
+        round(avg(trip_distance_miles)::numeric, 2) as avg_trip_distance,
+        round(avg(trip_duration_minutes)::numeric, 2) as avg_trip_duration_min,
+        round(avg(avg_speed_mph)::numeric, 2) as avg_speed_mph,
 
-        round(sum(fare_amount), 2) as total_fare_revenue,
-        round(sum(tip_amount), 2) as total_tip_revenue,
-        round(sum(total_amount), 2) as total_revenue,
-        round(avg(total_amount), 2) as avg_trip_revenue,
-        round(avg(tip_percentage), 2) as avg_tip_percentage,
+        round(sum(fare_amount)::numeric, 2) as total_fare_revenue,
+        round(sum(tip_amount)::numeric, 2) as total_tip_revenue,
+        round(sum(total_amount)::numeric, 2) as total_revenue,
+        round(avg(total_amount)::numeric, 2) as avg_trip_revenue,
+        round(avg(tip_percentage)::numeric, 2) as avg_tip_percentage,
 
         count(case when payment_type_id = 1 then 1 end) as credit_card_trips,
         count(case when payment_type_id = 2 then 1 end) as cash_trips

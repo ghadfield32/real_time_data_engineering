@@ -1,14 +1,11 @@
 /*
     Fact table: Fully enriched trip records with location names.
-    Incremental with delete+insert strategy.
+    Uses table materialization in RisingWave (no incremental strategy).
 */
 
 {{
   config(
-    materialized='incremental',
-    unique_key='trip_id',
-    incremental_strategy='delete+insert',
-    on_schema_change='fail'
+    materialized='table'
   )
 }}
 
@@ -66,9 +63,6 @@ final as (
     left join dropoff_locations do_loc
         on t.dropoff_location_id = do_loc.location_id
 
-    {% if is_incremental() %}
-    where t.pickup_datetime > (select max(pickup_datetime) from {{ this }})
-    {% endif %}
 )
 
 select * from final

@@ -1,62 +1,47 @@
 {#
-    Staging model: Yellow taxi trip records
+    Staging model: Yellow taxi trip records (RisingWave passthrough)
 
-    Canonical version for all pipelines. The source() reference
-    is configured per-pipeline in sources.yml.
+    The silver_cleaned_trips MV in RisingWave already handles:
+    - Column renaming and type casting
+    - Quality filters (nulls, negative fares, date range)
+    - Computed metrics (duration, speed, cost/mile, tip %)
+    - Time dimensions (pickup_date, pickup_hour, day_of_week, is_weekend)
+    - Impossible trip filters (duration 1-720 min, speed < 100 mph)
+
+    This staging model is a simple passthrough from the source.
 #}
 
 with source as (
     select * from {{ source('raw_nyc_taxi', 'raw_yellow_trips') }}
-),
-
-renamed as (
-    select
-        -- surrogate key (MD5 hash of composite key)
-        {{ dbt_utils.generate_surrogate_key([
-            'VendorID',
-            'tpep_pickup_datetime',
-            'tpep_dropoff_datetime',
-            'PULocationID',
-            'DOLocationID',
-            'fare_amount',
-            'total_amount'
-        ]) }} as trip_id,
-
-        -- identifiers
-        cast("VendorID" as integer) as vendor_id,
-        cast("RatecodeID" as integer) as rate_code_id,
-        cast("PULocationID" as integer) as pickup_location_id,
-        cast("DOLocationID" as integer) as dropoff_location_id,
-        cast(payment_type as integer) as payment_type_id,
-
-        -- timestamps
-        cast(tpep_pickup_datetime as timestamp) as pickup_datetime,
-        cast(tpep_dropoff_datetime as timestamp) as dropoff_datetime,
-
-        -- trip info
-        cast(passenger_count as integer) as passenger_count,
-        cast(trip_distance as double) as trip_distance_miles,
-        store_and_fwd_flag,
-
-        -- financials
-        round(cast(fare_amount as decimal(10, 2)), 2) as fare_amount,
-        round(cast(extra as decimal(10, 2)), 2) as extra_amount,
-        round(cast(mta_tax as decimal(10, 2)), 2) as mta_tax,
-        round(cast(tip_amount as decimal(10, 2)), 2) as tip_amount,
-        round(cast(tolls_amount as decimal(10, 2)), 2) as tolls_amount,
-        round(cast(improvement_surcharge as decimal(10, 2)), 2) as improvement_surcharge,
-        round(cast(total_amount as decimal(10, 2)), 2) as total_amount,
-        round(cast(congestion_surcharge as decimal(10, 2)), 2) as congestion_surcharge,
-        round(cast(Airport_fee as decimal(10, 2)), 2) as airport_fee
-
-    from source
-    where tpep_pickup_datetime is not null
-      and tpep_dropoff_datetime is not null
-      and trip_distance >= 0
-      and fare_amount >= 0
-      -- filter out-of-range dates (data quality: ~18 trips outside Jan 2024)
-      and cast(tpep_pickup_datetime as date) >= date '2024-01-01'
-      and cast(tpep_pickup_datetime as date) < date '2024-02-01'
 )
 
-select * from renamed
+select
+    trip_id,
+    vendor_id,
+    rate_code_id,
+    pickup_location_id,
+    dropoff_location_id,
+    payment_type_id,
+    pickup_datetime,
+    dropoff_datetime,
+    passenger_count,
+    trip_distance_miles,
+    store_and_fwd_flag,
+    fare_amount,
+    extra_amount,
+    mta_tax,
+    tip_amount,
+    tolls_amount,
+    improvement_surcharge,
+    total_amount,
+    congestion_surcharge,
+    airport_fee,
+    trip_duration_minutes,
+    avg_speed_mph,
+    cost_per_mile,
+    tip_percentage,
+    pickup_date,
+    pickup_hour,
+    pickup_day_of_week,
+    is_weekend
+from source

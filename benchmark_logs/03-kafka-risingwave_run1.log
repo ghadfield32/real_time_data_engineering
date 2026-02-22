@@ -1,0 +1,335 @@
+docker compose --profile generate --profile dbt down -v
+time="2026-02-21T09:45:19-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+docker compose up -d kafka risingwave
+time="2026-02-21T09:45:22-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network 03-kafka-risingwave_pipeline-net  Creating
+ Network 03-kafka-risingwave_pipeline-net  Created
+ Volume 03-kafka-risingwave_risingwave-data  Creating
+ Volume 03-kafka-risingwave_risingwave-data  Created
+ Volume 03-kafka-risingwave_kafka-data  Creating
+ Volume 03-kafka-risingwave_kafka-data  Created
+ Container p03-kafka  Creating
+ Container p03-kafka  Created
+ Container p03-risingwave  Creating
+ Container p03-risingwave  Created
+ Container p03-kafka  Starting
+ Container p03-kafka  Started
+ Container p03-kafka  Waiting
+ Container p03-kafka  Healthy
+ Container p03-risingwave  Starting
+ Container p03-risingwave  Started
+Waiting for services to be healthy...
+time="2026-02-21T09:45:42-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+
+Kafka is ready.
+Creating Kafka topics...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe topics
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.raw_trips \
+	--partitions 3 \
+	--replication-factor 1
+time="2026-02-21T09:45:49-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+Topics created.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+=== Benchmark: Pipeline 03 - Kafka + RisingWave ===
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+docker compose --profile generate --profile dbt down -v
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+[1/4] Infrastructure up...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe up
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+docker compose up -d kafka risingwave
+time="2026-02-21T09:46:03-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Network 03-kafka-risingwave_pipeline-net  Creating
+ Network 03-kafka-risingwave_pipeline-net  Created
+ Volume 03-kafka-risingwave_kafka-data  Creating
+ Volume 03-kafka-risingwave_kafka-data  Created
+ Volume 03-kafka-risingwave_risingwave-data  Creating
+ Volume 03-kafka-risingwave_risingwave-data  Created
+ Container p03-kafka  Creating
+ Container p03-kafka  Created
+ Container p03-risingwave  Creating
+ Container p03-risingwave  Created
+ Container p03-kafka  Starting
+ Container p03-kafka  Started
+ Container p03-kafka  Waiting
+ Container p03-kafka  Healthy
+ Container p03-risingwave  Starting
+ Container p03-risingwave  Started
+Waiting for services to be healthy...
+time="2026-02-21T09:46:24-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+
+Kafka is ready.
+Creating Kafka topics...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe topics
+make[2]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.raw_trips \
+	--partitions 3 \
+	--replication-factor 1
+time="2026-02-21T09:46:30-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+Topics created.
+make[2]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+[2/4] Creating RisingWave streaming objects...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe process
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+Submitting RisingWave SQL scripts...
+MSYS_NO_PATHCONV=1 docker run --rm --network 03-kafka-risingwave_pipeline-net \
+	-v "$(pwd)/risingwave/sql:/sql:ro" postgres:alpine \
+	psql -h risingwave -p 4566 -U root -d dev -f /sql/01-create-source.sql || true
+CREATE_SOURCE
+[1/3] Kafka source created.
+MSYS_NO_PATHCONV=1 docker run --rm --network 03-kafka-risingwave_pipeline-net \
+	-v "$(pwd)/risingwave/sql:/sql:ro" postgres:alpine \
+	psql -h risingwave -p 4566 -U root -d dev -f /sql/02-mv-bronze-trips.sql || true
+CREATE_MATERIALIZED_VIEW
+[2/3] Bronze materialized view created.
+MSYS_NO_PATHCONV=1 docker run --rm --network 03-kafka-risingwave_pipeline-net \
+	-v "$(pwd)/risingwave/sql:/sql:ro" postgres:alpine \
+	psql -h risingwave -p 4566 -U root -d dev -f /sql/03-mv-silver-metrics.sql || true
+CREATE_MATERIALIZED_VIEW
+[3/3] Silver materialized view created.
+All RisingWave objects created. MVs will update automatically as Kafka events arrive.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+[3/4] Generating events (10k)...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe generate-limited
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+time="2026-02-21T09:46:37-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container p03-kafka  Running
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     kafka:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.54s
+  Rate:    18,418 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+[4/4] Running dbt build...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe dbt-build
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+MSYS_NO_PATHCONV=1 docker compose run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --profiles-dir ."
+time="2026-02-21T09:46:39-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container p03-kafka  Running
+ Container p03-risingwave  Running
+ Container p03-kafka  Waiting
+ Container p03-kafka  Healthy
+[0m14:46:43  Running with dbt=1.11.5
+[0m14:46:43  Installing dbt-labs/dbt_utils
+[0m14:46:46  Installed from version 1.3.3
+[0m14:46:46  Up to date!
+[0m14:46:48  Running with dbt=1.11.5
+[0m14:46:48  Registered adapter: postgres=1.10.0
+[0m14:46:49  Found 14 models, 64 data tests, 3 seeds, 1 source, 592 macros
+[0m14:46:49  
+[0m14:46:49  Concurrency: 1 threads (target='dev')
+[0m14:46:49  
+[0m14:46:49  1 of 81 START sql view model public.dim_dates .................................. [RUN]
+[0m14:46:49  1 of 81 OK created sql view model public.dim_dates ............................. [[32mCREATE_VIEW[0m in 0.11s]
+[0m14:46:49  2 of 81 START sql view model public.stg_yellow_trips ........................... [RUN]
+[0m14:46:49  2 of 81 OK created sql view model public.stg_yellow_trips ...................... [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:49  3 of 81 START seed file public_public.payment_type_lookup ...................... [RUN]
+[0m14:46:49  3 of 81 OK loaded seed file public_public.payment_type_lookup .................. [[32mINSERT 6[0m in 0.08s]
+[0m14:46:49  4 of 81 START seed file public_public.rate_code_lookup ......................... [RUN]
+[0m14:46:49  4 of 81 OK loaded seed file public_public.rate_code_lookup ..................... [[32mINSERT 7[0m in 0.08s]
+[0m14:46:49  5 of 81 START seed file public_public.taxi_zone_lookup ......................... [RUN]
+[0m14:46:49  5 of 81 OK loaded seed file public_public.taxi_zone_lookup ..................... [[32mINSERT 265[0m in 0.12s]
+[0m14:46:49  6 of 81 START test not_null_dim_dates_date_key ................................. [RUN]
+[0m14:46:49  6 of 81 PASS not_null_dim_dates_date_key ....................................... [[32mPASS[0m in 0.05s]
+[0m14:46:49  7 of 81 START test not_null_dim_dates_day_of_week_name ......................... [RUN]
+[0m14:46:50  7 of 81 PASS not_null_dim_dates_day_of_week_name ............................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  8 of 81 START test not_null_dim_dates_is_holiday ............................... [RUN]
+[0m14:46:50  8 of 81 PASS not_null_dim_dates_is_holiday ..................................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  9 of 81 START test not_null_dim_dates_is_weekend ............................... [RUN]
+[0m14:46:50  9 of 81 PASS not_null_dim_dates_is_weekend ..................................... [[32mPASS[0m in 0.03s]
+[0m14:46:50  10 of 81 START test unique_dim_dates_date_key .................................. [RUN]
+[0m14:46:50  10 of 81 PASS unique_dim_dates_date_key ........................................ [[32mPASS[0m in 0.04s]
+[0m14:46:50  11 of 81 START test assert_fare_not_exceeds_total .............................. [RUN]
+[0m14:46:50  11 of 81 PASS assert_fare_not_exceeds_total .................................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  12 of 81 START test not_null_stg_yellow_trips_dropoff_datetime ................. [RUN]
+[0m14:46:50  12 of 81 PASS not_null_stg_yellow_trips_dropoff_datetime ....................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  13 of 81 START test not_null_stg_yellow_trips_dropoff_location_id .............. [RUN]
+[0m14:46:50  13 of 81 PASS not_null_stg_yellow_trips_dropoff_location_id .................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  14 of 81 START test not_null_stg_yellow_trips_fare_amount ...................... [RUN]
+[0m14:46:50  14 of 81 PASS not_null_stg_yellow_trips_fare_amount ............................ [[32mPASS[0m in 0.04s]
+[0m14:46:50  15 of 81 START test not_null_stg_yellow_trips_pickup_datetime .................. [RUN]
+[0m14:46:50  15 of 81 PASS not_null_stg_yellow_trips_pickup_datetime ........................ [[32mPASS[0m in 0.04s]
+[0m14:46:50  16 of 81 START test not_null_stg_yellow_trips_pickup_location_id ............... [RUN]
+[0m14:46:50  16 of 81 PASS not_null_stg_yellow_trips_pickup_location_id ..................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  17 of 81 START test not_null_stg_yellow_trips_total_amount ..................... [RUN]
+[0m14:46:50  17 of 81 PASS not_null_stg_yellow_trips_total_amount ........................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  18 of 81 START test not_null_stg_yellow_trips_trip_distance_miles .............. [RUN]
+[0m14:46:50  18 of 81 PASS not_null_stg_yellow_trips_trip_distance_miles .................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  19 of 81 START test not_null_stg_yellow_trips_trip_id .......................... [RUN]
+[0m14:46:50  19 of 81 PASS not_null_stg_yellow_trips_trip_id ................................ [[32mPASS[0m in 0.04s]
+[0m14:46:50  20 of 81 START test not_null_stg_yellow_trips_vendor_id ........................ [RUN]
+[0m14:46:50  20 of 81 PASS not_null_stg_yellow_trips_vendor_id .............................. [[32mPASS[0m in 0.04s]
+[0m14:46:50  21 of 81 START test unique_stg_yellow_trips_trip_id ............................ [RUN]
+[0m14:46:50  21 of 81 PASS unique_stg_yellow_trips_trip_id .................................. [[32mPASS[0m in 0.04s]
+[0m14:46:50  22 of 81 START test not_null_payment_type_lookup_payment_type_id ............... [RUN]
+[0m14:46:50  22 of 81 PASS not_null_payment_type_lookup_payment_type_id ..................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  23 of 81 START test unique_payment_type_lookup_payment_type_id ................. [RUN]
+[0m14:46:50  23 of 81 PASS unique_payment_type_lookup_payment_type_id ....................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  24 of 81 START test not_null_rate_code_lookup_rate_code_id ..................... [RUN]
+[0m14:46:50  24 of 81 PASS not_null_rate_code_lookup_rate_code_id ........................... [[32mPASS[0m in 0.04s]
+[0m14:46:50  25 of 81 START test unique_rate_code_lookup_rate_code_id ....................... [RUN]
+[0m14:46:50  25 of 81 PASS unique_rate_code_lookup_rate_code_id ............................. [[32mPASS[0m in 0.04s]
+[0m14:46:50  26 of 81 START sql view model public.stg_taxi_zones ............................ [RUN]
+[0m14:46:50  26 of 81 OK created sql view model public.stg_taxi_zones ....................... [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:50  27 of 81 START sql view model public.int_trip_metrics .......................... [RUN]
+[0m14:46:50  27 of 81 OK created sql view model public.int_trip_metrics ..................... [[32mCREATE_VIEW[0m in 0.09s]
+[0m14:46:50  28 of 81 START sql view model public.stg_payment_types ......................... [RUN]
+[0m14:46:51  28 of 81 OK created sql view model public.stg_payment_types .................... [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:51  29 of 81 START sql view model public.stg_rate_codes ............................ [RUN]
+[0m14:46:51  29 of 81 OK created sql view model public.stg_rate_codes ....................... [[32mCREATE_VIEW[0m in 0.04s]
+[0m14:46:51  30 of 81 START test not_null_stg_taxi_zones_borough ............................ [RUN]
+[0m14:46:51  30 of 81 PASS not_null_stg_taxi_zones_borough .................................. [[32mPASS[0m in 0.04s]
+[0m14:46:51  31 of 81 START test not_null_stg_taxi_zones_location_id ........................ [RUN]
+[0m14:46:51  31 of 81 PASS not_null_stg_taxi_zones_location_id .............................. [[32mPASS[0m in 0.04s]
+[0m14:46:51  32 of 81 START test not_null_stg_taxi_zones_zone_name .......................... [RUN]
+[0m14:46:51  32 of 81 PASS not_null_stg_taxi_zones_zone_name ................................ [[32mPASS[0m in 0.04s]
+[0m14:46:51  33 of 81 START test relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+[0m14:46:51  33 of 81 PASS relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.05s]
+[0m14:46:51  34 of 81 START test relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+[0m14:46:51  34 of 81 PASS relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.04s]
+[0m14:46:51  35 of 81 START test unique_stg_taxi_zones_location_id .......................... [RUN]
+[0m14:46:51  35 of 81 PASS unique_stg_taxi_zones_location_id ................................ [[32mPASS[0m in 0.04s]
+[0m14:46:51  36 of 81 START test assert_trip_duration_positive .............................. [RUN]
+[0m14:46:51  36 of 81 PASS assert_trip_duration_positive .................................... [[32mPASS[0m in 0.04s]
+[0m14:46:51  37 of 81 START test not_null_int_trip_metrics_is_weekend ....................... [RUN]
+[0m14:46:51  37 of 81 PASS not_null_int_trip_metrics_is_weekend ............................. [[32mPASS[0m in 0.04s]
+[0m14:46:51  38 of 81 START test not_null_int_trip_metrics_pickup_date ...................... [RUN]
+[0m14:46:51  38 of 81 PASS not_null_int_trip_metrics_pickup_date ............................ [[32mPASS[0m in 0.04s]
+[0m14:46:51  39 of 81 START test not_null_int_trip_metrics_pickup_hour ...................... [RUN]
+[0m14:46:51  39 of 81 PASS not_null_int_trip_metrics_pickup_hour ............................ [[32mPASS[0m in 0.04s]
+[0m14:46:51  40 of 81 START test not_null_int_trip_metrics_trip_duration_minutes ............ [RUN]
+[0m14:46:51  40 of 81 PASS not_null_int_trip_metrics_trip_duration_minutes .................. [[32mPASS[0m in 0.04s]
+[0m14:46:51  41 of 81 START test not_null_int_trip_metrics_trip_id .......................... [RUN]
+[0m14:46:51  41 of 81 PASS not_null_int_trip_metrics_trip_id ................................ [[32mPASS[0m in 0.04s]
+[0m14:46:51  42 of 81 START test not_null_stg_payment_types_payment_type_id ................. [RUN]
+[0m14:46:51  42 of 81 PASS not_null_stg_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.04s]
+[0m14:46:51  43 of 81 START test not_null_stg_payment_types_payment_type_name ............... [RUN]
+[0m14:46:51  43 of 81 PASS not_null_stg_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.04s]
+[0m14:46:51  44 of 81 START test unique_stg_payment_types_payment_type_id ................... [RUN]
+[0m14:46:51  44 of 81 PASS unique_stg_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.04s]
+[0m14:46:51  45 of 81 START test not_null_stg_rate_codes_rate_code_id ....................... [RUN]
+[0m14:46:51  45 of 81 PASS not_null_stg_rate_codes_rate_code_id ............................. [[32mPASS[0m in 0.04s]
+[0m14:46:51  46 of 81 START test not_null_stg_rate_codes_rate_code_name ..................... [RUN]
+[0m14:46:51  46 of 81 PASS not_null_stg_rate_codes_rate_code_name ........................... [[32mPASS[0m in 0.04s]
+[0m14:46:51  47 of 81 START test unique_stg_rate_codes_rate_code_id ......................... [RUN]
+[0m14:46:51  47 of 81 PASS unique_stg_rate_codes_rate_code_id ............................... [[32mPASS[0m in 0.04s]
+[0m14:46:51  48 of 81 START sql view model public.dim_locations ............................. [RUN]
+[0m14:46:51  48 of 81 OK created sql view model public.dim_locations ........................ [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:51  49 of 81 START sql view model public.int_daily_summary ......................... [RUN]
+[0m14:46:51  49 of 81 OK created sql view model public.int_daily_summary .................... [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:51  50 of 81 START sql view model public.int_hourly_patterns ....................... [RUN]
+[0m14:46:52  50 of 81 OK created sql view model public.int_hourly_patterns .................. [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:52  51 of 81 START sql view model public.dim_payment_types ......................... [RUN]
+[0m14:46:52  51 of 81 OK created sql view model public.dim_payment_types .................... [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:52  52 of 81 START test not_null_dim_locations_borough ............................. [RUN]
+[0m14:46:52  52 of 81 PASS not_null_dim_locations_borough ................................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  53 of 81 START test not_null_dim_locations_location_id ......................... [RUN]
+[0m14:46:52  53 of 81 PASS not_null_dim_locations_location_id ............................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  54 of 81 START test not_null_dim_locations_zone_name ........................... [RUN]
+[0m14:46:52  54 of 81 PASS not_null_dim_locations_zone_name ................................. [[32mPASS[0m in 0.04s]
+[0m14:46:52  55 of 81 START test unique_dim_locations_location_id ........................... [RUN]
+[0m14:46:52  55 of 81 PASS unique_dim_locations_location_id ................................. [[32mPASS[0m in 0.04s]
+[0m14:46:52  56 of 81 START test not_null_int_daily_summary_pickup_date ..................... [RUN]
+[0m14:46:52  56 of 81 PASS not_null_int_daily_summary_pickup_date ........................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  57 of 81 START test not_null_int_daily_summary_total_revenue ................... [RUN]
+[0m14:46:52  57 of 81 PASS not_null_int_daily_summary_total_revenue ......................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  58 of 81 START test not_null_int_daily_summary_total_trips ..................... [RUN]
+[0m14:46:52  58 of 81 PASS not_null_int_daily_summary_total_trips ........................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  59 of 81 START test unique_int_daily_summary_pickup_date ....................... [RUN]
+[0m14:46:52  59 of 81 PASS unique_int_daily_summary_pickup_date ............................. [[32mPASS[0m in 0.04s]
+[0m14:46:52  60 of 81 START test not_null_int_hourly_patterns_pickup_date ................... [RUN]
+[0m14:46:52  60 of 81 PASS not_null_int_hourly_patterns_pickup_date ......................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  61 of 81 START test not_null_int_hourly_patterns_pickup_hour ................... [RUN]
+[0m14:46:52  61 of 81 PASS not_null_int_hourly_patterns_pickup_hour ......................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  62 of 81 START test not_null_int_hourly_patterns_total_trips ................... [RUN]
+[0m14:46:52  62 of 81 PASS not_null_int_hourly_patterns_total_trips ......................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  63 of 81 START test not_null_dim_payment_types_payment_type_id ................. [RUN]
+[0m14:46:52  63 of 81 PASS not_null_dim_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  64 of 81 START test not_null_dim_payment_types_payment_type_name ............... [RUN]
+[0m14:46:52  64 of 81 PASS not_null_dim_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  65 of 81 START test unique_dim_payment_types_payment_type_id ................... [RUN]
+[0m14:46:52  65 of 81 PASS unique_dim_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.04s]
+[0m14:46:52  66 of 81 START sql view model public.fct_trips ................................. [RUN]
+[0m14:46:52  66 of 81 OK created sql view model public.fct_trips ............................ [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:52  67 of 81 START sql view model public.mart_daily_revenue ........................ [RUN]
+[0m14:46:52  67 of 81 OK created sql view model public.mart_daily_revenue ................... [[32mCREATE_VIEW[0m in 0.07s]
+[0m14:46:52  68 of 81 START sql view model public.mart_hourly_demand ........................ [RUN]
+[0m14:46:52  68 of 81 OK created sql view model public.mart_hourly_demand ................... [[32mCREATE_VIEW[0m in 0.08s]
+[0m14:46:52  69 of 81 START test not_null_fct_trips_pickup_datetime ......................... [RUN]
+[0m14:46:53  69 of 81 PASS not_null_fct_trips_pickup_datetime ............................... [[32mPASS[0m in 0.05s]
+[0m14:46:53  70 of 81 START test not_null_fct_trips_total_amount ............................ [RUN]
+[0m14:46:53  70 of 81 PASS not_null_fct_trips_total_amount .................................. [[32mPASS[0m in 0.04s]
+[0m14:46:53  71 of 81 START test not_null_fct_trips_trip_id ................................. [RUN]
+[0m14:46:53  71 of 81 PASS not_null_fct_trips_trip_id ....................................... [[32mPASS[0m in 0.04s]
+[0m14:46:53  72 of 81 START test unique_fct_trips_trip_id ................................... [RUN]
+[0m14:46:53  72 of 81 PASS unique_fct_trips_trip_id ......................................... [[32mPASS[0m in 0.05s]
+[0m14:46:53  73 of 81 START test not_null_mart_daily_revenue_date_key ....................... [RUN]
+[0m14:46:53  73 of 81 PASS not_null_mart_daily_revenue_date_key ............................. [[32mPASS[0m in 0.05s]
+[0m14:46:53  74 of 81 START test not_null_mart_daily_revenue_total_revenue .................. [RUN]
+[0m14:46:53  74 of 81 PASS not_null_mart_daily_revenue_total_revenue ........................ [[32mPASS[0m in 0.04s]
+[0m14:46:53  75 of 81 START test unique_mart_daily_revenue_date_key ......................... [RUN]
+[0m14:46:53  75 of 81 PASS unique_mart_daily_revenue_date_key ............................... [[32mPASS[0m in 0.04s]
+[0m14:46:53  76 of 81 START test not_null_mart_hourly_demand_is_weekend ..................... [RUN]
+[0m14:46:53  76 of 81 PASS not_null_mart_hourly_demand_is_weekend ........................... [[32mPASS[0m in 0.04s]
+[0m14:46:53  77 of 81 START test not_null_mart_hourly_demand_pickup_hour .................... [RUN]
+[0m14:46:53  77 of 81 PASS not_null_mart_hourly_demand_pickup_hour .......................... [[32mPASS[0m in 0.04s]
+[0m14:46:53  78 of 81 START sql view model public.mart_location_performance ................. [RUN]
+[0m14:46:53  78 of 81 OK created sql view model public.mart_location_performance ............ [[32mCREATE_VIEW[0m in 0.09s]
+[0m14:46:53  79 of 81 START test not_null_mart_location_performance_pickup_location_id ...... [RUN]
+[0m14:46:53  79 of 81 PASS not_null_mart_location_performance_pickup_location_id ............ [[32mPASS[0m in 0.05s]
+[0m14:46:53  80 of 81 START test not_null_mart_location_performance_total_pickups ........... [RUN]
+[0m14:46:53  80 of 81 PASS not_null_mart_location_performance_total_pickups ................. [[32mPASS[0m in 0.05s]
+[0m14:46:53  81 of 81 START test unique_mart_location_performance_pickup_location_id ........ [RUN]
+[0m14:46:53  81 of 81 PASS unique_mart_location_performance_pickup_location_id .............. [[32mPASS[0m in 0.05s]
+[0m14:46:53  
+[0m14:46:53  Finished running 3 seeds, 64 data tests, 14 view models in 0 hours 0 minutes and 4.31 seconds (4.31s).
+[0m14:46:53  
+[0m14:46:53  [32mCompleted successfully[0m
+[0m14:46:53  
+[0m14:46:53  Done. PASS=81 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=81
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/03-kafka-risingwave'
+=== Benchmark complete ===
+docker compose --profile generate --profile dbt down -v
+time="2026-02-21T09:46:54-05:00" level=warning msg="C:\\docker_projects\\real_time_data_engineering\\pipelines\\03-kafka-risingwave\\docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion"
+ Container p03-risingwave  Stopping
+ Container p03-risingwave  Stopped
+ Container p03-risingwave  Removing
+ Container p03-risingwave  Removed
+ Container p03-kafka  Stopping
+ Container p03-kafka  Stopped
+ Container p03-kafka  Removing
+ Container p03-kafka  Removed
+ Network 03-kafka-risingwave_pipeline-net  Removing
+ Volume 03-kafka-risingwave_risingwave-data  Removing
+ Volume 03-kafka-risingwave_kafka-data  Removing
+ Volume 03-kafka-risingwave_risingwave-data  Removed
+ Volume 03-kafka-risingwave_kafka-data  Removed
+ Network 03-kafka-risingwave_pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.

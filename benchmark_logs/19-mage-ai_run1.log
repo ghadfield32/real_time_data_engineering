@@ -1,0 +1,270 @@
+docker compose --profile generator down -v --remove-orphans
+docker compose up -d
+ Network p19-pipeline-net  Creating
+ Network p19-pipeline-net  Created
+ Container p19-kafka  Creating
+ Container p19-kafka  Created
+ Container p19-mage  Creating
+ Container p19-mage  Created
+ Container p19-kafka  Starting
+ Container p19-kafka  Started
+ Container p19-kafka  Waiting
+ Container p19-kafka  Healthy
+ Container p19-mage  Starting
+ Container p19-mage  Started
+
+=== Pipeline 19: Mage AI ===
+Kafka:    localhost:9092
+Mage UI:  http://localhost:6789
+
+Open Mage UI and run the taxi_pipeline.
+============================================================
+  Pipeline 19 Benchmark: Mage AI (Visual Pipeline)
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose --profile generator down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose up -d
+ Network p19-pipeline-net  Creating
+ Network p19-pipeline-net  Created
+ Container p19-kafka  Creating
+ Container p19-kafka  Created
+ Container p19-mage  Creating
+ Container p19-mage  Created
+ Container p19-kafka  Starting
+ Container p19-kafka  Started
+ Container p19-kafka  Waiting
+ Container p19-kafka  Healthy
+ Container p19-mage  Starting
+ Container p19-mage  Started
+
+=== Pipeline 19: Mage AI ===
+Kafka:    localhost:9092
+Mage UI:  http://localhost:6789
+
+Open Mage UI and run the taxi_pipeline.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.raw_trips --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+Topics created.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p19-kafka  Running
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+Traceback (most recent call last):
+  File "/app/generator.py", line 31, in <module>
+    import orjson
+ModuleNotFoundError: No module named 'orjson'
+
+make[1]: *** [Makefile:34: generate-limited] Error 1
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make: *** [Makefile:44: benchmark] Error 2
+docker compose --profile generator down -v --remove-orphans
+ Container p19-mage  Stopping
+ Container p19-mage  Stopped
+ Container p19-mage  Removing
+ Container p19-mage  Removed
+ Container p19-kafka  Stopping
+ Container p19-kafka  Stopped
+ Container p19-kafka  Removing
+ Container p19-kafka  Removed
+ Network p19-pipeline-net  Removing
+ Network p19-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.
+docker compose --profile generator down -v --remove-orphans
+docker compose up -d
+ Network p19-pipeline-net  Creating
+ Network p19-pipeline-net  Created
+ Container p19-kafka  Creating
+ Container p19-kafka  Created
+ Container p19-mage  Creating
+ Container p19-mage  Created
+ Container p19-kafka  Starting
+ Container p19-kafka  Started
+ Container p19-kafka  Waiting
+ Container p19-kafka  Healthy
+ Container p19-mage  Starting
+ Container p19-mage  Started
+
+=== Pipeline 19: Mage AI ===
+Kafka:    localhost:9092
+Mage UI:  http://localhost:6789
+
+Open Mage UI and run the taxi_pipeline.
+============================================================
+  Pipeline 19 Benchmark: Mage AI (Visual Pipeline)
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose --profile generator down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose up -d
+ Network p19-pipeline-net  Creating
+ Network p19-pipeline-net  Created
+ Container p19-kafka  Creating
+ Container p19-kafka  Created
+ Container p19-mage  Creating
+ Container p19-mage  Created
+ Container p19-kafka  Starting
+ Container p19-kafka  Started
+ Container p19-kafka  Waiting
+ Container p19-kafka  Healthy
+ Container p19-mage  Starting
+ Container p19-mage  Started
+
+=== Pipeline 19: Mage AI ===
+Kafka:    localhost:9092
+Mage UI:  http://localhost:6789
+
+Open Mage UI and run the taxi_pipeline.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.raw_trips --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+Topics created.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p19-kafka  Running
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+Traceback (most recent call last):
+  File "/app/generator.py", line 33, in <module>
+    from confluent_kafka import Producer
+ModuleNotFoundError: No module named 'confluent_kafka'
+
+make[1]: *** [Makefile:34: generate-limited] Error 1
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make: *** [Makefile:44: benchmark] Error 2
+docker compose --profile generator down -v --remove-orphans
+ Container p19-mage  Stopping
+ Container p19-mage  Stopped
+ Container p19-mage  Removing
+ Container p19-mage  Removed
+ Container p19-kafka  Stopping
+ Container p19-kafka  Stopped
+ Container p19-kafka  Removing
+ Container p19-kafka  Removed
+ Network p19-pipeline-net  Removing
+ Network p19-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.
+docker compose --profile generator down -v --remove-orphans
+docker compose up -d
+ Network p19-pipeline-net  Creating
+ Network p19-pipeline-net  Created
+ Container p19-kafka  Creating
+ Container p19-kafka  Created
+ Container p19-mage  Creating
+ Container p19-mage  Created
+ Container p19-kafka  Starting
+ Container p19-kafka  Started
+ Container p19-kafka  Waiting
+ Container p19-kafka  Healthy
+ Container p19-mage  Starting
+ Container p19-mage  Started
+
+=== Pipeline 19: Mage AI ===
+Kafka:    localhost:9092
+Mage UI:  http://localhost:6789
+
+Open Mage UI and run the taxi_pipeline.
+============================================================
+  Pipeline 19 Benchmark: Mage AI (Visual Pipeline)
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose --profile generator down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose up -d
+ Network p19-pipeline-net  Creating
+ Network p19-pipeline-net  Created
+ Container p19-kafka  Creating
+ Container p19-kafka  Created
+ Container p19-mage  Creating
+ Container p19-mage  Created
+ Container p19-kafka  Starting
+ Container p19-kafka  Started
+ Container p19-kafka  Waiting
+ Container p19-kafka  Healthy
+ Container p19-mage  Starting
+ Container p19-mage  Started
+
+=== Pipeline 19: Mage AI ===
+Kafka:    localhost:9092
+Mage UI:  http://localhost:6789
+
+Open Mage UI and run the taxi_pipeline.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.raw_trips --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+Topics created.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p19-kafka  Running
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+%4|1771763111.446|GETPID|rdkafka#producer-1| [thrd:main]: Failed to acquire idempotence PID from broker kafka:9092/1: Broker: Coordinator load in progress: retrying
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     kafka:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.99s
+  Rate:    10,098 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited data generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/19-mage-ai'
+Mage AI is a visual pipeline tool.
+Open Mage UI at http://localhost:6789 and trigger taxi_pipeline.
+
+============================================================
+  BENCHMARK COMPLETE (data generation only)
+  Total elapsed: 27s
+============================================================
+Results saved to benchmark_results/latest.json
+docker compose --profile generator down -v --remove-orphans
+ Container p19-mage  Stopping
+ Container p19-mage  Stopped
+ Container p19-mage  Removing
+ Container p19-mage  Removed
+ Container p19-kafka  Stopping
+ Container p19-kafka  Stopped
+ Container p19-kafka  Removing
+ Container p19-kafka  Removed
+ Network p19-pipeline-net  Removing
+ Network p19-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.

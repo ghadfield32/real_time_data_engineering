@@ -14,12 +14,12 @@ final as (
         pickup_zone,
 
         count(*) as total_pickups,
-        round(avg(trip_distance_miles), 2) as avg_trip_distance,
-        round(avg(trip_duration_minutes), 2) as avg_trip_duration_min,
-        round(sum(total_amount), 2) as total_revenue,
-        round(avg(total_amount), 2) as avg_revenue_per_trip,
-        round(avg(tip_percentage), 2) as avg_tip_pct,
-        round(avg(passenger_count), 2) as avg_passengers,
+        round(avg(trip_distance_miles)::numeric, 2) as avg_trip_distance,
+        round(avg(trip_duration_minutes)::numeric, 2) as avg_trip_duration_min,
+        round(sum(total_amount)::numeric, 2) as total_revenue,
+        round(avg(total_amount)::numeric, 2) as avg_revenue_per_trip,
+        round(avg(tip_percentage)::numeric, 2) as avg_tip_pct,
+        round(avg(passenger_count)::numeric, 2) as avg_passengers,
 
         -- most common dropoff destination
         {{ mode_compat('dropoff_zone') }} as most_common_dropoff_zone,

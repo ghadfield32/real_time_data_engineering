@@ -1,0 +1,475 @@
+docker compose --profile generate down -v --remove-orphans
+docker compose up -d redpanda minio mc-init spark-master spark-worker dbt
+ Network 05-redpanda-spark-iceberg_pipeline-net  Creating
+ Network 05-redpanda-spark-iceberg_pipeline-net  Created
+ Volume 05-redpanda-spark-iceberg_redpanda-data  Creating
+ Volume 05-redpanda-spark-iceberg_redpanda-data  Created
+ Volume 05-redpanda-spark-iceberg_minio-data  Creating
+ Volume 05-redpanda-spark-iceberg_minio-data  Created
+ Container p05-minio  Creating
+ Container p05-redpanda  Creating
+ Container p05-spark-master  Creating
+ Container p05-minio  Created
+ Container p05-mc-init  Creating
+ Container p05-redpanda  Created
+ Container p05-spark-master  Created
+ Container p05-spark-worker  Creating
+ Container p05-mc-init  Created
+ Container p05-dbt  Creating
+ Container p05-spark-worker  Created
+ Container p05-dbt  Created
+ Container p05-minio  Starting
+ Container p05-redpanda  Starting
+ Container p05-spark-master  Starting
+ Container p05-redpanda  Started
+ Container p05-spark-master  Started
+ Container p05-spark-master  Waiting
+ Container p05-minio  Started
+ Container p05-minio  Waiting
+ Container p05-spark-master  Healthy
+ Container p05-spark-worker  Starting
+ Container p05-minio  Healthy
+ Container p05-mc-init  Starting
+ Container p05-spark-worker  Started
+ Container p05-mc-init  Started
+ Container p05-mc-init  Waiting
+ Container p05-mc-init  Exited
+ Container p05-dbt  Starting
+ Container p05-dbt  Started
+Waiting for services to be healthy...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe topics
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+docker compose exec redpanda rpk topic create taxi.raw_trips \
+	--brokers localhost:9092 \
+	--partitions 6 \
+	--replicas 1 || true
+TOPIC           STATUS
+taxi.raw_trips  OK
+Topic taxi.raw_trips created.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+=== Pipeline 05: Redpanda + Spark + Iceberg Benchmark ===
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+docker compose --profile generate down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+docker compose up -d redpanda minio mc-init spark-master spark-worker dbt
+ Network 05-redpanda-spark-iceberg_pipeline-net  Creating
+ Network 05-redpanda-spark-iceberg_pipeline-net  Created
+ Volume 05-redpanda-spark-iceberg_redpanda-data  Creating
+ Volume 05-redpanda-spark-iceberg_redpanda-data  Created
+ Volume 05-redpanda-spark-iceberg_minio-data  Creating
+ Volume 05-redpanda-spark-iceberg_minio-data  Created
+ Container p05-redpanda  Creating
+ Container p05-minio  Creating
+ Container p05-spark-master  Creating
+ Container p05-minio  Created
+ Container p05-mc-init  Creating
+ Container p05-redpanda  Created
+ Container p05-spark-master  Created
+ Container p05-spark-worker  Creating
+ Container p05-mc-init  Created
+ Container p05-dbt  Creating
+ Container p05-spark-worker  Created
+ Container p05-dbt  Created
+ Container p05-minio  Starting
+ Container p05-spark-master  Starting
+ Container p05-redpanda  Starting
+ Container p05-minio  Started
+ Container p05-minio  Waiting
+ Container p05-redpanda  Started
+ Container p05-spark-master  Started
+ Container p05-spark-master  Waiting
+ Container p05-minio  Healthy
+ Container p05-mc-init  Starting
+ Container p05-spark-master  Healthy
+ Container p05-spark-worker  Starting
+ Container p05-mc-init  Started
+ Container p05-mc-init  Waiting
+ Container p05-spark-worker  Started
+ Container p05-mc-init  Exited
+ Container p05-dbt  Starting
+ Container p05-dbt  Started
+Waiting for services to be healthy...
+C:/Users/ghadf/scoop/apps/make/current/bin/make.exe topics
+make[2]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+docker compose exec redpanda rpk topic create taxi.raw_trips \
+	--brokers localhost:9092 \
+	--partitions 6 \
+	--replicas 1 || true
+TOPIC           STATUS
+taxi.raw_trips  OK
+Topic taxi.raw_trips created.
+make[2]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+MSYS_NO_PATHCONV=1 docker compose run --rm \
+	-e MODE=burst \
+	-e MAX_EVENTS=10000 \
+	-e METRICS_PATH=/benchmarks/generator_metrics.json \
+	data-generator
+ Container p05-redpanda  Running
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     redpanda:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.35s
+  Rate:    28,494 events/sec
+============================================================
+  Metrics written to /benchmarks/generator_metrics.json
+Sample generation complete.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+MSYS_NO_PATHCONV=1 docker compose exec -T spark-master /opt/spark/bin/spark-submit \
+	--master local[*] \
+	/opt/spark-jobs/bronze_ingest.py
+============================================================
+  Pipeline 05 — Bronze Ingest (Redpanda -> Iceberg)
+============================================================
+26/02/21 14:50:28 INFO SparkContext: Running Spark version 3.3.3
+26/02/21 14:50:28 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/02/21 14:50:28 INFO ResourceUtils: ==============================================================
+26/02/21 14:50:28 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/02/21 14:50:28 INFO ResourceUtils: ==============================================================
+26/02/21 14:50:28 INFO SparkContext: Submitted application: Pipeline05_BronzeIngest
+26/02/21 14:50:28 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 512, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/02/21 14:50:28 INFO ResourceProfile: Limiting resource is cpu
+26/02/21 14:50:28 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/02/21 14:50:28 INFO SecurityManager: Changing view acls to: spark
+26/02/21 14:50:28 INFO SecurityManager: Changing modify acls to: spark
+26/02/21 14:50:28 INFO SecurityManager: Changing view acls groups to: 
+26/02/21 14:50:28 INFO SecurityManager: Changing modify acls groups to: 
+26/02/21 14:50:28 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(spark); groups with view permissions: Set(); users  with modify permissions: Set(spark); groups with modify permissions: Set()
+26/02/21 14:50:28 INFO Utils: Successfully started service 'sparkDriver' on port 43227.
+26/02/21 14:50:28 INFO SparkEnv: Registering MapOutputTracker
+26/02/21 14:50:28 INFO SparkEnv: Registering BlockManagerMaster
+26/02/21 14:50:28 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/02/21 14:50:28 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/02/21 14:50:28 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/02/21 14:50:28 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-66070d65-da2a-4ca2-8a72-38ce6dbd3006
+26/02/21 14:50:28 INFO MemoryStore: MemoryStore started with capacity 127.2 MiB
+26/02/21 14:50:28 INFO SparkEnv: Registering OutputCommitCoordinator
+26/02/21 14:50:28 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/02/21 14:50:28 INFO Executor: Starting executor ID driver on host spark-master
+26/02/21 14:50:28 INFO Executor: Starting executor with user classpath (userClassPathFirst = false): ''
+26/02/21 14:50:28 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 43235.
+26/02/21 14:50:28 INFO NettyBlockTransferService: Server created on spark-master:43235
+26/02/21 14:50:28 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/02/21 14:50:28 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, spark-master, 43235, None)
+26/02/21 14:50:28 INFO BlockManagerMasterEndpoint: Registering block manager spark-master:43235 with 127.2 MiB RAM, BlockManagerId(driver, spark-master, 43235, None)
+26/02/21 14:50:28 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, spark-master, 43235, None)
+26/02/21 14:50:28 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, spark-master, 43235, None)
+26/02/21 14:50:29 WARN MetricsConfig: Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+Bronze table warehouse.bronze.raw_trips is ready.
+26/02/21 14:50:32 WARN ResolveWriteToStream: spark.sql.adaptive.enabled is not supported in streaming DataFrames/Datasets and will be disabled.
+Bronze ingest complete. Total rows in warehouse.bronze.raw_trips: 10,000
+============================================================
+  Bronze Ingest COMPLETE
+============================================================
+Bronze ingest complete.
+MSYS_NO_PATHCONV=1 docker compose exec -T spark-master /opt/spark/bin/spark-submit \
+	--master local[*] \
+	/opt/spark-jobs/silver_transform.py
+============================================================
+  Pipeline 05 — Silver Transform (Bronze -> Silver Iceberg)
+  Column names preserved for dbt-duckdb consumption
+============================================================
+26/02/21 14:50:42 INFO SparkContext: Running Spark version 3.3.3
+26/02/21 14:50:42 WARN NativeCodeLoader: Unable to load native-hadoop library for your platform... using builtin-java classes where applicable
+26/02/21 14:50:42 INFO ResourceUtils: ==============================================================
+26/02/21 14:50:42 INFO ResourceUtils: No custom resources configured for spark.driver.
+26/02/21 14:50:42 INFO ResourceUtils: ==============================================================
+26/02/21 14:50:42 INFO SparkContext: Submitted application: Pipeline05_SilverTransform
+26/02/21 14:50:42 INFO ResourceProfile: Default ResourceProfile created, executor resources: Map(cores -> name: cores, amount: 1, script: , vendor: , memory -> name: memory, amount: 512, script: , vendor: , offHeap -> name: offHeap, amount: 0, script: , vendor: ), task resources: Map(cpus -> name: cpus, amount: 1.0)
+26/02/21 14:50:42 INFO ResourceProfile: Limiting resource is cpu
+26/02/21 14:50:42 INFO ResourceProfileManager: Added ResourceProfile id: 0
+26/02/21 14:50:42 INFO SecurityManager: Changing view acls to: spark
+26/02/21 14:50:42 INFO SecurityManager: Changing modify acls to: spark
+26/02/21 14:50:42 INFO SecurityManager: Changing view acls groups to: 
+26/02/21 14:50:42 INFO SecurityManager: Changing modify acls groups to: 
+26/02/21 14:50:42 INFO SecurityManager: SecurityManager: authentication disabled; ui acls disabled; users  with view permissions: Set(spark); groups with view permissions: Set(); users  with modify permissions: Set(spark); groups with modify permissions: Set()
+26/02/21 14:50:42 INFO Utils: Successfully started service 'sparkDriver' on port 33215.
+26/02/21 14:50:42 INFO SparkEnv: Registering MapOutputTracker
+26/02/21 14:50:42 INFO SparkEnv: Registering BlockManagerMaster
+26/02/21 14:50:42 INFO BlockManagerMasterEndpoint: Using org.apache.spark.storage.DefaultTopologyMapper for getting topology information
+26/02/21 14:50:42 INFO BlockManagerMasterEndpoint: BlockManagerMasterEndpoint up
+26/02/21 14:50:42 INFO SparkEnv: Registering BlockManagerMasterHeartbeat
+26/02/21 14:50:42 INFO DiskBlockManager: Created local directory at /tmp/blockmgr-b341aeb2-1dcd-4f43-b8b6-96bffa8134dd
+26/02/21 14:50:42 INFO MemoryStore: MemoryStore started with capacity 127.2 MiB
+26/02/21 14:50:42 INFO SparkEnv: Registering OutputCommitCoordinator
+26/02/21 14:50:42 INFO Utils: Successfully started service 'SparkUI' on port 4040.
+26/02/21 14:50:42 INFO Executor: Starting executor ID driver on host spark-master
+26/02/21 14:50:42 INFO Executor: Starting executor with user classpath (userClassPathFirst = false): ''
+26/02/21 14:50:42 INFO Utils: Successfully started service 'org.apache.spark.network.netty.NettyBlockTransferService' on port 44443.
+26/02/21 14:50:42 INFO NettyBlockTransferService: Server created on spark-master:44443
+26/02/21 14:50:42 INFO BlockManager: Using org.apache.spark.storage.RandomBlockReplicationPolicy for block replication policy
+26/02/21 14:50:42 INFO BlockManagerMaster: Registering BlockManager BlockManagerId(driver, spark-master, 44443, None)
+26/02/21 14:50:42 INFO BlockManagerMasterEndpoint: Registering block manager spark-master:44443 with 127.2 MiB RAM, BlockManagerId(driver, spark-master, 44443, None)
+26/02/21 14:50:42 INFO BlockManagerMaster: Registered BlockManager BlockManagerId(driver, spark-master, 44443, None)
+26/02/21 14:50:42 INFO BlockManager: Initialized BlockManager: BlockManagerId(driver, spark-master, 44443, None)
+26/02/21 14:50:43 WARN MetricsConfig: Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+SLF4J: Failed to load class "org.slf4j.impl.StaticLoggerBinder".
+SLF4J: Defaulting to no-operation (NOP) logger implementation
+SLF4J: See http://www.slf4j.org/codes.html#StaticLoggerBinder for further details.
+Silver table warehouse.silver.cleaned_trips is ready.
+Bronze rows read: 10,000
+Silver transform complete. Rows written: 9,855
+Rows filtered out: 145
+============================================================
+  Silver Transform COMPLETE
+============================================================
+Silver transform complete.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+MSYS_NO_PATHCONV=1 docker compose run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --profiles-dir ."
+ Container p05-minio  Running
+ Container p05-minio  Waiting
+ Container p05-minio  Healthy
+ Container p05-mc-init  Starting
+ Container p05-mc-init  Started
+[0m14:50:51  Running with dbt=1.11.5
+[0m14:50:53  Installing dbt-labs/dbt_utils
+[0m14:50:56  Installed from version 1.3.3
+[0m14:50:56  Up to date!
+[0m14:50:57  Running with dbt=1.11.5
+[0m14:50:57  Registered adapter: duckdb=1.10.0
+[0m14:50:57  Unable to do partial parsing because saved manifest not found. Starting full parse.
+[0m14:50:59  Found 14 models, 74 data tests, 3 seeds, 1 source, 606 macros
+[0m14:50:59  
+[0m14:50:59  Concurrency: 4 threads (target='dev')
+[0m14:50:59  
+[0m14:51:03  1 of 91 START sql table model main.dim_dates ................................... [RUN]
+[0m14:51:03  2 of 91 START sql view model main.stg_yellow_trips ............................. [RUN]
+[0m14:51:03  3 of 91 START seed file main_main.payment_type_lookup .......................... [RUN]
+[0m14:51:03  4 of 91 START seed file main_main.rate_code_lookup ............................. [RUN]
+[0m14:51:03  4 of 91 OK loaded seed file main_main.rate_code_lookup ......................... [[32mINSERT 7[0m in 0.13s]
+[0m14:51:03  5 of 91 START seed file main_main.taxi_zone_lookup ............................. [RUN]
+[0m14:51:03  3 of 91 OK loaded seed file main_main.payment_type_lookup ...................... [[32mINSERT 6[0m in 0.14s]
+[0m14:51:03  6 of 91 START test not_null_rate_code_lookup_rate_code_id ...................... [RUN]
+[0m14:51:03  2 of 91 OK created sql view model main.stg_yellow_trips ........................ [[32mOK[0m in 0.15s]
+[0m14:51:03  7 of 91 START test unique_rate_code_lookup_rate_code_id ........................ [RUN]
+[0m14:51:03  1 of 91 OK created sql table model main.dim_dates .............................. [[32mOK[0m in 0.19s]
+[0m14:51:03  8 of 91 START test not_null_payment_type_lookup_payment_type_id ................ [RUN]
+[0m14:51:03  5 of 91 OK loaded seed file main_main.taxi_zone_lookup ......................... [[32mINSERT 265[0m in 0.07s]
+[0m14:51:03  6 of 91 PASS not_null_rate_code_lookup_rate_code_id ............................ [[32mPASS[0m in 0.07s]
+[0m14:51:03  7 of 91 PASS unique_rate_code_lookup_rate_code_id .............................. [[32mPASS[0m in 0.05s]
+[0m14:51:03  9 of 91 START test unique_payment_type_lookup_payment_type_id .................. [RUN]
+[0m14:51:03  10 of 91 START test accepted_values_stg_yellow_trips_payment_type_id__0__1__2__3__4__5__6  [RUN]
+[0m14:51:03  11 of 91 START test accepted_values_stg_yellow_trips_rate_code_id__1__2__3__4__5__6__99  [RUN]
+[0m14:51:03  8 of 91 PASS not_null_payment_type_lookup_payment_type_id ...................... [[32mPASS[0m in 0.05s]
+[0m14:51:03  12 of 91 START test accepted_values_stg_yellow_trips_vendor_id__1__2__6 ........ [RUN]
+[0m14:51:03  9 of 91 PASS unique_payment_type_lookup_payment_type_id ........................ [[32mPASS[0m in 0.04s]
+[0m14:51:03  13 of 91 START test assert_fare_not_exceeds_total .............................. [RUN]
+[0m14:51:03  11 of 91 PASS accepted_values_stg_yellow_trips_rate_code_id__1__2__3__4__5__6__99  [[32mPASS[0m in 0.12s]
+[0m14:51:03  10 of 91 PASS accepted_values_stg_yellow_trips_payment_type_id__0__1__2__3__4__5__6  [[32mPASS[0m in 0.12s]
+[0m14:51:03  15 of 91 START test not_null_stg_yellow_trips_dropoff_location_id .............. [RUN]
+[0m14:51:03  14 of 91 START test not_null_stg_yellow_trips_dropoff_datetime ................. [RUN]
+[0m14:51:03  12 of 91 PASS accepted_values_stg_yellow_trips_vendor_id__1__2__6 .............. [[32mPASS[0m in 0.12s]
+[0m14:51:03  16 of 91 START test not_null_stg_yellow_trips_fare_amount ...................... [RUN]
+[0m14:51:03  13 of 91 PASS assert_fare_not_exceeds_total .................................... [[32mPASS[0m in 0.11s]
+[0m14:51:03  17 of 91 START test not_null_stg_yellow_trips_pickup_datetime .................. [RUN]
+[0m14:51:03  14 of 91 PASS not_null_stg_yellow_trips_dropoff_datetime ....................... [[32mPASS[0m in 0.06s]
+[0m14:51:03  15 of 91 PASS not_null_stg_yellow_trips_dropoff_location_id .................... [[32mPASS[0m in 0.06s]
+[0m14:51:03  18 of 91 START test not_null_stg_yellow_trips_pickup_location_id ............... [RUN]
+[0m14:51:03  19 of 91 START test not_null_stg_yellow_trips_total_amount ..................... [RUN]
+[0m14:51:03  16 of 91 PASS not_null_stg_yellow_trips_fare_amount ............................ [[32mPASS[0m in 0.05s]
+[0m14:51:03  20 of 91 START test not_null_stg_yellow_trips_trip_distance_miles .............. [RUN]
+[0m14:51:04  17 of 91 PASS not_null_stg_yellow_trips_pickup_datetime ........................ [[32mPASS[0m in 0.06s]
+[0m14:51:04  21 of 91 START test not_null_stg_yellow_trips_trip_id .......................... [RUN]
+[0m14:51:04  19 of 91 PASS not_null_stg_yellow_trips_total_amount ........................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  20 of 91 PASS not_null_stg_yellow_trips_trip_distance_miles .................... [[32mPASS[0m in 0.04s]
+[0m14:51:04  18 of 91 PASS not_null_stg_yellow_trips_pickup_location_id ..................... [[32mPASS[0m in 0.06s]
+[0m14:51:04  22 of 91 START test not_null_stg_yellow_trips_vendor_id ........................ [RUN]
+[0m14:51:04  23 of 91 START test unique_stg_yellow_trips_trip_id ............................ [RUN]
+[0m14:51:04  24 of 91 START test not_null_dim_dates_date_key ................................ [RUN]
+[0m14:51:04  21 of 91 PASS not_null_stg_yellow_trips_trip_id ................................ [[32mPASS[0m in 0.06s]
+[0m14:51:04  25 of 91 START test not_null_dim_dates_day_of_week_name ........................ [RUN]
+[0m14:51:04  24 of 91 PASS not_null_dim_dates_date_key ...................................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  26 of 91 START test not_null_dim_dates_is_holiday .............................. [RUN]
+[0m14:51:04  22 of 91 PASS not_null_stg_yellow_trips_vendor_id .............................. [[32mPASS[0m in 0.06s]
+[0m14:51:04  27 of 91 START test not_null_dim_dates_is_weekend .............................. [RUN]
+[0m14:51:04  23 of 91 PASS unique_stg_yellow_trips_trip_id .................................. [[32mPASS[0m in 0.09s]
+[0m14:51:04  28 of 91 START test unique_dim_dates_date_key .................................. [RUN]
+[0m14:51:04  25 of 91 PASS not_null_dim_dates_day_of_week_name .............................. [[32mPASS[0m in 0.07s]
+[0m14:51:04  29 of 91 START test not_null_taxi_zone_lookup_Borough .......................... [RUN]
+[0m14:51:04  26 of 91 PASS not_null_dim_dates_is_holiday .................................... [[32mPASS[0m in 0.07s]
+[0m14:51:04  30 of 91 START test not_null_taxi_zone_lookup_LocationID ....................... [RUN]
+[0m14:51:04  27 of 91 PASS not_null_dim_dates_is_weekend .................................... [[32mPASS[0m in 0.07s]
+[0m14:51:04  31 of 91 START test unique_taxi_zone_lookup_LocationID ......................... [RUN]
+[0m14:51:04  28 of 91 PASS unique_dim_dates_date_key ........................................ [[32mPASS[0m in 0.07s]
+[0m14:51:04  32 of 91 START sql view model main.stg_rate_codes .............................. [RUN]
+[0m14:51:04  29 of 91 PASS not_null_taxi_zone_lookup_Borough ................................ [[32mPASS[0m in 0.06s]
+[0m14:51:04  33 of 91 START sql view model main.stg_payment_types ........................... [RUN]
+[0m14:51:04  30 of 91 PASS not_null_taxi_zone_lookup_LocationID ............................. [[32mPASS[0m in 0.05s]
+[0m14:51:04  31 of 91 PASS unique_taxi_zone_lookup_LocationID ............................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  34 of 91 START sql view model main.int_trip_metrics ............................ [RUN]
+[0m14:51:04  35 of 91 START sql view model main.stg_taxi_zones .............................. [RUN]
+[0m14:51:04  32 of 91 OK created sql view model main.stg_rate_codes ......................... [[32mOK[0m in 0.07s]
+[0m14:51:04  33 of 91 OK created sql view model main.stg_payment_types ...................... [[32mOK[0m in 0.07s]
+[0m14:51:04  36 of 91 START test not_null_stg_rate_codes_rate_code_id ....................... [RUN]
+[0m14:51:04  37 of 91 START test not_null_stg_rate_codes_rate_code_name ..................... [RUN]
+[0m14:51:04  35 of 91 OK created sql view model main.stg_taxi_zones ......................... [[32mOK[0m in 0.08s]
+[0m14:51:04  34 of 91 OK created sql view model main.int_trip_metrics ....................... [[32mOK[0m in 0.08s]
+[0m14:51:04  38 of 91 START test unique_stg_rate_codes_rate_code_id ......................... [RUN]
+[0m14:51:04  39 of 91 START test not_null_stg_payment_types_payment_type_id ................. [RUN]
+[0m14:51:04  36 of 91 PASS not_null_stg_rate_codes_rate_code_id ............................. [[32mPASS[0m in 0.05s]
+[0m14:51:04  40 of 91 START test not_null_stg_payment_types_payment_type_name ............... [RUN]
+[0m14:51:04  37 of 91 PASS not_null_stg_rate_codes_rate_code_name ........................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  41 of 91 START test unique_stg_payment_types_payment_type_id ................... [RUN]
+[0m14:51:04  38 of 91 PASS unique_stg_rate_codes_rate_code_id ............................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  42 of 91 START test not_null_stg_taxi_zones_borough ............................ [RUN]
+[0m14:51:04  39 of 91 PASS not_null_stg_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  43 of 91 START test not_null_stg_taxi_zones_location_id ........................ [RUN]
+[0m14:51:04  40 of 91 PASS not_null_stg_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  44 of 91 START test not_null_stg_taxi_zones_zone_name .......................... [RUN]
+[0m14:51:04  41 of 91 PASS unique_stg_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  45 of 91 START test relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+[0m14:51:04  42 of 91 PASS not_null_stg_taxi_zones_borough .................................. [[32mPASS[0m in 0.05s]
+[0m14:51:04  43 of 91 PASS not_null_stg_taxi_zones_location_id .............................. [[32mPASS[0m in 0.04s]
+[0m14:51:04  46 of 91 START test relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+[0m14:51:04  47 of 91 START test unique_stg_taxi_zones_location_id .......................... [RUN]
+[0m14:51:04  44 of 91 PASS not_null_stg_taxi_zones_zone_name ................................ [[32mPASS[0m in 0.05s]
+[0m14:51:04  48 of 91 START test assert_trip_duration_positive .............................. [RUN]
+[0m14:51:04  45 of 91 PASS relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.06s]
+[0m14:51:04  49 of 91 START test dbt_utils_accepted_range_int_trip_metrics_pickup_hour__23__0  [RUN]
+[0m14:51:04  47 of 91 PASS unique_stg_taxi_zones_location_id ................................ [[32mPASS[0m in 0.05s]
+[0m14:51:04  50 of 91 START test dbt_utils_accepted_range_int_trip_metrics_trip_duration_minutes__720__1  [RUN]
+[0m14:51:04  46 of 91 PASS relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.06s]
+[0m14:51:04  48 of 91 PASS assert_trip_duration_positive .................................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  51 of 91 START test not_null_int_trip_metrics_is_weekend ....................... [RUN]
+[0m14:51:04  52 of 91 START test not_null_int_trip_metrics_pickup_date ...................... [RUN]
+[0m14:51:04  49 of 91 PASS dbt_utils_accepted_range_int_trip_metrics_pickup_hour__23__0 ..... [[32mPASS[0m in 0.06s]
+[0m14:51:04  53 of 91 START test not_null_int_trip_metrics_pickup_hour ...................... [RUN]
+[0m14:51:04  50 of 91 PASS dbt_utils_accepted_range_int_trip_metrics_trip_duration_minutes__720__1  [[32mPASS[0m in 0.06s]
+[0m14:51:04  54 of 91 START test not_null_int_trip_metrics_trip_duration_minutes ............ [RUN]
+[0m14:51:04  51 of 91 PASS not_null_int_trip_metrics_is_weekend ............................. [[32mPASS[0m in 0.05s]
+[0m14:51:04  55 of 91 START test not_null_int_trip_metrics_trip_id .......................... [RUN]
+[0m14:51:04  52 of 91 PASS not_null_int_trip_metrics_pickup_date ............................ [[32mPASS[0m in 0.06s]
+[0m14:51:04  56 of 91 START sql table model main.dim_payment_types .......................... [RUN]
+[0m14:51:04  53 of 91 PASS not_null_int_trip_metrics_pickup_hour ............................ [[32mPASS[0m in 0.06s]
+[0m14:51:04  57 of 91 START sql table model main.dim_locations .............................. [RUN]
+[0m14:51:04  54 of 91 PASS not_null_int_trip_metrics_trip_duration_minutes .................. [[32mPASS[0m in 0.05s]
+[0m14:51:04  55 of 91 PASS not_null_int_trip_metrics_trip_id ................................ [[32mPASS[0m in 0.05s]
+[0m14:51:04  58 of 91 START sql view model main.int_daily_summary ........................... [RUN]
+[0m14:51:04  59 of 91 START sql view model main.int_hourly_patterns ......................... [RUN]
+[0m14:51:04  56 of 91 OK created sql table model main.dim_payment_types ..................... [[32mOK[0m in 0.07s]
+[0m14:51:04  60 of 91 START test not_null_dim_payment_types_payment_type_id ................. [RUN]
+[0m14:51:04  57 of 91 OK created sql table model main.dim_locations ......................... [[32mOK[0m in 0.09s]
+[0m14:51:04  61 of 91 START test not_null_dim_payment_types_payment_type_name ............... [RUN]
+[0m14:51:04  59 of 91 OK created sql view model main.int_hourly_patterns .................... [[32mOK[0m in 0.08s]
+[0m14:51:04  58 of 91 OK created sql view model main.int_daily_summary ...................... [[32mOK[0m in 0.08s]
+[0m14:51:04  62 of 91 START test unique_dim_payment_types_payment_type_id ................... [RUN]
+[0m14:51:04  63 of 91 START test not_null_dim_locations_borough ............................. [RUN]
+[0m14:51:04  60 of 91 PASS not_null_dim_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.06s]
+[0m14:51:04  64 of 91 START test not_null_dim_locations_location_id ......................... [RUN]
+[0m14:51:04  61 of 91 PASS not_null_dim_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.06s]
+[0m14:51:04  65 of 91 START test not_null_dim_locations_zone_name ........................... [RUN]
+[0m14:51:04  62 of 91 PASS unique_dim_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  63 of 91 PASS not_null_dim_locations_borough ................................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  66 of 91 START test unique_dim_locations_location_id ........................... [RUN]
+[0m14:51:04  67 of 91 START test dbt_utils_accepted_range_int_hourly_patterns_pickup_hour__23__0  [RUN]
+[0m14:51:04  64 of 91 PASS not_null_dim_locations_location_id ............................... [[32mPASS[0m in 0.05s]
+[0m14:51:04  68 of 91 START test not_null_int_hourly_patterns_pickup_date ................... [RUN]
+[0m14:51:04  66 of 91 PASS unique_dim_locations_location_id ................................. [[32mPASS[0m in 0.04s]
+[0m14:51:04  65 of 91 PASS not_null_dim_locations_zone_name ................................. [[32mPASS[0m in 0.05s]
+[0m14:51:04  69 of 91 START test not_null_int_hourly_patterns_pickup_hour ................... [RUN]
+[0m14:51:04  70 of 91 START test not_null_int_hourly_patterns_total_trips ................... [RUN]
+[0m14:51:04  67 of 91 PASS dbt_utils_accepted_range_int_hourly_patterns_pickup_hour__23__0 .. [[32mPASS[0m in 0.06s]
+[0m14:51:04  71 of 91 START test dbt_utils_accepted_range_int_daily_summary_total_trips__0 .. [RUN]
+[0m14:51:04  68 of 91 PASS not_null_int_hourly_patterns_pickup_date ......................... [[32mPASS[0m in 0.06s]
+[0m14:51:04  72 of 91 START test not_null_int_daily_summary_pickup_date ..................... [RUN]
+[0m14:51:04  69 of 91 PASS not_null_int_hourly_patterns_pickup_hour ......................... [[32mPASS[0m in 0.07s]
+[0m14:51:04  73 of 91 START test not_null_int_daily_summary_total_revenue ................... [RUN]
+[0m14:51:04  70 of 91 PASS not_null_int_hourly_patterns_total_trips ......................... [[32mPASS[0m in 0.07s]
+[0m14:51:04  71 of 91 PASS dbt_utils_accepted_range_int_daily_summary_total_trips__0 ........ [[32mPASS[0m in 0.06s]
+[0m14:51:04  74 of 91 START test not_null_int_daily_summary_total_trips ..................... [RUN]
+[0m14:51:04  75 of 91 START test unique_int_daily_summary_pickup_date ....................... [RUN]
+[0m14:51:04  72 of 91 PASS not_null_int_daily_summary_pickup_date ........................... [[32mPASS[0m in 0.06s]
+[0m14:51:04  76 of 91 START sql incremental model main.fct_trips ............................ [RUN]
+[0m14:51:04  73 of 91 PASS not_null_int_daily_summary_total_revenue ......................... [[32mPASS[0m in 0.09s]
+[0m14:51:04  75 of 91 PASS unique_int_daily_summary_pickup_date ............................. [[32mPASS[0m in 0.08s]
+[0m14:51:04  74 of 91 PASS not_null_int_daily_summary_total_trips ........................... [[32mPASS[0m in 0.08s]
+[0m14:51:04  77 of 91 START sql table model main.mart_hourly_demand ......................... [RUN]
+[0m14:51:04  78 of 91 START sql table model main.mart_daily_revenue ......................... [RUN]
+[0m14:51:05  76 of 91 OK created sql incremental model main.fct_trips ....................... [[32mOK[0m in 0.14s]
+[0m14:51:05  79 of 91 START test not_null_fct_trips_pickup_datetime ......................... [RUN]
+[0m14:51:05  80 of 91 START test not_null_fct_trips_total_amount ............................ [RUN]
+[0m14:51:05  77 of 91 OK created sql table model main.mart_hourly_demand .................... [[32mOK[0m in 0.10s]
+[0m14:51:05  78 of 91 OK created sql table model main.mart_daily_revenue .................... [[32mOK[0m in 0.17s]
+[0m14:51:05  81 of 91 START test not_null_fct_trips_trip_id ................................. [RUN]
+[0m14:51:05  82 of 91 START test unique_fct_trips_trip_id ................................... [RUN]
+[0m14:51:05  80 of 91 PASS not_null_fct_trips_total_amount .................................. [[32mPASS[0m in 0.13s]
+[0m14:51:05  83 of 91 START test not_null_mart_hourly_demand_is_weekend ..................... [RUN]
+[0m14:51:05  79 of 91 PASS not_null_fct_trips_pickup_datetime ............................... [[32mPASS[0m in 0.13s]
+[0m14:51:05  84 of 91 START test not_null_mart_hourly_demand_pickup_hour .................... [RUN]
+[0m14:51:05  82 of 91 PASS unique_fct_trips_trip_id ......................................... [[32mPASS[0m in 0.05s]
+[0m14:51:05  81 of 91 PASS not_null_fct_trips_trip_id ....................................... [[32mPASS[0m in 0.05s]
+[0m14:51:05  85 of 91 START test not_null_mart_daily_revenue_date_key ....................... [RUN]
+[0m14:51:05  86 of 91 START test not_null_mart_daily_revenue_total_revenue .................. [RUN]
+[0m14:51:05  84 of 91 PASS not_null_mart_hourly_demand_pickup_hour .......................... [[32mPASS[0m in 0.05s]
+[0m14:51:05  83 of 91 PASS not_null_mart_hourly_demand_is_weekend ........................... [[32mPASS[0m in 0.06s]
+[0m14:51:05  87 of 91 START test unique_mart_daily_revenue_date_key ......................... [RUN]
+[0m14:51:05  88 of 91 START sql table model main.mart_location_performance .................. [RUN]
+[0m14:51:05  85 of 91 PASS not_null_mart_daily_revenue_date_key ............................. [[32mPASS[0m in 0.05s]
+[0m14:51:05  86 of 91 PASS not_null_mart_daily_revenue_total_revenue ........................ [[32mPASS[0m in 0.06s]
+[0m14:51:05  87 of 91 PASS unique_mart_daily_revenue_date_key ............................... [[32mPASS[0m in 0.05s]
+[0m14:51:05  88 of 91 OK created sql table model main.mart_location_performance ............. [[32mOK[0m in 0.06s]
+[0m14:51:05  89 of 91 START test not_null_mart_location_performance_pickup_location_id ...... [RUN]
+[0m14:51:05  90 of 91 START test not_null_mart_location_performance_total_pickups ........... [RUN]
+[0m14:51:05  91 of 91 START test unique_mart_location_performance_pickup_location_id ........ [RUN]
+[0m14:51:05  91 of 91 PASS unique_mart_location_performance_pickup_location_id .............. [[32mPASS[0m in 0.04s]
+[0m14:51:05  89 of 91 PASS not_null_mart_location_performance_pickup_location_id ............ [[32mPASS[0m in 0.05s]
+[0m14:51:05  90 of 91 PASS not_null_mart_location_performance_total_pickups ................. [[32mPASS[0m in 0.05s]
+[0m14:51:05  
+[0m14:51:05  Finished running 1 incremental model, 3 seeds, 6 table models, 74 data tests, 7 view models in 0 hours 0 minutes and 5.79 seconds (5.79s).
+[0m14:51:05  
+[0m14:51:05  [32mCompleted successfully[0m
+[0m14:51:05  
+[0m14:51:05  Done. PASS=91 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=91
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/05-redpanda-spark-iceberg'
+=== Benchmark complete (Total: 65s) ===
+docker compose --profile generate down -v --remove-orphans
+ Container p05-dbt  Stopping
+ Container p05-redpanda  Stopping
+ Container p05-spark-worker  Stopping
+ Container p05-redpanda  Stopped
+ Container p05-redpanda  Removing
+ Container p05-redpanda  Removed
+ Container p05-dbt  Stopped
+ Container p05-dbt  Removing
+ Container p05-dbt  Removed
+ Container p05-mc-init  Stopping
+ Container p05-mc-init  Stopped
+ Container p05-mc-init  Removing
+ Container p05-spark-worker  Stopped
+ Container p05-spark-worker  Removing
+ Container p05-mc-init  Removed
+ Container p05-minio  Stopping
+ Container p05-spark-worker  Removed
+ Container p05-spark-master  Stopping
+ Container p05-minio  Stopped
+ Container p05-minio  Removing
+ Container p05-minio  Removed
+ Container p05-spark-master  Stopped
+ Container p05-spark-master  Removing
+ Container p05-spark-master  Removed
+ Volume 05-redpanda-spark-iceberg_redpanda-data  Removing
+ Network 05-redpanda-spark-iceberg_pipeline-net  Removing
+ Volume 05-redpanda-spark-iceberg_minio-data  Removing
+ Volume 05-redpanda-spark-iceberg_redpanda-data  Removed
+ Volume 05-redpanda-spark-iceberg_minio-data  Removed
+ Network 05-redpanda-spark-iceberg_pipeline-net  Removed
+docker compose --profile generate down -v --remove-orphans
+rm -rf benchmark_results/*.json

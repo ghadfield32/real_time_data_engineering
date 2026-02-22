@@ -31,10 +31,10 @@ final as (
         daily.avg_trip_duration_min,
 
         -- running total
-        sum(daily.total_revenue) over (order by d.date_key) as cumulative_revenue,
+        sum(daily.total_revenue) over (partition by 1::int order by d.date_key) as cumulative_revenue,
 
         -- day-over-day change
-        daily.total_revenue - lag(daily.total_revenue) over (order by d.date_key) as revenue_change_vs_prior_day
+        daily.total_revenue - lag(daily.total_revenue) over (partition by 1::int order by d.date_key) as revenue_change_vs_prior_day
 
     from daily
     inner join dates d

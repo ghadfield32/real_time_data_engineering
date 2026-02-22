@@ -71,7 +71,7 @@ services:
       TOPIC: taxi.raw_trips
       MODE: burst
       MAX_EVENTS: "10000"
-    command: ["sh", "-c", "pip install -q pyarrow kafka-python-ng && python generator.py"]
+    command: ["sh", "-c", "pip install -q pyarrow confluent-kafka orjson && python generator.py"]
     depends_on:
       kafka:
         condition: service_healthy

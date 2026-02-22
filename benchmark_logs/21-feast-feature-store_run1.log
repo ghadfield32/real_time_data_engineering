@@ -1,0 +1,1110 @@
+docker compose --profile generator --profile feast down -v --remove-orphans
+docker compose up -d
+ Network p21-pipeline-net  Creating
+ Network p21-pipeline-net  Created
+ Volume 21-feast-feature-store_flink-checkpoints  Creating
+ Volume 21-feast-feature-store_flink-checkpoints  Created
+ Volume 21-feast-feature-store_minio-data  Creating
+ Volume 21-feast-feature-store_minio-data  Created
+ Container p21-kafka  Creating
+ Container p21-minio  Creating
+ Container p21-kafka  Created
+ Container p21-minio  Created
+ Container p21-feast-server  Creating
+ Container p21-mc-init  Creating
+ Container p21-mc-init  Created
+ Container p21-flink-jobmanager  Creating
+ Container p21-feast-server  Created
+ Container p21-flink-jobmanager  Created
+ Container p21-flink-taskmanager  Creating
+ Container p21-flink-taskmanager  Created
+ Container p21-minio  Starting
+ Container p21-kafka  Starting
+ Container p21-minio  Started
+ Container p21-minio  Waiting
+ Container p21-minio  Waiting
+ Container p21-kafka  Started
+ Container p21-minio  Healthy
+ Container p21-minio  Healthy
+ Container p21-mc-init  Starting
+ Container p21-feast-server  Starting
+ Container p21-mc-init  Started
+ Container p21-mc-init  Waiting
+ Container p21-kafka  Waiting
+ Container p21-feast-server  Started
+ Container p21-mc-init  Exited
+ Container p21-kafka  Healthy
+ Container p21-flink-jobmanager  Starting
+ Container p21-flink-jobmanager  Started
+ Container p21-flink-jobmanager  Waiting
+ Container p21-flink-jobmanager  Healthy
+ Container p21-flink-taskmanager  Starting
+ Container p21-flink-taskmanager  Started
+
+=== Pipeline 21: Feast Feature Store ===
+Kafka:           localhost:9092
+Schema Registry: http://localhost:8085
+Flink Dashboard: http://localhost:8081
+MinIO Console:   http://localhost:9001  (minioadmin/minioadmin)
+Feast Server:    http://localhost:6566
+============================================================
+  Pipeline 21 Benchmark: Feast Feature Store
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose --profile generator --profile feast down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose up -d
+ Network p21-pipeline-net  Creating
+ Network p21-pipeline-net  Created
+ Volume 21-feast-feature-store_flink-checkpoints  Creating
+ Volume 21-feast-feature-store_flink-checkpoints  Created
+ Volume 21-feast-feature-store_minio-data  Creating
+ Volume 21-feast-feature-store_minio-data  Created
+ Container p21-minio  Creating
+ Container p21-kafka  Creating
+ Container p21-minio  Created
+ Container p21-mc-init  Creating
+ Container p21-feast-server  Creating
+ Container p21-kafka  Created
+ Container p21-mc-init  Created
+ Container p21-flink-jobmanager  Creating
+ Container p21-feast-server  Created
+ Container p21-flink-jobmanager  Created
+ Container p21-flink-taskmanager  Creating
+ Container p21-flink-taskmanager  Created
+ Container p21-kafka  Starting
+ Container p21-minio  Starting
+ Container p21-minio  Started
+ Container p21-minio  Waiting
+ Container p21-minio  Waiting
+ Container p21-kafka  Started
+ Container p21-minio  Healthy
+ Container p21-minio  Healthy
+ Container p21-feast-server  Starting
+ Container p21-mc-init  Starting
+ Container p21-mc-init  Started
+ Container p21-kafka  Waiting
+ Container p21-mc-init  Waiting
+ Container p21-feast-server  Started
+ Container p21-mc-init  Exited
+ Container p21-kafka  Healthy
+ Container p21-flink-jobmanager  Starting
+ Container p21-flink-jobmanager  Started
+ Container p21-flink-jobmanager  Waiting
+ Container p21-flink-jobmanager  Healthy
+ Container p21-flink-taskmanager  Starting
+ Container p21-flink-taskmanager  Started
+
+=== Pipeline 21: Feast Feature Store ===
+Kafka:           localhost:9092
+Schema Registry: http://localhost:8085
+Flink Dashboard: http://localhost:8081
+MinIO Console:   http://localhost:9001  (minioadmin/minioadmin)
+Feast Server:    http://localhost:6566
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+Waiting for services to stabilize...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 --create --if-not-exists \
+	--topic taxi.raw_trips --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p21-kafka  Running
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     kafka:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.45s
+  Rate:    22,223 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited data generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+Waiting for Flink processing to catch up...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/05-bronze.sql
+2026-02-21 15:15:12,123 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-21 15:15:12,162 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-21 15:15:12,162 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 21, 2026 3:15:12 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 01: Bronze Layer (Kafka → Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS bronze.raw_trips (
+>     VendorID                BIGINT,
+>     tpep_pickup_datetime    TIMESTAMP(3),
+>     tpep_dropoff_datetime   TIMESTAMP(3),
+>     passenger_count         BIGINT,
+>     trip_distance           DOUBLE,
+>     RatecodeID              BIGINT,
+>     store_and_fwd_flag      STRING,
+>     PULocationID            BIGINT,
+>     DOLocationID            BIGINT,
+>     payment_type            BIGINT,
+>     fare_amount             DOUBLE,
+>     extra                   DOUBLE,
+>     mta_tax                 DOUBLE,
+>     tip_amount              DOUBLE,
+>     tolls_amount            DOUBLE,
+>     improvement_surcharge   DOUBLE,
+>     total_amount            DOUBLE,
+>     congestion_surcharge    DOUBLE,
+>     Airport_fee             DOUBLE,
+>     ingestion_ts            TIMESTAMP(3)
+> )
+> WITH (
+>     'format-version' = '1',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> INSERT INTO iceberg_catalog.bronze.raw_trips
+> SELECT
+>     VendorID,
+>     TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss')   AS tpep_pickup_datetime,
+>     TO_TIMESTAMP(tpep_dropoff_datetime, 'yyyy-MM-dd''T''HH:mm:ss')[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
+2026-02-21 15:15:21,492 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-21 15:15:21,530 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-21 15:15:21,530 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 21, 2026 3:15:21 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 01: Silver Layer (Bronze Iceberg → Silver Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
+>     trip_id                 STRING,
+>     vendor_id               INT,
+>     rate_code_id            INT,
+>     pickup_location_id      INT,
+>     dropoff_location_id     INT,
+>     payment_type_id         INT,
+>     pickup_datetime         TIMESTAMP(3),
+>     dropoff_datetime        TIMESTAMP(3),
+>     passenger_count         INT,
+>     trip_distance_miles     DOUBLE,
+>     store_and_fwd_flag      STRING,
+>     fare_amount             DECIMAL(10, 2),
+>     extra_amount            DECIMAL(10, 2),
+>     mta_tax                 DECIMAL(10, 2),
+>     tip_amount              DECIMAL(10, 2),
+>     tolls_amount            DECIMAL(10, 2),
+>     improvement_surcharge   DECIMAL(10, 2),
+>     total_amount            DECIMAL(10, 2),
+>     congestion_surcharge    DECIMAL(10, 2),
+>     airport_fee             DECIMAL(10, 2),
+>     pickup_date             DATE
+> ) PARTITIONED BY (pickup_date)
+> WITH (
+>     'format-version' = '2',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> -- Deduplication: ROW_NUMBER partitioned by natural key, keeping latest ingestion
+> INSERT INTO iceberg_catalog.silver.cleaned_trips
+> WITH deduped AS (
+>     SELECT *,
+>         ROW_NUMBER() OVER (
+>             PARTITION BY VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
+>                          PULocationID, DOLocationID, fare_amount, total_amount
+>             ORDER BY ingestion_ts DESC
+>         ) AS rn
+>     FROM iceberg_catalog.bronze.raw_trips
+>     WHERE tpep_pickup_datetime IS NOT NULL
+>       AND tpep_dropoff_datetime IS NOT NULL
+>       AND trip_distance >= 0
+>       AND fare_amount >= 0
+>       AND CAST(tpep_pickup_datetime AS DATE) >= DATE '2024-01-01'
+>       AND CAST(tpep_pickup_datetime AS DATE) <  DATE '2024-02-01'
+> )
+> SELECT
+>     CAST(MD5(CONCAT_WS('|',
+>         CAST(VendorID AS STRING),
+>         CAST(tpep_pickup_datetime AS STRING),
+>         CAST(tpep_dropoff_datetime AS STRING),
+>         CAST(PULocationID AS STRING),
+>         CAST(DOLocationID AS STRING),
+>         CAST(fare_amount AS STRING),
+>         CAST(total_amount AS STRING)
+>     )) AS STRING) AS trip_id,
+>     CAST(VendorID AS INT)       AS vendor_id,
+>     CAST(RatecodeID AS INT)     AS rate_code_id,
+>     CAST(PULocationID AS INT)   AS pickup_location_id,
+>     CAST(DOLocationID AS INT)   AS dropoff_location_id,
+>     CAST(payment_type AS INT)   AS payment_type_id,
+>     tpep_pickup_datetime        AS pickup_datetime,
+>     tpep_dropoff_datetime       AS dropoff_datetime,
+>     CAST(passenger_count AS INT) AS passenger_count,
+>     trip_distance               AS trip_distance_miles,
+>     store_and_fwd_flag,
+>     CAST(ROUND(fare_amount, 2)             AS DECIMAL(10, 2)) AS fare_amount,
+>     CAST(ROUND(extra, 2)                   AS DECIMAL(10, 2)) AS extra_amount,
+>     CAST(ROUND(mta_tax, 2)                 AS DECIMAL(10, 2)) AS mta_tax,
+>     CAST(ROUND(tip_amount, 2)              AS DECIMAL(10, 2)) AS tip_amount,
+>     CAST(ROUND(tolls_amount, 2)            AS DECIMAL(10, 2)) AS tolls_amount,
+>     CAST(ROUND(improvement_surcharge, 2)   AS DECIMAL(10, 2)) AS improvement_surcharge,
+>     CAST(ROUND(total_amount, 2)            AS DECIMAL(10, 2)) AS total_amount,
+>     CAST(ROUND(congestion_surcharge, 2)    AS DECIMAL(10, 2)) AS congestion_surcharge,
+>     CAST(ROUND(Airport_fee, 2)             AS DECIMAL(10, 2)) AS airport_fee,
+>     CAST(tpep_pickup_datetime AS DATE)[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose run --rm feast-server python /app/feast_repo/materialize_features.py
+ Container p21-minio  Running
+Traceback (most recent call last):
+  File "/app/feast_repo/materialize_features.py", line 86, in <module>
+=== Feast Feature Materialization ===
+Exporting trip features...
+    main()
+  File "/app/feast_repo/materialize_features.py", line 28, in main
+    con.execute("""
+_duckdb.BinderException: Binder Error: Referenced column "trip_distance" not found in FROM clause!
+Candidate bindings: "trip_distance_miles", "trip_id", "tip_amount", "pickup_datetime", "pickup_date"
+
+LINE 7:                 trip_distance,
+                        ^
+
+make[1]: *** [Makefile:72: feast-materialize] Error 1
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make: *** [Makefile:85: benchmark] Error 2
+docker compose --profile generator --profile feast down -v --remove-orphans
+ Container p21-feast-server  Stopping
+ Container p21-flink-taskmanager  Stopping
+ Container p21-flink-taskmanager  Stopped
+ Container p21-flink-taskmanager  Removing
+ Container p21-flink-taskmanager  Removed
+ Container p21-flink-jobmanager  Stopping
+ Container p21-flink-jobmanager  Stopped
+ Container p21-flink-jobmanager  Removing
+ Container p21-flink-jobmanager  Removed
+ Container p21-kafka  Stopping
+ Container p21-mc-init  Stopping
+ Container p21-mc-init  Stopped
+ Container p21-mc-init  Removing
+ Container p21-mc-init  Removed
+ Container p21-feast-server  Stopped
+ Container p21-feast-server  Removing
+ Container p21-feast-server  Removed
+ Container p21-minio  Stopping
+ Container p21-minio  Stopped
+ Container p21-minio  Removing
+ Container p21-minio  Removed
+ Container p21-kafka  Stopped
+ Container p21-kafka  Removing
+ Container p21-kafka  Removed
+ Volume 21-feast-feature-store_minio-data  Removing
+ Volume 21-feast-feature-store_flink-checkpoints  Removing
+ Network p21-pipeline-net  Removing
+ Volume 21-feast-feature-store_flink-checkpoints  Removed
+ Volume 21-feast-feature-store_minio-data  Removed
+ Network p21-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.
+docker compose --profile generator --profile feast down -v --remove-orphans
+docker compose up -d
+ Network p21-pipeline-net  Creating
+ Network p21-pipeline-net  Created
+ Volume 21-feast-feature-store_flink-checkpoints  Creating
+ Volume 21-feast-feature-store_flink-checkpoints  Created
+ Volume 21-feast-feature-store_minio-data  Creating
+ Volume 21-feast-feature-store_minio-data  Created
+ Container p21-kafka  Creating
+ Container p21-minio  Creating
+ Container p21-minio  Created
+ Container p21-mc-init  Creating
+ Container p21-feast-server  Creating
+ Container p21-kafka  Created
+ Container p21-mc-init  Created
+ Container p21-flink-jobmanager  Creating
+ Container p21-feast-server  Created
+ Container p21-flink-jobmanager  Created
+ Container p21-flink-taskmanager  Creating
+ Container p21-flink-taskmanager  Created
+ Container p21-minio  Starting
+ Container p21-kafka  Starting
+ Container p21-minio  Started
+ Container p21-minio  Waiting
+ Container p21-minio  Waiting
+ Container p21-kafka  Started
+ Container p21-minio  Healthy
+ Container p21-minio  Healthy
+ Container p21-mc-init  Starting
+ Container p21-feast-server  Starting
+ Container p21-mc-init  Started
+ Container p21-kafka  Waiting
+ Container p21-mc-init  Waiting
+ Container p21-feast-server  Started
+ Container p21-mc-init  Exited
+ Container p21-kafka  Healthy
+ Container p21-flink-jobmanager  Starting
+ Container p21-flink-jobmanager  Started
+ Container p21-flink-jobmanager  Waiting
+ Container p21-flink-jobmanager  Healthy
+ Container p21-flink-taskmanager  Starting
+ Container p21-flink-taskmanager  Started
+
+=== Pipeline 21: Feast Feature Store ===
+Kafka:           localhost:9092
+Schema Registry: http://localhost:8085
+Flink Dashboard: http://localhost:8081
+MinIO Console:   http://localhost:9001  (minioadmin/minioadmin)
+Feast Server:    http://localhost:6566
+============================================================
+  Pipeline 21 Benchmark: Feast Feature Store
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose --profile generator --profile feast down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose up -d
+ Network p21-pipeline-net  Creating
+ Network p21-pipeline-net  Created
+ Volume 21-feast-feature-store_minio-data  Creating
+ Volume 21-feast-feature-store_minio-data  Created
+ Volume 21-feast-feature-store_flink-checkpoints  Creating
+ Volume 21-feast-feature-store_flink-checkpoints  Created
+ Container p21-minio  Creating
+ Container p21-kafka  Creating
+ Container p21-minio  Created
+ Container p21-mc-init  Creating
+ Container p21-feast-server  Creating
+ Container p21-kafka  Created
+ Container p21-mc-init  Created
+ Container p21-flink-jobmanager  Creating
+ Container p21-feast-server  Created
+ Container p21-flink-jobmanager  Created
+ Container p21-flink-taskmanager  Creating
+ Container p21-flink-taskmanager  Created
+ Container p21-minio  Starting
+ Container p21-kafka  Starting
+ Container p21-minio  Started
+ Container p21-minio  Waiting
+ Container p21-minio  Waiting
+ Container p21-kafka  Started
+ Container p21-minio  Healthy
+ Container p21-mc-init  Starting
+ Container p21-minio  Healthy
+ Container p21-feast-server  Starting
+ Container p21-mc-init  Started
+ Container p21-kafka  Waiting
+ Container p21-mc-init  Waiting
+ Container p21-feast-server  Started
+ Container p21-mc-init  Exited
+ Container p21-kafka  Healthy
+ Container p21-flink-jobmanager  Starting
+ Container p21-flink-jobmanager  Started
+ Container p21-flink-jobmanager  Waiting
+ Container p21-flink-jobmanager  Healthy
+ Container p21-flink-taskmanager  Starting
+ Container p21-flink-taskmanager  Started
+
+=== Pipeline 21: Feast Feature Store ===
+Kafka:           localhost:9092
+Schema Registry: http://localhost:8085
+Flink Dashboard: http://localhost:8081
+MinIO Console:   http://localhost:9001  (minioadmin/minioadmin)
+Feast Server:    http://localhost:6566
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+Waiting for services to stabilize...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 --create --if-not-exists \
+	--topic taxi.raw_trips --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p21-kafka  Running
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     kafka:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.45s
+  Rate:    22,338 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited data generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+Waiting for Flink processing to catch up...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/05-bronze.sql
+2026-02-22 12:26:42,320 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-22 12:26:42,409 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-22 12:26:42,409 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 22, 2026 12:26:42 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 01: Bronze Layer (Kafka → Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS bronze.raw_trips (
+>     VendorID                BIGINT,
+>     tpep_pickup_datetime    TIMESTAMP(3),
+>     tpep_dropoff_datetime   TIMESTAMP(3),
+>     passenger_count         BIGINT,
+>     trip_distance           DOUBLE,
+>     RatecodeID              BIGINT,
+>     store_and_fwd_flag      STRING,
+>     PULocationID            BIGINT,
+>     DOLocationID            BIGINT,
+>     payment_type            BIGINT,
+>     fare_amount             DOUBLE,
+>     extra                   DOUBLE,
+>     mta_tax                 DOUBLE,
+>     tip_amount              DOUBLE,
+>     tolls_amount            DOUBLE,
+>     improvement_surcharge   DOUBLE,
+>     total_amount            DOUBLE,
+>     congestion_surcharge    DOUBLE,
+>     Airport_fee             DOUBLE,
+>     ingestion_ts            TIMESTAMP(3)
+> )
+> WITH (
+>     'format-version' = '1',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> INSERT INTO iceberg_catalog.bronze.raw_trips
+> SELECT
+>     VendorID,
+>     TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss')   AS tpep_pickup_datetime,
+>     TO_TIMESTAMP(tpep_dropoff_datetime, 'yyyy-MM-dd''T''HH:mm:ss')[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
+2026-02-22 12:26:58,655 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-22 12:26:58,693 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-22 12:26:58,693 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 22, 2026 12:26:59 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 01: Silver Layer (Bronze Iceberg → Silver Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
+>     trip_id                 STRING,
+>     vendor_id               INT,
+>     rate_code_id            INT,
+>     pickup_location_id      INT,
+>     dropoff_location_id     INT,
+>     payment_type_id         INT,
+>     pickup_datetime         TIMESTAMP(3),
+>     dropoff_datetime        TIMESTAMP(3),
+>     passenger_count         INT,
+>     trip_distance_miles     DOUBLE,
+>     store_and_fwd_flag      STRING,
+>     fare_amount             DECIMAL(10, 2),
+>     extra_amount            DECIMAL(10, 2),
+>     mta_tax                 DECIMAL(10, 2),
+>     tip_amount              DECIMAL(10, 2),
+>     tolls_amount            DECIMAL(10, 2),
+>     improvement_surcharge   DECIMAL(10, 2),
+>     total_amount            DECIMAL(10, 2),
+>     congestion_surcharge    DECIMAL(10, 2),
+>     airport_fee             DECIMAL(10, 2),
+>     pickup_date             DATE
+> ) PARTITIONED BY (pickup_date)
+> WITH (
+>     'format-version' = '2',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> -- Deduplication: ROW_NUMBER partitioned by natural key, keeping latest ingestion
+> INSERT INTO iceberg_catalog.silver.cleaned_trips
+> WITH deduped AS (
+>     SELECT *,
+>         ROW_NUMBER() OVER (
+>             PARTITION BY VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
+>                          PULocationID, DOLocationID, fare_amount, total_amount
+>             ORDER BY ingestion_ts DESC
+>         ) AS rn
+>     FROM iceberg_catalog.bronze.raw_trips
+>     WHERE tpep_pickup_datetime IS NOT NULL
+>       AND tpep_dropoff_datetime IS NOT NULL
+>       AND trip_distance >= 0
+>       AND fare_amount >= 0
+>       AND CAST(tpep_pickup_datetime AS DATE) >= DATE '2024-01-01'
+>       AND CAST(tpep_pickup_datetime AS DATE) <  DATE '2024-02-01'
+> )
+> SELECT
+>     CAST(MD5(CONCAT_WS('|',
+>         CAST(VendorID AS STRING),
+>         CAST(tpep_pickup_datetime AS STRING),
+>         CAST(tpep_dropoff_datetime AS STRING),
+>         CAST(PULocationID AS STRING),
+>         CAST(DOLocationID AS STRING),
+>         CAST(fare_amount AS STRING),
+>         CAST(total_amount AS STRING)
+>     )) AS STRING) AS trip_id,
+>     CAST(VendorID AS INT)       AS vendor_id,
+>     CAST(RatecodeID AS INT)     AS rate_code_id,
+>     CAST(PULocationID AS INT)   AS pickup_location_id,
+>     CAST(DOLocationID AS INT)   AS dropoff_location_id,
+>     CAST(payment_type AS INT)   AS payment_type_id,
+>     tpep_pickup_datetime        AS pickup_datetime,
+>     tpep_dropoff_datetime       AS dropoff_datetime,
+>     CAST(passenger_count AS INT) AS passenger_count,
+>     trip_distance               AS trip_distance_miles,
+>     store_and_fwd_flag,
+>     CAST(ROUND(fare_amount, 2)             AS DECIMAL(10, 2)) AS fare_amount,
+>     CAST(ROUND(extra, 2)                   AS DECIMAL(10, 2)) AS extra_amount,
+>     CAST(ROUND(mta_tax, 2)                 AS DECIMAL(10, 2)) AS mta_tax,
+>     CAST(ROUND(tip_amount, 2)              AS DECIMAL(10, 2)) AS tip_amount,
+>     CAST(ROUND(tolls_amount, 2)            AS DECIMAL(10, 2)) AS tolls_amount,
+>     CAST(ROUND(improvement_surcharge, 2)   AS DECIMAL(10, 2)) AS improvement_surcharge,
+>     CAST(ROUND(total_amount, 2)            AS DECIMAL(10, 2)) AS total_amount,
+>     CAST(ROUND(congestion_surcharge, 2)    AS DECIMAL(10, 2)) AS congestion_surcharge,
+>     CAST(ROUND(Airport_fee, 2)             AS DECIMAL(10, 2)) AS airport_fee,
+>     CAST(tpep_pickup_datetime AS DATE)[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+2026-02-22 12:27:06,186 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Stopping s3a-file-system metrics system...
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose run --rm feast-server python /app/feast_repo/materialize_features.py
+ Container p21-minio  Running
+Traceback (most recent call last):
+  File "/app/feast_repo/materialize_features.py", line 86, in <module>
+=== Feast Feature Materialization ===
+Exporting trip features...
+    main()
+  File "/app/feast_repo/materialize_features.py", line 28, in main
+    con.execute("""
+_duckdb.BinderException: Binder Error: Referenced column "trip_distance" not found in FROM clause!
+Candidate bindings: "trip_distance_miles", "trip_id", "tip_amount", "pickup_datetime", "pickup_date"
+
+LINE 7:                 trip_distance,
+                        ^
+
+make[1]: *** [Makefile:72: feast-materialize] Error 1
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make: *** [Makefile:85: benchmark] Error 2
+docker compose --profile generator --profile feast down -v --remove-orphans
+ Container p21-feast-server  Stopping
+ Container p21-flink-taskmanager  Stopping
+ Container p21-flink-taskmanager  Stopped
+ Container p21-flink-taskmanager  Removing
+ Container p21-flink-taskmanager  Removed
+ Container p21-flink-jobmanager  Stopping
+ Container p21-flink-jobmanager  Stopped
+ Container p21-flink-jobmanager  Removing
+ Container p21-flink-jobmanager  Removed
+ Container p21-mc-init  Stopping
+ Container p21-kafka  Stopping
+ Container p21-mc-init  Stopped
+ Container p21-mc-init  Removing
+ Container p21-feast-server  Stopped
+ Container p21-feast-server  Removing
+ Container p21-mc-init  Removed
+ Container p21-feast-server  Removed
+ Container p21-minio  Stopping
+ Container p21-minio  Stopped
+ Container p21-minio  Removing
+ Container p21-minio  Removed
+ Container p21-kafka  Stopped
+ Container p21-kafka  Removing
+ Container p21-kafka  Removed
+ Volume 21-feast-feature-store_minio-data  Removing
+ Volume 21-feast-feature-store_flink-checkpoints  Removing
+ Network p21-pipeline-net  Removing
+ Volume 21-feast-feature-store_minio-data  Removed
+ Volume 21-feast-feature-store_flink-checkpoints  Removed
+ Network p21-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.
+docker compose --profile generator --profile feast down -v --remove-orphans
+docker compose up -d
+ Network p21-pipeline-net  Creating
+ Network p21-pipeline-net  Created
+ Volume 21-feast-feature-store_flink-checkpoints  Creating
+ Volume 21-feast-feature-store_flink-checkpoints  Created
+ Volume 21-feast-feature-store_minio-data  Creating
+ Volume 21-feast-feature-store_minio-data  Created
+ Container p21-minio  Creating
+ Container p21-kafka  Creating
+ Container p21-minio  Created
+ Container p21-mc-init  Creating
+ Container p21-feast-server  Creating
+ Container p21-kafka  Created
+ Container p21-mc-init  Created
+ Container p21-flink-jobmanager  Creating
+ Container p21-feast-server  Created
+ Container p21-flink-jobmanager  Created
+ Container p21-flink-taskmanager  Creating
+ Container p21-flink-taskmanager  Created
+ Container p21-kafka  Starting
+ Container p21-minio  Starting
+ Container p21-kafka  Started
+ Container p21-minio  Started
+ Container p21-minio  Waiting
+ Container p21-minio  Waiting
+ Container p21-minio  Healthy
+ Container p21-minio  Healthy
+ Container p21-mc-init  Starting
+ Container p21-feast-server  Starting
+ Container p21-mc-init  Started
+ Container p21-mc-init  Waiting
+ Container p21-kafka  Waiting
+ Container p21-feast-server  Started
+ Container p21-kafka  Healthy
+ Container p21-mc-init  Exited
+ Container p21-flink-jobmanager  Starting
+ Container p21-flink-jobmanager  Started
+ Container p21-flink-jobmanager  Waiting
+ Container p21-flink-jobmanager  Healthy
+ Container p21-flink-taskmanager  Starting
+ Container p21-flink-taskmanager  Started
+
+=== Pipeline 21: Feast Feature Store ===
+Kafka:           localhost:9092
+Schema Registry: http://localhost:8085
+Flink Dashboard: http://localhost:8081
+MinIO Console:   http://localhost:9001  (minioadmin/minioadmin)
+Feast Server:    http://localhost:6566
+============================================================
+  Pipeline 21 Benchmark: Feast Feature Store
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose --profile generator --profile feast down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose up -d
+ Network p21-pipeline-net  Creating
+ Network p21-pipeline-net  Created
+ Volume 21-feast-feature-store_minio-data  Creating
+ Volume 21-feast-feature-store_minio-data  Created
+ Volume 21-feast-feature-store_flink-checkpoints  Creating
+ Volume 21-feast-feature-store_flink-checkpoints  Created
+ Container p21-minio  Creating
+ Container p21-kafka  Creating
+ Container p21-minio  Created
+ Container p21-mc-init  Creating
+ Container p21-feast-server  Creating
+ Container p21-kafka  Created
+ Container p21-mc-init  Created
+ Container p21-flink-jobmanager  Creating
+ Container p21-feast-server  Created
+ Container p21-flink-jobmanager  Created
+ Container p21-flink-taskmanager  Creating
+ Container p21-flink-taskmanager  Created
+ Container p21-kafka  Starting
+ Container p21-minio  Starting
+ Container p21-kafka  Started
+ Container p21-minio  Started
+ Container p21-minio  Waiting
+ Container p21-minio  Waiting
+ Container p21-minio  Healthy
+ Container p21-feast-server  Starting
+ Container p21-minio  Healthy
+ Container p21-mc-init  Starting
+ Container p21-mc-init  Started
+ Container p21-kafka  Waiting
+ Container p21-mc-init  Waiting
+ Container p21-feast-server  Started
+ Container p21-mc-init  Exited
+ Container p21-kafka  Healthy
+ Container p21-flink-jobmanager  Starting
+ Container p21-flink-jobmanager  Started
+ Container p21-flink-jobmanager  Waiting
+ Container p21-flink-jobmanager  Healthy
+ Container p21-flink-taskmanager  Starting
+ Container p21-flink-taskmanager  Started
+
+=== Pipeline 21: Feast Feature Store ===
+Kafka:           localhost:9092
+Schema Registry: http://localhost:8085
+Flink Dashboard: http://localhost:8081
+MinIO Console:   http://localhost:9001  (minioadmin/minioadmin)
+Feast Server:    http://localhost:6566
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+Waiting for services to stabilize...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 --create --if-not-exists \
+	--topic taxi.raw_trips --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p21-kafka  Running
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     kafka:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.43s
+  Rate:    23,316 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited data generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+Waiting for Flink processing to catch up...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/05-bronze.sql
+2026-02-22 12:29:56,456 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-22 12:29:56,496 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-22 12:29:56,496 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 22, 2026 12:29:56 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 01: Bronze Layer (Kafka → Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS bronze.raw_trips (
+>     VendorID                BIGINT,
+>     tpep_pickup_datetime    TIMESTAMP(3),
+>     tpep_dropoff_datetime   TIMESTAMP(3),
+>     passenger_count         BIGINT,
+>     trip_distance           DOUBLE,
+>     RatecodeID              BIGINT,
+>     store_and_fwd_flag      STRING,
+>     PULocationID            BIGINT,
+>     DOLocationID            BIGINT,
+>     payment_type            BIGINT,
+>     fare_amount             DOUBLE,
+>     extra                   DOUBLE,
+>     mta_tax                 DOUBLE,
+>     tip_amount              DOUBLE,
+>     tolls_amount            DOUBLE,
+>     improvement_surcharge   DOUBLE,
+>     total_amount            DOUBLE,
+>     congestion_surcharge    DOUBLE,
+>     Airport_fee             DOUBLE,
+>     ingestion_ts            TIMESTAMP(3)
+> )
+> WITH (
+>     'format-version' = '1',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> INSERT INTO iceberg_catalog.bronze.raw_trips
+> SELECT
+>     VendorID,
+>     TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss')   AS tpep_pickup_datetime,
+>     TO_TIMESTAMP(tpep_dropoff_datetime, 'yyyy-MM-dd''T''HH:mm:ss')[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
+2026-02-22 12:30:08,922 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-22 12:30:08,967 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-22 12:30:08,967 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 22, 2026 12:30:09 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 01: Silver Layer (Bronze Iceberg → Silver Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
+>     trip_id                 STRING,
+>     vendor_id               INT,
+>     rate_code_id            INT,
+>     pickup_location_id      INT,
+>     dropoff_location_id     INT,
+>     payment_type_id         INT,
+>     pickup_datetime         TIMESTAMP(3),
+>     dropoff_datetime        TIMESTAMP(3),
+>     passenger_count         INT,
+>     trip_distance_miles     DOUBLE,
+>     store_and_fwd_flag      STRING,
+>     fare_amount             DECIMAL(10, 2),
+>     extra_amount            DECIMAL(10, 2),
+>     mta_tax                 DECIMAL(10, 2),
+>     tip_amount              DECIMAL(10, 2),
+>     tolls_amount            DECIMAL(10, 2),
+>     improvement_surcharge   DECIMAL(10, 2),
+>     total_amount            DECIMAL(10, 2),
+>     congestion_surcharge    DECIMAL(10, 2),
+>     airport_fee             DECIMAL(10, 2),
+>     pickup_date             DATE
+> ) PARTITIONED BY (pickup_date)
+> WITH (
+>     'format-version' = '2',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> -- Deduplication: ROW_NUMBER partitioned by natural key, keeping latest ingestion
+> INSERT INTO iceberg_catalog.silver.cleaned_trips
+> WITH deduped AS (
+>     SELECT *,
+>         ROW_NUMBER() OVER (
+>             PARTITION BY VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
+>                          PULocationID, DOLocationID, fare_amount, total_amount
+>             ORDER BY ingestion_ts DESC
+>         ) AS rn
+>     FROM iceberg_catalog.bronze.raw_trips
+>     WHERE tpep_pickup_datetime IS NOT NULL
+>       AND tpep_dropoff_datetime IS NOT NULL
+>       AND trip_distance >= 0
+>       AND fare_amount >= 0
+>       AND CAST(tpep_pickup_datetime AS DATE) >= DATE '2024-01-01'
+>       AND CAST(tpep_pickup_datetime AS DATE) <  DATE '2024-02-01'
+> )
+> SELECT
+>     CAST(MD5(CONCAT_WS('|',
+>         CAST(VendorID AS STRING),
+>         CAST(tpep_pickup_datetime AS STRING),
+>         CAST(tpep_dropoff_datetime AS STRING),
+>         CAST(PULocationID AS STRING),
+>         CAST(DOLocationID AS STRING),
+>         CAST(fare_amount AS STRING),
+>         CAST(total_amount AS STRING)
+>     )) AS STRING) AS trip_id,
+>     CAST(VendorID AS INT)       AS vendor_id,
+>     CAST(RatecodeID AS INT)     AS rate_code_id,
+>     CAST(PULocationID AS INT)   AS pickup_location_id,
+>     CAST(DOLocationID AS INT)   AS dropoff_location_id,
+>     CAST(payment_type AS INT)   AS payment_type_id,
+>     tpep_pickup_datetime        AS pickup_datetime,
+>     tpep_dropoff_datetime       AS dropoff_datetime,
+>     CAST(passenger_count AS INT) AS passenger_count,
+>     trip_distance               AS trip_distance_miles,
+>     store_and_fwd_flag,
+>     CAST(ROUND(fare_amount, 2)             AS DECIMAL(10, 2)) AS fare_amount,
+>     CAST(ROUND(extra, 2)                   AS DECIMAL(10, 2)) AS extra_amount,
+>     CAST(ROUND(mta_tax, 2)                 AS DECIMAL(10, 2)) AS mta_tax,
+>     CAST(ROUND(tip_amount, 2)              AS DECIMAL(10, 2)) AS tip_amount,
+>     CAST(ROUND(tolls_amount, 2)            AS DECIMAL(10, 2)) AS tolls_amount,
+>     CAST(ROUND(improvement_surcharge, 2)   AS DECIMAL(10, 2)) AS improvement_surcharge,
+>     CAST(ROUND(total_amount, 2)            AS DECIMAL(10, 2)) AS total_amount,
+>     CAST(ROUND(congestion_surcharge, 2)    AS DECIMAL(10, 2)) AS congestion_surcharge,
+>     CAST(ROUND(Airport_fee, 2)             AS DECIMAL(10, 2)) AS airport_fee,
+>     CAST(tpep_pickup_datetime AS DATE)[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+MSYS_NO_PATHCONV=1 docker compose run --rm feast-server python /app/feast_repo/materialize_features.py
+ Container p21-minio  Running
+/usr/local/lib/python3.12/site-packages/feast/repo_config.py:292: DeprecationWarning: The serialization version below 3 are deprecated. Specifying `entity_key_serialization_version` to 3 is recommended.
+  warnings.warn(
+Traceback (most recent call last):
+  File "/usr/local/bin/feast", line 8, in <module>
+    sys.exit(cli())
+             ^^^^^
+  File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1485, in __call__
+    return self.main(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1406, in main
+    rv = self.invoke(ctx)
+         ^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1873, in invoke
+    return _process_result(sub_ctx.command.invoke(sub_ctx))
+                           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/click/core.py", line 1269, in invoke
+    return ctx.invoke(self.callback, **ctx.params)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/click/core.py", line 824, in invoke
+    return callback(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/click/decorators.py", line 34, in new_func
+    return f(get_current_context(), *args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/feast/cli/cli.py", line 302, in apply_total_command
+    apply_total(
+  File "/usr/local/lib/python3.12/site-packages/feast/repo_operations.py", line 439, in apply_total
+    repo = _get_repo_contents(repo_path, repo_config.project, repo_config)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/feast/repo_operations.py", line 255, in _get_repo_contents
+    repo = parse_repo(repo_path)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/feast/repo_operations.py", line 135, in parse_repo
+    module = importlib.import_module(module_path)
+             ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/importlib/__init__.py", line 90, in import_module
+    return _bootstrap._gcd_import(name[level:], package, level)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "<frozen importlib._bootstrap>", line 1387, in _gcd_import
+  File "<frozen importlib._bootstrap>", line 1360, in _find_and_load
+  File "<frozen importlib._bootstrap>", line 1331, in _find_and_load_unlocked
+  File "<frozen importlib._bootstrap>", line 935, in _load_unlocked
+  File "<frozen importlib._bootstrap_external>", line 999, in exec_module
+  File "<frozen importlib._bootstrap>", line 488, in _call_with_frames_removed
+  File "/app/feast_repo/features.py", line 30, in <module>
+    Feature(name="vendor_id", dtype=Int64),
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.12/site-packages/feast/feature.py", line 42, in __init__
+    raise ValueError("dtype is not a valid ValueType")
+ValueError: dtype is not a valid ValueType
+/usr/local/lib/python3.12/site-packages/feast/repo_config.py:292: DeprecationWarning: The serialization version below 3 are deprecated. Specifying `entity_key_serialization_version` to 3 is recommended.
+  warnings.warn(
+Materializing [1m[32m0[0m feature views from [1m[32m2024-01-01 00:00:00+00:00[0m to [1m[32m2026-02-22 12:30:22+00:00[0m into the [1m[32msqlite[0m online store.
+
+=== Feast Feature Materialization ===
+Exporting trip features...
+  Exported 9855 trip records
+Exporting location features...
+  Exported 114 location feature records
+Applying Feast feature definitions...
+Materializing features to online store...
+=== Feature materialization complete ===
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+
+============================================================
+  BENCHMARK COMPLETE
+  Total elapsed: 76s
+============================================================
+Results saved to benchmark_results/latest.json
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose --profile generator --profile feast down -v --remove-orphans
+ Container p21-feast-server  Stopping
+ Container p21-flink-taskmanager  Stopping
+ Container p21-flink-taskmanager  Stopped
+ Container p21-flink-taskmanager  Removing
+ Container p21-flink-taskmanager  Removed
+ Container p21-flink-jobmanager  Stopping
+ Container p21-flink-jobmanager  Stopped
+ Container p21-flink-jobmanager  Removing
+ Container p21-flink-jobmanager  Removed
+ Container p21-kafka  Stopping
+ Container p21-mc-init  Stopping
+ Container p21-mc-init  Stopped
+ Container p21-mc-init  Removing
+ Container p21-mc-init  Removed
+ Container p21-feast-server  Stopped
+ Container p21-feast-server  Removing
+ Container p21-feast-server  Removed
+ Container p21-minio  Stopping
+ Container p21-minio  Stopped
+ Container p21-minio  Removing
+ Container p21-minio  Removed
+ Container p21-kafka  Stopped
+ Container p21-kafka  Removing
+ Container p21-kafka  Removed
+ Volume 21-feast-feature-store_minio-data  Removing
+ Volume 21-feast-feature-store_flink-checkpoints  Removing
+ Network p21-pipeline-net  Removing
+ Volume 21-feast-feature-store_minio-data  Removed
+ Volume 21-feast-feature-store_flink-checkpoints  Removed
+ Network p21-pipeline-net  Removed
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/21-feast-feature-store'
+docker compose --profile generator --profile feast down -v --remove-orphans
+make: *** No rule to make target 'clean'.  Stop.

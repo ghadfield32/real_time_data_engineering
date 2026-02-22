@@ -1,0 +1,550 @@
+docker compose --profile generator down -v --remove-orphans
+docker compose up -d
+ Network p16-pipeline-net  Creating
+ Network p16-pipeline-net  Created
+ Volume 16-pinot-serving_flink-checkpoints  Creating
+ Volume 16-pinot-serving_flink-checkpoints  Created
+ Volume 16-pinot-serving_minio-data  Creating
+ Volume 16-pinot-serving_minio-data  Created
+ Container p16-redpanda  Creating
+ Container p16-minio  Creating
+ Container p16-pinot-zookeeper  Creating
+ Container p16-minio  Created
+ Container p16-mc-init  Creating
+ Container p16-redpanda  Created
+ Container p16-pinot-zookeeper  Created
+ Container p16-pinot-controller  Creating
+ Container p16-mc-init  Created
+ Container p16-flink-jobmanager  Creating
+ Container p16-pinot-controller  Created
+ Container p16-pinot-broker  Creating
+ Container p16-flink-jobmanager  Created
+ Container p16-flink-taskmanager  Creating
+ Container p16-pinot-broker  Created
+ Container p16-pinot-server  Creating
+ Container p16-flink-taskmanager  Created
+ Container p16-pinot-server  Created
+ Container p16-minio  Starting
+ Container p16-redpanda  Starting
+ Container p16-pinot-zookeeper  Starting
+ Container p16-pinot-zookeeper  Started
+ Container p16-pinot-zookeeper  Waiting
+ Container p16-minio  Started
+ Container p16-minio  Waiting
+ Container p16-redpanda  Started
+ Container p16-pinot-zookeeper  Healthy
+ Container p16-pinot-controller  Starting
+ Container p16-minio  Healthy
+ Container p16-mc-init  Starting
+ Container p16-pinot-controller  Started
+ Container p16-pinot-controller  Waiting
+ Container p16-mc-init  Started
+ Container p16-redpanda  Waiting
+ Container p16-mc-init  Waiting
+ Container p16-redpanda  Healthy
+ Container p16-mc-init  Exited
+ Container p16-flink-jobmanager  Starting
+ Container p16-flink-jobmanager  Started
+ Container p16-flink-jobmanager  Waiting
+ Container p16-flink-jobmanager  Healthy
+ Container p16-flink-taskmanager  Starting
+ Container p16-flink-taskmanager  Started
+ Container p16-pinot-controller  Healthy
+ Container p16-pinot-broker  Starting
+ Container p16-pinot-broker  Started
+ Container p16-pinot-broker  Waiting
+ Container p16-pinot-broker  Healthy
+ Container p16-pinot-server  Starting
+ Container p16-pinot-server  Started
+
+=== Pipeline 16: Redpanda + Flink + Pinot ===
+Redpanda:         localhost:9092
+Flink Dashboard:  http://localhost:8083
+MinIO Console:    http://localhost:9003 (minioadmin/minioadmin)
+Pinot Controller: http://localhost:9010
+Pinot Broker:     http://localhost:8099
+============================================================
+  Pipeline 16 Benchmark: Redpanda + Flink + Pinot
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+docker compose --profile generator down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+docker compose up -d
+ Network p16-pipeline-net  Creating
+ Network p16-pipeline-net  Created
+ Volume 16-pinot-serving_minio-data  Creating
+ Volume 16-pinot-serving_minio-data  Created
+ Volume 16-pinot-serving_flink-checkpoints  Creating
+ Volume 16-pinot-serving_flink-checkpoints  Created
+ Container p16-pinot-zookeeper  Creating
+ Container p16-minio  Creating
+ Container p16-redpanda  Creating
+ Container p16-redpanda  Created
+ Container p16-minio  Created
+ Container p16-mc-init  Creating
+ Container p16-pinot-zookeeper  Created
+ Container p16-pinot-controller  Creating
+ Container p16-mc-init  Created
+ Container p16-flink-jobmanager  Creating
+ Container p16-pinot-controller  Created
+ Container p16-pinot-broker  Creating
+ Container p16-flink-jobmanager  Created
+ Container p16-flink-taskmanager  Creating
+ Container p16-pinot-broker  Created
+ Container p16-pinot-server  Creating
+ Container p16-flink-taskmanager  Created
+ Container p16-pinot-server  Created
+ Container p16-pinot-zookeeper  Starting
+ Container p16-minio  Starting
+ Container p16-redpanda  Starting
+ Container p16-pinot-zookeeper  Started
+ Container p16-pinot-zookeeper  Waiting
+ Container p16-minio  Started
+ Container p16-minio  Waiting
+ Container p16-redpanda  Started
+ Container p16-pinot-zookeeper  Healthy
+ Container p16-pinot-controller  Starting
+ Container p16-minio  Healthy
+ Container p16-mc-init  Starting
+ Container p16-pinot-controller  Started
+ Container p16-pinot-controller  Waiting
+ Container p16-mc-init  Started
+ Container p16-redpanda  Waiting
+ Container p16-mc-init  Waiting
+ Container p16-mc-init  Exited
+ Container p16-redpanda  Healthy
+ Container p16-flink-jobmanager  Starting
+ Container p16-flink-jobmanager  Started
+ Container p16-flink-jobmanager  Waiting
+ Container p16-flink-jobmanager  Healthy
+ Container p16-flink-taskmanager  Starting
+ Container p16-flink-taskmanager  Started
+ Container p16-pinot-controller  Healthy
+ Container p16-pinot-broker  Starting
+ Container p16-pinot-broker  Started
+ Container p16-pinot-broker  Waiting
+ Container p16-pinot-broker  Healthy
+ Container p16-pinot-server  Starting
+ Container p16-pinot-server  Started
+
+=== Pipeline 16: Redpanda + Flink + Pinot ===
+Redpanda:         localhost:9092
+Flink Dashboard:  http://localhost:8083
+MinIO Console:    http://localhost:9003 (minioadmin/minioadmin)
+Pinot Controller: http://localhost:9010
+Pinot Broker:     http://localhost:8099
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+docker compose exec redpanda rpk topic create taxi.raw_trips \
+	--brokers localhost:9092 --partitions 3 --replicas 1 || true
+TOPIC           STATUS
+taxi.raw_trips  OK
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+Creating Pinot schema...
+curl -s -X POST "http://localhost:9010/schemas" \
+	-H "Content-Type: application/json" \
+	-d @pinot/schemas/taxi_trips_schema.json | python3 -m json.tool
+{
+    "code": 400,
+    "error": "Invalid schema: taxi_trips. Reason: Invalid format: 1:SIMPLE_DATE_FORMAT:yyyy-MM-dd'T'HH:mm:ss"
+}
+
+Creating Pinot real-time table...
+curl -s -X POST "http://localhost:9010/tables" \
+	-H "Content-Type: application/json" \
+	-d @pinot/tables/taxi_trips_table.json | python3 -m json.tool
+{
+    "code": 400,
+    "error": "Schema should not be null for REALTIME table"
+}
+Pinot table created. Events from Redpanda will be ingested automatically.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p16-redpanda  Running
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     redpanda:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.77s
+  Rate:    13,062 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited data generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+Waiting for Pinot ingestion (15s)...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+=== Pinot Query Benchmark ===
+Q1: Simple aggregate
+{
+    "numRowsResultSet": 0,
+    "partialResult": true,
+    "exceptions": [
+        {
+            "errorCode": 190,
+            "message": "TableDoesNotExistError"
+        }
+    ],
+    "numGroupsLimitReached": false,
+    "timeUsedMs": 0,
+    "requestId": "2019491803000000000",
+    "brokerId": "Broker_172.19.0.8_8099",
+    "numDocsScanned": 0,
+    "totalDocs": 0,
+    "numEntriesScannedInFilter": 0,
+    "numEntriesScannedPostFilter": 0,
+    "numServersQueried": 0,
+    "numServersResponded": 0,
+    "numSegmentsQueried": 0,
+    "numSegmentsProcessed": 0,
+    "numSegmentsMatched": 0,
+    "numConsumingSegmentsQueried": 0,
+    "numConsumingSegmentsProcessed": 0,
+    "numConsumingSegmentsMatched": 0,
+    "minConsumingFreshnessTimeMs": 0,
+    "numSegmentsPrunedByBroker": 0,
+    "numSegmentsPrunedByServer": 0,
+    "numSegmentsPrunedInvalid": 0,
+    "numSegmentsPrunedByLimit": 0,
+    "numSegmentsPrunedByValue": 0,
+    "brokerReduceTimeMs": 0,
+    "offlineThreadCpuTimeNs": 0,
+    "realtimeThreadCpuTimeNs": 0,
+    "offlineSystemActivitiesCpuTimeNs": 0,
+    "realtimeSystemActivitiesCpuTimeNs": 0,
+    "offlineResponseSerializationCpuTimeNs": 0,
+    "realtimeResponseSerializationCpuTimeNs": 0,
+    "offlineTotalCpuTimeNs": 0,
+    "realtimeTotalCpuTimeNs": 0,
+    "explainPlanNumEmptyFilterSegments": 0,
+    "explainPlanNumMatchAllFilterSegments": 0,
+    "traceInfo": {}
+}
+
+Q2: Top locations
+{
+    "numRowsResultSet": 0,
+    "partialResult": true,
+    "exceptions": [
+        {
+            "errorCode": 190,
+            "message": "TableDoesNotExistError"
+        }
+    ],
+    "numGroupsLimitReached": false,
+    "timeUsedMs": 0,
+    "requestId": "2019491803000000001",
+    "brokerId": "Broker_172.19.0.8_8099",
+    "numDocsScanned": 0,
+    "totalDocs": 0,
+    "numEntriesScannedInFilter": 0,
+    "numEntriesScannedPostFilter": 0,
+    "numServersQueried": 0,
+    "numServersResponded": 0,
+    "numSegmentsQueried": 0,
+    "numSegmentsProcessed": 0,
+    "numSegmentsMatched": 0,
+    "numConsumingSegmentsQueried": 0,
+    "numConsumingSegmentsProcessed": 0,
+    "numConsumingSegmentsMatched": 0,
+    "minConsumingFreshnessTimeMs": 0,
+    "numSegmentsPrunedByBroker": 0,
+    "numSegmentsPrunedByServer": 0,
+    "numSegmentsPrunedInvalid": 0,
+    "numSegmentsPrunedByLimit": 0,
+    "numSegmentsPrunedByValue": 0,
+    "brokerReduceTimeMs": 0,
+    "offlineThreadCpuTimeNs": 0,
+    "realtimeThreadCpuTimeNs": 0,
+    "offlineSystemActivitiesCpuTimeNs": 0,
+    "realtimeSystemActivitiesCpuTimeNs": 0,
+    "offlineResponseSerializationCpuTimeNs": 0,
+    "realtimeResponseSerializationCpuTimeNs": 0,
+    "offlineTotalCpuTimeNs": 0,
+    "realtimeTotalCpuTimeNs": 0,
+    "explainPlanNumEmptyFilterSegments": 0,
+    "explainPlanNumMatchAllFilterSegments": 0,
+    "traceInfo": {}
+}
+
+Q3: Payment type breakdown
+{
+    "numRowsResultSet": 0,
+    "partialResult": true,
+    "exceptions": [
+        {
+            "errorCode": 190,
+            "message": "TableDoesNotExistError"
+        }
+    ],
+    "numGroupsLimitReached": false,
+    "timeUsedMs": 0,
+    "requestId": "2019491803000000002",
+    "brokerId": "Broker_172.19.0.8_8099",
+    "numDocsScanned": 0,
+    "totalDocs": 0,
+    "numEntriesScannedInFilter": 0,
+    "numEntriesScannedPostFilter": 0,
+    "numServersQueried": 0,
+    "numServersResponded": 0,
+    "numSegmentsQueried": 0,
+    "numSegmentsProcessed": 0,
+    "numSegmentsMatched": 0,
+    "numConsumingSegmentsQueried": 0,
+    "numConsumingSegmentsProcessed": 0,
+    "numConsumingSegmentsMatched": 0,
+    "minConsumingFreshnessTimeMs": 0,
+    "numSegmentsPrunedByBroker": 0,
+    "numSegmentsPrunedByServer": 0,
+    "numSegmentsPrunedInvalid": 0,
+    "numSegmentsPrunedByLimit": 0,
+    "numSegmentsPrunedByValue": 0,
+    "brokerReduceTimeMs": 0,
+    "offlineThreadCpuTimeNs": 0,
+    "realtimeThreadCpuTimeNs": 0,
+    "offlineSystemActivitiesCpuTimeNs": 0,
+    "realtimeSystemActivitiesCpuTimeNs": 0,
+    "offlineResponseSerializationCpuTimeNs": 0,
+    "realtimeResponseSerializationCpuTimeNs": 0,
+    "offlineTotalCpuTimeNs": 0,
+    "realtimeTotalCpuTimeNs": 0,
+    "explainPlanNumEmptyFilterSegments": 0,
+    "explainPlanNumMatchAllFilterSegments": 0,
+    "traceInfo": {}
+}
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/05-bronze.sql
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+2026-02-21 15:09:06,881 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-21 15:09:06,925 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-21 15:09:06,925 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 21, 2026 3:09:08 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 16: Bronze Layer (Kafka -> Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS bronze.raw_trips (
+>     VendorID                BIGINT,
+>     tpep_pickup_datetime    TIMESTAMP(3),
+>     tpep_dropoff_datetime   TIMESTAMP(3),
+>     passenger_count         BIGINT,
+>     trip_distance           DOUBLE,
+>     RatecodeID              BIGINT,
+>     store_and_fwd_flag      STRING,
+>     PULocationID            BIGINT,
+>     DOLocationID            BIGINT,
+>     payment_type            BIGINT,
+>     fare_amount             DOUBLE,
+>     extra                   DOUBLE,
+>     mta_tax                 DOUBLE,
+>     tip_amount              DOUBLE,
+>     tolls_amount            DOUBLE,
+>     improvement_surcharge   DOUBLE,
+>     total_amount            DOUBLE,
+>     congestion_surcharge    DOUBLE,
+>     Airport_fee             DOUBLE,
+>     ingestion_ts            TIMESTAMP(3)
+> )
+> WITH (
+>     'format-version' = '1',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> INSERT INTO iceberg_catalog.bronze.raw_trips
+> SELECT
+>     VendorID,
+>     TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss')   AS tpep_pickup_datetime,
+>     TO_TIMESTAMP(tpep_dropoff_datetime, 'yyyy-MM-dd''T''HH:mm:ss')[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+2026-02-21 15:09:22,075 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-21 15:09:22,117 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-21 15:09:22,117 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 21, 2026 3:09:22 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 16: Silver Layer (Bronze Iceberg -> Silver Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
+>     trip_id                 STRING,
+>     vendor_id               INT,
+>     rate_code_id            INT,
+>     pickup_location_id      INT,
+>     dropoff_location_id     INT,
+>     payment_type_id         INT,
+>     pickup_datetime         TIMESTAMP(3),
+>     dropoff_datetime        TIMESTAMP(3),
+>     passenger_count         INT,
+>     trip_distance_miles     DOUBLE,
+>     store_and_fwd_flag      STRING,
+>     fare_amount             DECIMAL(10, 2),
+>     extra_amount            DECIMAL(10, 2),
+>     mta_tax                 DECIMAL(10, 2),
+>     tip_amount              DECIMAL(10, 2),
+>     tolls_amount            DECIMAL(10, 2),
+>     improvement_surcharge   DECIMAL(10, 2),
+>     total_amount            DECIMAL(10, 2),
+>     congestion_surcharge    DECIMAL(10, 2),
+>     airport_fee             DECIMAL(10, 2),
+>     pickup_date             DATE
+> ) PARTITIONED BY (pickup_date)
+> WITH (
+>     'format-version' = '2',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> -- Deduplication: ROW_NUMBER partitioned by natural key, keeping latest ingestion
+> INSERT INTO iceberg_catalog.silver.cleaned_trips
+> WITH deduped AS (
+>     SELECT *,
+>         ROW_NUMBER() OVER (
+>             PARTITION BY VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
+>                          PULocationID, DOLocationID, fare_amount, total_amount
+>             ORDER BY ingestion_ts DESC
+>         ) AS rn
+>     FROM iceberg_catalog.bronze.raw_trips
+>     WHERE tpep_pickup_datetime IS NOT NULL
+>       AND tpep_dropoff_datetime IS NOT NULL
+>       AND trip_distance >= 0
+>       AND fare_amount >= 0
+>       AND CAST(tpep_pickup_datetime AS DATE) >= DATE '2024-01-01'
+>       AND CAST(tpep_pickup_datetime AS DATE) <  DATE '2024-02-01'
+> )
+> SELECT
+>     CAST(MD5(CONCAT_WS('|',
+>         CAST(VendorID AS STRING),
+>         CAST(tpep_pickup_datetime AS STRING),
+>         CAST(tpep_dropoff_datetime AS STRING),
+>         CAST(PULocationID AS STRING),
+>         CAST(DOLocationID AS STRING),
+>         CAST(fare_amount AS STRING),
+>         CAST(total_amount AS STRING)
+>     )) AS STRING) AS trip_id,
+>     CAST(VendorID AS INT)       AS vendor_id,
+>     CAST(RatecodeID AS INT)     AS rate_code_id,
+>     CAST(PULocationID AS INT)   AS pickup_location_id,
+>     CAST(DOLocationID AS INT)   AS dropoff_location_id,
+>     CAST(payment_type AS INT)   AS payment_type_id,
+>     tpep_pickup_datetime        AS pickup_datetime,
+>     tpep_dropoff_datetime       AS dropoff_datetime,
+>     CAST(passenger_count AS INT) AS passenger_count,
+>     trip_distance               AS trip_distance_miles,
+>     store_and_fwd_flag,
+>     CAST(ROUND(fare_amount, 2)             AS DECIMAL(10, 2)) AS fare_amount,
+>     CAST(ROUND(extra, 2)                   AS DECIMAL(10, 2)) AS extra_amount,
+>     CAST(ROUND(mta_tax, 2)                 AS DECIMAL(10, 2)) AS mta_tax,
+>     CAST(ROUND(tip_amount, 2)              AS DECIMAL(10, 2)) AS tip_amount,
+>     CAST(ROUND(tolls_amount, 2)            AS DECIMAL(10, 2)) AS tolls_amount,
+>     CAST(ROUND(improvement_surcharge, 2)   AS DECIMAL(10, 2)) AS improvement_surcharge,
+>     CAST(ROUND(total_amount, 2)            AS DECIMAL(10, 2)) AS total_amount,
+>     CAST(ROUND(congestion_surcharge, 2)    AS DECIMAL(10, 2)) AS congestion_surcharge,
+>     CAST(ROUND(Airport_fee, 2)             AS DECIMAL(10, 2)) AS airport_fee,
+>     CAST(tpep_pickup_datetime AS DATE)[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/16-pinot-serving'
+
+============================================================
+  BENCHMARK COMPLETE
+  Total elapsed: 85s
+============================================================
+Results saved to benchmark_results/latest.json
+docker compose --profile generator down -v --remove-orphans
+ Container p16-flink-taskmanager  Stopping
+ Container p16-pinot-server  Stopping
+ Container p16-flink-taskmanager  Stopped
+ Container p16-flink-taskmanager  Removing
+ Container p16-flink-taskmanager  Removed
+ Container p16-flink-jobmanager  Stopping
+ Container p16-pinot-server  Stopped
+ Container p16-pinot-server  Removing
+ Container p16-pinot-server  Removed
+ Container p16-pinot-broker  Stopping
+ Container p16-flink-jobmanager  Stopped
+ Container p16-flink-jobmanager  Removing
+ Container p16-flink-jobmanager  Removed
+ Container p16-mc-init  Stopping
+ Container p16-redpanda  Stopping
+ Container p16-mc-init  Stopped
+ Container p16-mc-init  Removing
+ Container p16-mc-init  Removed
+ Container p16-minio  Stopping
+ Container p16-minio  Stopped
+ Container p16-minio  Removing
+ Container p16-minio  Removed
+ Container p16-redpanda  Stopped
+ Container p16-redpanda  Removing
+ Container p16-redpanda  Removed
+ Container p16-pinot-broker  Stopped
+ Container p16-pinot-broker  Removing
+ Container p16-pinot-broker  Removed
+ Container p16-pinot-controller  Stopping
+ Container p16-pinot-controller  Stopped
+ Container p16-pinot-controller  Removing
+ Container p16-pinot-controller  Removed
+ Container p16-pinot-zookeeper  Stopping
+ Container p16-pinot-zookeeper  Stopped
+ Container p16-pinot-zookeeper  Removing
+ Container p16-pinot-zookeeper  Removed
+ Network p16-pipeline-net  Removing
+ Volume 16-pinot-serving_minio-data  Removing
+ Volume 16-pinot-serving_flink-checkpoints  Removing
+ Volume 16-pinot-serving_flink-checkpoints  Removed
+ Volume 16-pinot-serving_minio-data  Removed
+ Network p16-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.

@@ -1,0 +1,488 @@
+docker compose down -v
+ Network 00-batch-baseline_default  Removing
+ Network 00-batch-baseline_default  Removed
+docker compose up --build --abort-on-container-exit
+#1 [internal] load local bake definitions
+#1 reading from stdin 616B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 494B 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [1/8] FROM docker.io/library/python:3.12-slim@sha256:9e01bf1ae5db7649a236da7be1e94ffbbbdd7a93f867dd0d8d5720d9e1f89fab
+#5 resolve docker.io/library/python:3.12-slim@sha256:9e01bf1ae5db7649a236da7be1e94ffbbbdd7a93f867dd0d8d5720d9e1f89fab 0.0s done
+#5 DONE 0.0s
+
+#6 [internal] load build context
+#6 transferring context: 80.00MB 5.1s
+#6 transferring context: 162.50MB 10.1s
+#6 transferring context: 244.44MB 15.2s
+#6 transferring context: 327.34MB 20.2s
+#6 transferring context: 388.92MB 25.3s
+#6 transferring context: 459.87MB 29.9s done
+#6 DONE 30.0s
+
+#7 [2/8] RUN pip install --no-cache-dir dbt-duckdb==1.9.1
+#7 CACHED
+
+#8 [3/8] WORKDIR /dbt
+#8 CACHED
+
+#9 [4/8] COPY dbt_project/packages.yml /dbt/packages.yml
+#9 CACHED
+
+#10 [5/8] COPY dbt_project/dbt_project.yml /dbt/dbt_project.yml
+#10 CACHED
+
+#11 [6/8] COPY dbt_project/profiles.yml /dbt/profiles.yml
+#11 CACHED
+
+#12 [7/8] RUN dbt deps --profiles-dir .
+#12 CACHED
+
+#13 [8/8] COPY dbt_project/ /dbt/
+#13 DONE 1.7s
+
+#14 exporting to image
+#14 exporting layers
+#14 exporting layers 7.8s done
+#14 exporting manifest sha256:bf328708fc6020cce8f7ef1c6b758d53fdda935b8225a9e520e963dfa18b8b04 0.0s done
+#14 exporting config sha256:d86a551e72502820827b1d791aefdcf530e7e805279789abdbe30b2aa87cee94 0.0s done
+#14 exporting attestation manifest sha256:489ee2e615c2ebf29f6e8b2d287a3f8a4d5d9e005b21b94cf70c02c7dba758d9 0.0s done
+#14 exporting manifest list sha256:dc698695c8a12647c21b89254c82852acd1ecb09e0b05ca799598ff3c5e035e2
+#14 exporting manifest list sha256:dc698695c8a12647c21b89254c82852acd1ecb09e0b05ca799598ff3c5e035e2 0.0s done
+#14 naming to docker.io/library/00-batch-baseline-dbt:latest done
+#14 unpacking to docker.io/library/00-batch-baseline-dbt:latest
+#14 unpacking to docker.io/library/00-batch-baseline-dbt:latest 1.4s done
+#14 DONE 9.4s
+
+#15 resolving provenance for metadata file
+#15 DONE 0.0s
+ 00-batch-baseline-dbt  Built
+ Network 00-batch-baseline_default  Creating
+ Network 00-batch-baseline_default  Created
+ Container 00-batch-baseline-dbt-1  Creating
+ Container 00-batch-baseline-dbt-1  Created
+Attaching to dbt-1
+dbt-1  | [0m14:40:15  Running with dbt=1.11.4
+dbt-1  | [0m14:40:16  Installing dbt-labs/dbt_utils
+dbt-1  | [0m14:40:19  Installed from version 1.3.3
+dbt-1  | [0m14:40:19  Up to date!
+dbt-1  | [0m14:40:21  Running with dbt=1.11.4
+dbt-1  | [0m14:40:21  Registered adapter: duckdb=1.9.1
+dbt-1  | [0m14:40:22  Found 14 models, 74 data tests, 3 seeds, 1 source, 578 macros
+dbt-1  | [0m14:40:22  
+dbt-1  | [0m14:40:22  Concurrency: 4 threads (target='dev')
+dbt-1  | [0m14:40:22  
+dbt-1  | [0m14:40:22  1 of 91 START sql table model main.dim_dates ................................... [RUN]
+dbt-1  | [0m14:40:22  2 of 91 START sql table model main.stg_yellow_trips ............................ [RUN]
+dbt-1  | [0m14:40:22  3 of 91 START seed file main.payment_type_lookup ............................... [RUN]
+dbt-1  | [0m14:40:22  4 of 91 START seed file main.rate_code_lookup .................................. [RUN]
+dbt-1  | [0m14:40:22  4 of 91 OK loaded seed file main.rate_code_lookup .............................. [[32mCREATE 7[0m in 0.15s]
+dbt-1  | [0m14:40:22  5 of 91 START seed file main.taxi_zone_lookup .................................. [RUN]
+dbt-1  | [0m14:40:22  3 of 91 OK loaded seed file main.payment_type_lookup ........................... [[32mCREATE 6[0m in 0.15s]
+dbt-1  | [0m14:40:22  6 of 91 START test not_null_rate_code_lookup_rate_code_id ...................... [RUN]
+dbt-1  | [0m14:40:22  1 of 91 OK created sql table model main.dim_dates .............................. [[32mOK[0m in 0.20s]
+dbt-1  | [0m14:40:22  7 of 91 START test unique_rate_code_lookup_rate_code_id ........................ [RUN]
+dbt-1  | [0m14:40:22  6 of 91 PASS not_null_rate_code_lookup_rate_code_id ............................ [[32mPASS[0m in 0.06s]
+dbt-1  | [0m14:40:22  8 of 91 START test not_null_payment_type_lookup_payment_type_id ................ [RUN]
+dbt-1  | [0m14:40:22  5 of 91 OK loaded seed file main.taxi_zone_lookup .............................. [[32mCREATE 265[0m in 0.09s]
+dbt-1  | [0m14:40:22  9 of 91 START test unique_payment_type_lookup_payment_type_id .................. [RUN]
+dbt-1  | [0m14:40:22  7 of 91 PASS unique_rate_code_lookup_rate_code_id .............................. [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:22  10 of 91 START test not_null_dim_dates_date_key ................................ [RUN]
+dbt-1  | [0m14:40:22  8 of 91 PASS not_null_payment_type_lookup_payment_type_id ...................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:22  11 of 91 START test not_null_dim_dates_day_of_week_name ........................ [RUN]
+dbt-1  | [0m14:40:22  9 of 91 PASS unique_payment_type_lookup_payment_type_id ........................ [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:22  12 of 91 START test not_null_dim_dates_is_holiday .............................. [RUN]
+dbt-1  | [0m14:40:22  10 of 91 PASS not_null_dim_dates_date_key ...................................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:22  11 of 91 PASS not_null_dim_dates_day_of_week_name .............................. [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:22  13 of 91 START test not_null_dim_dates_is_weekend .............................. [RUN]
+dbt-1  | [0m14:40:22  14 of 91 START test unique_dim_dates_date_key .................................. [RUN]
+dbt-1  | [0m14:40:22  12 of 91 PASS not_null_dim_dates_is_holiday .................................... [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:22  13 of 91 PASS not_null_dim_dates_is_weekend .................................... [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:22  15 of 91 START test not_null_taxi_zone_lookup_Borough .......................... [RUN]
+dbt-1  | [0m14:40:22  16 of 91 START test not_null_taxi_zone_lookup_LocationID ....................... [RUN]
+dbt-1  | [0m14:40:22  14 of 91 PASS unique_dim_dates_date_key ........................................ [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:22  17 of 91 START test unique_taxi_zone_lookup_LocationID ......................... [RUN]
+dbt-1  | [0m14:40:22  15 of 91 PASS not_null_taxi_zone_lookup_Borough ................................ [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:22  16 of 91 PASS not_null_taxi_zone_lookup_LocationID ............................. [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:22  18 of 91 START sql view model main.stg_rate_codes .............................. [RUN]
+dbt-1  | [0m14:40:22  19 of 91 START sql view model main.stg_payment_types ........................... [RUN]
+dbt-1  | [0m14:40:22  17 of 91 PASS unique_taxi_zone_lookup_LocationID ............................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:22  20 of 91 START sql view model main.stg_taxi_zones .............................. [RUN]
+dbt-1  | [0m14:40:22  18 of 91 OK created sql view model main.stg_rate_codes ......................... [[32mOK[0m in 0.07s]
+dbt-1  | [0m14:40:22  19 of 91 OK created sql view model main.stg_payment_types ...................... [[32mOK[0m in 0.07s]
+dbt-1  | [0m14:40:22  21 of 91 START test not_null_stg_rate_codes_rate_code_id ....................... [RUN]
+dbt-1  | [0m14:40:22  22 of 91 START test not_null_stg_rate_codes_rate_code_name ..................... [RUN]
+dbt-1  | [0m14:40:22  20 of 91 OK created sql view model main.stg_taxi_zones ......................... [[32mOK[0m in 0.07s]
+dbt-1  | [0m14:40:22  23 of 91 START test unique_stg_rate_codes_rate_code_id ......................... [RUN]
+dbt-1  | [0m14:40:22  21 of 91 PASS not_null_stg_rate_codes_rate_code_id ............................. [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:22  22 of 91 PASS not_null_stg_rate_codes_rate_code_name ........................... [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:22  24 of 91 START test not_null_stg_payment_types_payment_type_id ................. [RUN]
+dbt-1  | [0m14:40:22  25 of 91 START test not_null_stg_payment_types_payment_type_name ............... [RUN]
+dbt-1  | [0m14:40:23  23 of 91 PASS unique_stg_rate_codes_rate_code_id ............................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  26 of 91 START test unique_stg_payment_types_payment_type_id ................... [RUN]
+dbt-1  | [0m14:40:23  24 of 91 PASS not_null_stg_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  25 of 91 PASS not_null_stg_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  27 of 91 START test not_null_stg_taxi_zones_borough ............................ [RUN]
+dbt-1  | [0m14:40:23  28 of 91 START test not_null_stg_taxi_zones_location_id ........................ [RUN]
+dbt-1  | [0m14:40:23  26 of 91 PASS unique_stg_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  29 of 91 START test not_null_stg_taxi_zones_zone_name .......................... [RUN]
+dbt-1  | [0m14:40:23  28 of 91 PASS not_null_stg_taxi_zones_location_id .............................. [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  27 of 91 PASS not_null_stg_taxi_zones_borough .................................. [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  30 of 91 START test unique_stg_taxi_zones_location_id .......................... [RUN]
+dbt-1  | [0m14:40:23  31 of 91 START sql table model main.dim_payment_types .......................... [RUN]
+dbt-1  | [0m14:40:23  29 of 91 PASS not_null_stg_taxi_zones_zone_name ................................ [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  30 of 91 PASS unique_stg_taxi_zones_location_id ................................ [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:23  32 of 91 START sql table model main.dim_locations .............................. [RUN]
+dbt-1  | [0m14:40:23  31 of 91 OK created sql table model main.dim_payment_types ..................... [[32mOK[0m in 0.06s]
+dbt-1  | [0m14:40:23  33 of 91 START test not_null_dim_payment_types_payment_type_id ................. [RUN]
+dbt-1  | [0m14:40:23  34 of 91 START test not_null_dim_payment_types_payment_type_name ............... [RUN]
+dbt-1  | [0m14:40:23  32 of 91 OK created sql table model main.dim_locations ......................... [[32mOK[0m in 0.07s]
+dbt-1  | [0m14:40:23  34 of 91 PASS not_null_dim_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:23  35 of 91 START test unique_dim_payment_types_payment_type_id ................... [RUN]
+dbt-1  | [0m14:40:23  33 of 91 PASS not_null_dim_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:23  36 of 91 START test not_null_dim_locations_borough ............................. [RUN]
+dbt-1  | [0m14:40:23  37 of 91 START test not_null_dim_locations_location_id ......................... [RUN]
+dbt-1  | [0m14:40:23  35 of 91 PASS unique_dim_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  36 of 91 PASS not_null_dim_locations_borough ................................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  38 of 91 START test not_null_dim_locations_zone_name ........................... [RUN]
+dbt-1  | [0m14:40:23  37 of 91 PASS not_null_dim_locations_location_id ............................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  39 of 91 START test unique_dim_locations_location_id ........................... [RUN]
+dbt-1  | [0m14:40:23  38 of 91 PASS not_null_dim_locations_zone_name ................................. [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:23  39 of 91 PASS unique_dim_locations_location_id ................................. [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:24  2 of 91 OK created sql table model main.stg_yellow_trips ....................... [[32mOK[0m in 1.97s]
+dbt-1  | [0m14:40:24  40 of 91 START test accepted_values_stg_yellow_trips_payment_type_id__0__1__2__3__4__5__6  [RUN]
+dbt-1  | [0m14:40:24  41 of 91 START test accepted_values_stg_yellow_trips_rate_code_id__1__2__3__4__5__6__99  [RUN]
+dbt-1  | [0m14:40:24  42 of 91 START test accepted_values_stg_yellow_trips_vendor_id__1__2__6 ........ [RUN]
+dbt-1  | [0m14:40:24  43 of 91 START test assert_fare_not_exceeds_total .............................. [RUN]
+dbt-1  | [0m14:40:24  42 of 91 PASS accepted_values_stg_yellow_trips_vendor_id__1__2__6 .............. [[32mPASS[0m in 0.09s]
+dbt-1  | [0m14:40:24  40 of 91 PASS accepted_values_stg_yellow_trips_payment_type_id__0__1__2__3__4__5__6  [[32mPASS[0m in 0.09s]
+dbt-1  | [0m14:40:24  41 of 91 PASS accepted_values_stg_yellow_trips_rate_code_id__1__2__3__4__5__6__99  [[32mPASS[0m in 0.09s]
+dbt-1  | [0m14:40:24  44 of 91 START test not_null_stg_yellow_trips_dropoff_datetime ................. [RUN]
+dbt-1  | [0m14:40:24  45 of 91 START test not_null_stg_yellow_trips_dropoff_location_id .............. [RUN]
+dbt-1  | [0m14:40:24  46 of 91 START test not_null_stg_yellow_trips_fare_amount ...................... [RUN]
+dbt-1  | [0m14:40:24  43 of 91 PASS assert_fare_not_exceeds_total .................................... [[32mPASS[0m in 0.10s]
+dbt-1  | [0m14:40:24  47 of 91 START test not_null_stg_yellow_trips_pickup_datetime .................. [RUN]
+dbt-1  | [0m14:40:24  45 of 91 PASS not_null_stg_yellow_trips_dropoff_location_id .................... [[32mPASS[0m in 0.06s]
+dbt-1  | [0m14:40:24  44 of 91 PASS not_null_stg_yellow_trips_dropoff_datetime ....................... [[32mPASS[0m in 0.06s]
+dbt-1  | [0m14:40:24  46 of 91 PASS not_null_stg_yellow_trips_fare_amount ............................ [[32mPASS[0m in 0.06s]
+dbt-1  | [0m14:40:24  47 of 91 PASS not_null_stg_yellow_trips_pickup_datetime ........................ [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:24  48 of 91 START test not_null_stg_yellow_trips_pickup_location_id ............... [RUN]
+dbt-1  | [0m14:40:24  49 of 91 START test not_null_stg_yellow_trips_total_amount ..................... [RUN]
+dbt-1  | [0m14:40:24  50 of 91 START test not_null_stg_yellow_trips_trip_distance_miles .............. [RUN]
+dbt-1  | [0m14:40:24  51 of 91 START test not_null_stg_yellow_trips_trip_id .......................... [RUN]
+dbt-1  | [0m14:40:24  49 of 91 PASS not_null_stg_yellow_trips_total_amount ........................... [[32mPASS[0m in 0.06s]
+dbt-1  | [0m14:40:24  48 of 91 PASS not_null_stg_yellow_trips_pickup_location_id ..................... [[32mPASS[0m in 0.06s]
+dbt-1  | [0m14:40:24  50 of 91 PASS not_null_stg_yellow_trips_trip_distance_miles .................... [[32mPASS[0m in 0.06s]
+dbt-1  | [0m14:40:24  51 of 91 PASS not_null_stg_yellow_trips_trip_id ................................ [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:24  52 of 91 START test not_null_stg_yellow_trips_vendor_id ........................ [RUN]
+dbt-1  | [0m14:40:24  53 of 91 START test unique_stg_yellow_trips_trip_id ............................ [RUN]
+dbt-1  | [0m14:40:24  54 of 91 START test relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+dbt-1  | [0m14:40:24  55 of 91 START test relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+dbt-1  | [0m14:40:24  52 of 91 PASS not_null_stg_yellow_trips_vendor_id .............................. [[32mPASS[0m in 0.06s]
+dbt-1  | [0m14:40:24  54 of 91 PASS relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.16s]
+dbt-1  | [0m14:40:24  55 of 91 PASS relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.15s]
+dbt-1  | [0m14:40:24  53 of 91 PASS unique_stg_yellow_trips_trip_id .................................. [[32mPASS[0m in 0.21s]
+dbt-1  | [0m14:40:24  56 of 91 START sql view model main.int_trip_metrics ............................ [RUN]
+dbt-1  | [0m14:40:25  56 of 91 OK created sql view model main.int_trip_metrics ....................... [[32mOK[0m in 0.14s]
+dbt-1  | [0m14:40:25  57 of 91 START test assert_trip_duration_positive .............................. [RUN]
+dbt-1  | [0m14:40:25  58 of 91 START test dbt_utils_accepted_range_int_trip_metrics_pickup_hour__23__0  [RUN]
+dbt-1  | [0m14:40:25  59 of 91 START test dbt_utils_accepted_range_int_trip_metrics_trip_duration_minutes__720__1  [RUN]
+dbt-1  | [0m14:40:25  60 of 91 START test not_null_int_trip_metrics_is_weekend ....................... [RUN]
+dbt-1  | [0m14:40:25  57 of 91 PASS assert_trip_duration_positive .................................... [[32mPASS[0m in 0.67s]
+dbt-1  | [0m14:40:25  60 of 91 PASS not_null_int_trip_metrics_is_weekend ............................. [[32mPASS[0m in 0.67s]
+dbt-1  | [0m14:40:25  61 of 91 START test not_null_int_trip_metrics_pickup_date ...................... [RUN]
+dbt-1  | [0m14:40:25  62 of 91 START test not_null_int_trip_metrics_pickup_hour ...................... [RUN]
+dbt-1  | [0m14:40:25  58 of 91 PASS dbt_utils_accepted_range_int_trip_metrics_pickup_hour__23__0 ..... [[32mPASS[0m in 0.71s]
+dbt-1  | [0m14:40:25  63 of 91 START test not_null_int_trip_metrics_trip_duration_minutes ............ [RUN]
+dbt-1  | [0m14:40:25  59 of 91 PASS dbt_utils_accepted_range_int_trip_metrics_trip_duration_minutes__720__1  [[32mPASS[0m in 0.74s]
+dbt-1  | [0m14:40:25  64 of 91 START test not_null_int_trip_metrics_trip_id .......................... [RUN]
+dbt-1  | [0m14:40:26  61 of 91 PASS not_null_int_trip_metrics_pickup_date ............................ [[32mPASS[0m in 0.85s]
+dbt-1  | [0m14:40:26  64 of 91 PASS not_null_int_trip_metrics_trip_id ................................ [[32mPASS[0m in 0.81s]
+dbt-1  | [0m14:40:26  62 of 91 PASS not_null_int_trip_metrics_pickup_hour ............................ [[32mPASS[0m in 0.86s]
+dbt-1  | [0m14:40:26  63 of 91 PASS not_null_int_trip_metrics_trip_duration_minutes .................. [[32mPASS[0m in 0.86s]
+dbt-1  | [0m14:40:26  65 of 91 START sql view model main.int_daily_summary ........................... [RUN]
+dbt-1  | [0m14:40:26  66 of 91 START sql view model main.int_hourly_patterns ......................... [RUN]
+dbt-1  | [0m14:40:26  67 of 91 START sql incremental model main.fct_trips ............................ [RUN]
+dbt-1  | [0m14:40:26  65 of 91 OK created sql view model main.int_daily_summary ...................... [[32mOK[0m in 0.11s]
+dbt-1  | [0m14:40:26  68 of 91 START test dbt_utils_accepted_range_int_daily_summary_total_trips__0 .. [RUN]
+dbt-1  | [0m14:40:26  69 of 91 START test not_null_int_daily_summary_pickup_date ..................... [RUN]
+dbt-1  | [0m14:40:26  66 of 91 OK created sql view model main.int_hourly_patterns .................... [[32mOK[0m in 0.12s]
+dbt-1  | [0m14:40:26  70 of 91 START test not_null_int_daily_summary_total_revenue ................... [RUN]
+dbt-1  | [0m14:40:26  69 of 91 PASS not_null_int_daily_summary_pickup_date ........................... [[32mPASS[0m in 0.14s]
+dbt-1  | [0m14:40:26  71 of 91 START test not_null_int_daily_summary_total_trips ..................... [RUN]
+dbt-1  | [0m14:40:27  68 of 91 PASS dbt_utils_accepted_range_int_daily_summary_total_trips__0 ........ [[32mPASS[0m in 0.38s]
+dbt-1  | [0m14:40:27  72 of 91 START test unique_int_daily_summary_pickup_date ....................... [RUN]
+dbt-1  | [0m14:40:27  71 of 91 PASS not_null_int_daily_summary_total_trips ........................... [[32mPASS[0m in 0.34s]
+dbt-1  | [0m14:40:27  73 of 91 START test dbt_utils_accepted_range_int_hourly_patterns_pickup_hour__23__0  [RUN]
+dbt-1  | [0m14:40:27  70 of 91 PASS not_null_int_daily_summary_total_revenue ......................... [[32mPASS[0m in 0.47s]
+dbt-1  | [0m14:40:27  74 of 91 START test not_null_int_hourly_patterns_pickup_date ................... [RUN]
+dbt-1  | [0m14:40:27  74 of 91 PASS not_null_int_hourly_patterns_pickup_date ......................... [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:27  75 of 91 START test not_null_int_hourly_patterns_pickup_hour ................... [RUN]
+dbt-1  | [0m14:40:27  73 of 91 PASS dbt_utils_accepted_range_int_hourly_patterns_pickup_hour__23__0 .. [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:27  76 of 91 START test not_null_int_hourly_patterns_total_trips ................... [RUN]
+dbt-1  | [0m14:40:27  75 of 91 PASS not_null_int_hourly_patterns_pickup_hour ......................... [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:27  72 of 91 PASS unique_int_daily_summary_pickup_date ............................. [[32mPASS[0m in 0.21s]
+dbt-1  | [0m14:40:27  77 of 91 START sql table model main.mart_daily_revenue ......................... [RUN]
+dbt-1  | [0m14:40:27  76 of 91 PASS not_null_int_hourly_patterns_total_trips ......................... [[32mPASS[0m in 0.16s]
+dbt-1  | [0m14:40:27  78 of 91 START sql table model main.mart_hourly_demand ......................... [RUN]
+dbt-1  | [0m14:40:27  77 of 91 OK created sql table model main.mart_daily_revenue .................... [[32mOK[0m in 0.29s]
+dbt-1  | [0m14:40:27  79 of 91 START test not_null_mart_daily_revenue_date_key ....................... [RUN]
+dbt-1  | [0m14:40:27  80 of 91 START test not_null_mart_daily_revenue_total_revenue .................. [RUN]
+dbt-1  | [0m14:40:27  80 of 91 PASS not_null_mart_daily_revenue_total_revenue ........................ [[32mPASS[0m in 0.04s]
+dbt-1  | [0m14:40:27  79 of 91 PASS not_null_mart_daily_revenue_date_key ............................. [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:27  81 of 91 START test unique_mart_daily_revenue_date_key ......................... [RUN]
+dbt-1  | [0m14:40:27  78 of 91 OK created sql table model main.mart_hourly_demand .................... [[32mOK[0m in 0.25s]
+dbt-1  | [0m14:40:27  81 of 91 PASS unique_mart_daily_revenue_date_key ............................... [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:27  82 of 91 START test not_null_mart_hourly_demand_is_weekend ..................... [RUN]
+dbt-1  | [0m14:40:27  83 of 91 START test not_null_mart_hourly_demand_pickup_hour .................... [RUN]
+dbt-1  | [0m14:40:27  83 of 91 PASS not_null_mart_hourly_demand_pickup_hour .......................... [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:27  82 of 91 PASS not_null_mart_hourly_demand_is_weekend ........................... [[32mPASS[0m in 0.03s]
+dbt-1  | [0m14:40:31  67 of 91 OK created sql incremental model main.fct_trips ....................... [[32mOK[0m in 5.26s]
+dbt-1  | [0m14:40:31  84 of 91 START test not_null_fct_trips_pickup_datetime ......................... [RUN]
+dbt-1  | [0m14:40:31  85 of 91 START test not_null_fct_trips_total_amount ............................ [RUN]
+dbt-1  | [0m14:40:31  86 of 91 START test not_null_fct_trips_trip_id ................................. [RUN]
+dbt-1  | [0m14:40:31  87 of 91 START test unique_fct_trips_trip_id ................................... [RUN]
+dbt-1  | [0m14:40:31  84 of 91 PASS not_null_fct_trips_pickup_datetime ............................... [[32mPASS[0m in 0.07s]
+dbt-1  | [0m14:40:31  86 of 91 PASS not_null_fct_trips_trip_id ....................................... [[32mPASS[0m in 0.07s]
+dbt-1  | [0m14:40:31  85 of 91 PASS not_null_fct_trips_total_amount .................................. [[32mPASS[0m in 0.07s]
+dbt-1  | [0m14:40:32  87 of 91 PASS unique_fct_trips_trip_id ......................................... [[32mPASS[0m in 0.18s]
+dbt-1  | [0m14:40:32  88 of 91 START sql table model main.mart_location_performance .................. [RUN]
+dbt-1  | [0m14:40:32  88 of 91 OK created sql table model main.mart_location_performance ............. [[32mOK[0m in 0.21s]
+dbt-1  | [0m14:40:32  89 of 91 START test not_null_mart_location_performance_pickup_location_id ...... [RUN]
+dbt-1  | [0m14:40:32  90 of 91 START test not_null_mart_location_performance_total_pickups ........... [RUN]
+dbt-1  | [0m14:40:32  91 of 91 START test unique_mart_location_performance_pickup_location_id ........ [RUN]
+dbt-1  | [0m14:40:32  89 of 91 PASS not_null_mart_location_performance_pickup_location_id ............ [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:32  90 of 91 PASS not_null_mart_location_performance_total_pickups ................. [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:32  91 of 91 PASS unique_mart_location_performance_pickup_location_id .............. [[32mPASS[0m in 0.05s]
+dbt-1  | [0m14:40:32  
+dbt-1  | [0m14:40:32  Finished running 1 incremental model, 3 seeds, 7 table models, 74 data tests, 6 view models in 0 hours 0 minutes and 10.13 seconds (10.13s).
+dbt-1  | [0m14:40:32  
+dbt-1  | [0m14:40:32  [32mCompleted successfully[0m
+dbt-1  | [0m14:40:32  
+dbt-1  | [0m14:40:32  Done. PASS=91 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=91
+[Kdbt-1 exited with code 0
+[31m[1mAborting on container exit...[0m
+ Container 00-batch-baseline-dbt-1  Stopping
+ Container 00-batch-baseline-dbt-1  Stopped
+=== Benchmark: Pipeline 00 - Batch Baseline ===
+time MSYS_NO_PATHCONV=1 docker compose run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
+[0m14:40:44  Running with dbt=1.11.4
+[0m14:40:44  Installing dbt-labs/dbt_utils
+[0m14:40:47  Installed from version 1.3.3
+[0m14:40:47  Up to date!
+[0m14:40:48  Running with dbt=1.11.4
+[0m14:40:48  Registered adapter: duckdb=1.9.1
+[0m14:40:49  Found 14 models, 74 data tests, 3 seeds, 1 source, 578 macros
+[0m14:40:49  
+[0m14:40:49  Concurrency: 4 threads (target='dev')
+[0m14:40:49  
+[0m14:40:49  1 of 91 START sql table model main.dim_dates ................................... [RUN]
+[0m14:40:49  2 of 91 START sql table model main.stg_yellow_trips ............................ [RUN]
+[0m14:40:49  3 of 91 START seed file main.payment_type_lookup ............................... [RUN]
+[0m14:40:49  4 of 91 START seed file main.rate_code_lookup .................................. [RUN]
+[0m14:40:49  4 of 91 OK loaded seed file main.rate_code_lookup .............................. [[32mCREATE 7[0m in 0.15s]
+[0m14:40:49  3 of 91 OK loaded seed file main.payment_type_lookup ........................... [[32mCREATE 6[0m in 0.15s]
+[0m14:40:49  5 of 91 START seed file main.taxi_zone_lookup .................................. [RUN]
+[0m14:40:49  6 of 91 START test not_null_rate_code_lookup_rate_code_id ...................... [RUN]
+[0m14:40:49  1 of 91 OK created sql table model main.dim_dates .............................. [[32mOK[0m in 0.20s]
+[0m14:40:49  7 of 91 START test unique_rate_code_lookup_rate_code_id ........................ [RUN]
+[0m14:40:49  6 of 91 PASS not_null_rate_code_lookup_rate_code_id ............................ [[32mPASS[0m in 0.06s]
+[0m14:40:49  8 of 91 START test not_null_payment_type_lookup_payment_type_id ................ [RUN]
+[0m14:40:49  5 of 91 OK loaded seed file main.taxi_zone_lookup .............................. [[32mCREATE 265[0m in 0.07s]
+[0m14:40:49  9 of 91 START test unique_payment_type_lookup_payment_type_id .................. [RUN]
+[0m14:40:49  7 of 91 PASS unique_rate_code_lookup_rate_code_id .............................. [[32mPASS[0m in 0.04s]
+[0m14:40:49  10 of 91 START test not_null_dim_dates_date_key ................................ [RUN]
+[0m14:40:49  8 of 91 PASS not_null_payment_type_lookup_payment_type_id ...................... [[32mPASS[0m in 0.04s]
+[0m14:40:49  11 of 91 START test not_null_dim_dates_day_of_week_name ........................ [RUN]
+[0m14:40:49  9 of 91 PASS unique_payment_type_lookup_payment_type_id ........................ [[32mPASS[0m in 0.04s]
+[0m14:40:49  12 of 91 START test not_null_dim_dates_is_holiday .............................. [RUN]
+[0m14:40:49  10 of 91 PASS not_null_dim_dates_date_key ...................................... [[32mPASS[0m in 0.04s]
+[0m14:40:49  13 of 91 START test not_null_dim_dates_is_weekend .............................. [RUN]
+[0m14:40:49  11 of 91 PASS not_null_dim_dates_day_of_week_name .............................. [[32mPASS[0m in 0.04s]
+[0m14:40:49  14 of 91 START test unique_dim_dates_date_key .................................. [RUN]
+[0m14:40:49  12 of 91 PASS not_null_dim_dates_is_holiday .................................... [[32mPASS[0m in 0.05s]
+[0m14:40:49  13 of 91 PASS not_null_dim_dates_is_weekend .................................... [[32mPASS[0m in 0.03s]
+[0m14:40:49  15 of 91 START test not_null_taxi_zone_lookup_Borough .......................... [RUN]
+[0m14:40:49  16 of 91 START test not_null_taxi_zone_lookup_LocationID ....................... [RUN]
+[0m14:40:49  14 of 91 PASS unique_dim_dates_date_key ........................................ [[32mPASS[0m in 0.05s]
+[0m14:40:49  17 of 91 START test unique_taxi_zone_lookup_LocationID ......................... [RUN]
+[0m14:40:49  16 of 91 PASS not_null_taxi_zone_lookup_LocationID ............................. [[32mPASS[0m in 0.04s]
+[0m14:40:49  15 of 91 PASS not_null_taxi_zone_lookup_Borough ................................ [[32mPASS[0m in 0.04s]
+[0m14:40:49  18 of 91 START sql view model main.stg_rate_codes .............................. [RUN]
+[0m14:40:49  19 of 91 START sql view model main.stg_payment_types ........................... [RUN]
+[0m14:40:49  17 of 91 PASS unique_taxi_zone_lookup_LocationID ............................... [[32mPASS[0m in 0.05s]
+[0m14:40:49  20 of 91 START sql view model main.stg_taxi_zones .............................. [RUN]
+[0m14:40:49  19 of 91 OK created sql view model main.stg_payment_types ...................... [[32mOK[0m in 0.08s]
+[0m14:40:49  18 of 91 OK created sql view model main.stg_rate_codes ......................... [[32mOK[0m in 0.09s]
+[0m14:40:49  21 of 91 START test not_null_stg_payment_types_payment_type_id ................. [RUN]
+[0m14:40:49  22 of 91 START test not_null_stg_payment_types_payment_type_name ............... [RUN]
+[0m14:40:49  20 of 91 OK created sql view model main.stg_taxi_zones ......................... [[32mOK[0m in 0.08s]
+[0m14:40:50  23 of 91 START test unique_stg_payment_types_payment_type_id ................... [RUN]
+[0m14:40:50  21 of 91 PASS not_null_stg_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.05s]
+[0m14:40:50  22 of 91 PASS not_null_stg_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.04s]
+[0m14:40:50  24 of 91 START test not_null_stg_rate_codes_rate_code_id ....................... [RUN]
+[0m14:40:50  25 of 91 START test not_null_stg_rate_codes_rate_code_name ..................... [RUN]
+[0m14:40:50  24 of 91 PASS not_null_stg_rate_codes_rate_code_id ............................. [[32mPASS[0m in 0.03s]
+[0m14:40:50  23 of 91 PASS unique_stg_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.04s]
+[0m14:40:50  25 of 91 PASS not_null_stg_rate_codes_rate_code_name ........................... [[32mPASS[0m in 0.03s]
+[0m14:40:50  26 of 91 START test unique_stg_rate_codes_rate_code_id ......................... [RUN]
+[0m14:40:50  27 of 91 START test not_null_stg_taxi_zones_borough ............................ [RUN]
+[0m14:40:50  28 of 91 START test not_null_stg_taxi_zones_location_id ........................ [RUN]
+[0m14:40:50  26 of 91 PASS unique_stg_rate_codes_rate_code_id ............................... [[32mPASS[0m in 0.03s]
+[0m14:40:50  29 of 91 START test not_null_stg_taxi_zones_zone_name .......................... [RUN]
+[0m14:40:50  28 of 91 PASS not_null_stg_taxi_zones_location_id .............................. [[32mPASS[0m in 0.04s]
+[0m14:40:50  27 of 91 PASS not_null_stg_taxi_zones_borough .................................. [[32mPASS[0m in 0.04s]
+[0m14:40:50  30 of 91 START test unique_stg_taxi_zones_location_id .......................... [RUN]
+[0m14:40:50  31 of 91 START sql table model main.dim_payment_types .......................... [RUN]
+[0m14:40:50  29 of 91 PASS not_null_stg_taxi_zones_zone_name ................................ [[32mPASS[0m in 0.04s]
+[0m14:40:50  30 of 91 PASS unique_stg_taxi_zones_location_id ................................ [[32mPASS[0m in 0.03s]
+[0m14:40:50  32 of 91 START sql table model main.dim_locations .............................. [RUN]
+[0m14:40:50  31 of 91 OK created sql table model main.dim_payment_types ..................... [[32mOK[0m in 0.07s]
+[0m14:40:50  33 of 91 START test not_null_dim_payment_types_payment_type_id ................. [RUN]
+[0m14:40:50  34 of 91 START test not_null_dim_payment_types_payment_type_name ............... [RUN]
+[0m14:40:50  32 of 91 OK created sql table model main.dim_locations ......................... [[32mOK[0m in 0.07s]
+[0m14:40:50  35 of 91 START test unique_dim_payment_types_payment_type_id ................... [RUN]
+[0m14:40:50  34 of 91 PASS not_null_dim_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.05s]
+[0m14:40:50  33 of 91 PASS not_null_dim_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.06s]
+[0m14:40:50  36 of 91 START test not_null_dim_locations_borough ............................. [RUN]
+[0m14:40:50  37 of 91 START test not_null_dim_locations_location_id ......................... [RUN]
+[0m14:40:50  35 of 91 PASS unique_dim_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.05s]
+[0m14:40:50  36 of 91 PASS not_null_dim_locations_borough ................................... [[32mPASS[0m in 0.03s]
+[0m14:40:50  38 of 91 START test not_null_dim_locations_zone_name ........................... [RUN]
+[0m14:40:50  39 of 91 START test unique_dim_locations_location_id ........................... [RUN]
+[0m14:40:50  37 of 91 PASS not_null_dim_locations_location_id ............................... [[32mPASS[0m in 0.04s]
+[0m14:40:50  38 of 91 PASS not_null_dim_locations_zone_name ................................. [[32mPASS[0m in 0.03s]
+[0m14:40:50  39 of 91 PASS unique_dim_locations_location_id ................................. [[32mPASS[0m in 0.03s]
+[0m14:40:51  2 of 91 OK created sql table model main.stg_yellow_trips ....................... [[32mOK[0m in 1.90s]
+[0m14:40:51  40 of 91 START test accepted_values_stg_yellow_trips_payment_type_id__0__1__2__3__4__5__6  [RUN]
+[0m14:40:51  41 of 91 START test accepted_values_stg_yellow_trips_rate_code_id__1__2__3__4__5__6__99  [RUN]
+[0m14:40:51  42 of 91 START test accepted_values_stg_yellow_trips_vendor_id__1__2__6 ........ [RUN]
+[0m14:40:51  43 of 91 START test assert_fare_not_exceeds_total .............................. [RUN]
+[0m14:40:51  41 of 91 PASS accepted_values_stg_yellow_trips_rate_code_id__1__2__3__4__5__6__99  [[32mPASS[0m in 0.09s]
+[0m14:40:51  44 of 91 START test not_null_stg_yellow_trips_dropoff_datetime ................. [RUN]
+[0m14:40:51  42 of 91 PASS accepted_values_stg_yellow_trips_vendor_id__1__2__6 .............. [[32mPASS[0m in 0.10s]
+[0m14:40:51  40 of 91 PASS accepted_values_stg_yellow_trips_payment_type_id__0__1__2__3__4__5__6  [[32mPASS[0m in 0.11s]
+[0m14:40:51  45 of 91 START test not_null_stg_yellow_trips_dropoff_location_id .............. [RUN]
+[0m14:40:51  46 of 91 START test not_null_stg_yellow_trips_fare_amount ...................... [RUN]
+[0m14:40:51  43 of 91 PASS assert_fare_not_exceeds_total .................................... [[32mPASS[0m in 0.11s]
+[0m14:40:51  47 of 91 START test not_null_stg_yellow_trips_pickup_datetime .................. [RUN]
+[0m14:40:51  44 of 91 PASS not_null_stg_yellow_trips_dropoff_datetime ....................... [[32mPASS[0m in 0.05s]
+[0m14:40:51  45 of 91 PASS not_null_stg_yellow_trips_dropoff_location_id .................... [[32mPASS[0m in 0.05s]
+[0m14:40:51  46 of 91 PASS not_null_stg_yellow_trips_fare_amount ............................ [[32mPASS[0m in 0.04s]
+[0m14:40:51  47 of 91 PASS not_null_stg_yellow_trips_pickup_datetime ........................ [[32mPASS[0m in 0.04s]
+[0m14:40:51  48 of 91 START test not_null_stg_yellow_trips_pickup_location_id ............... [RUN]
+[0m14:40:51  49 of 91 START test not_null_stg_yellow_trips_total_amount ..................... [RUN]
+[0m14:40:51  50 of 91 START test not_null_stg_yellow_trips_trip_distance_miles .............. [RUN]
+[0m14:40:51  51 of 91 START test not_null_stg_yellow_trips_trip_id .......................... [RUN]
+[0m14:40:51  48 of 91 PASS not_null_stg_yellow_trips_pickup_location_id ..................... [[32mPASS[0m in 0.05s]
+[0m14:40:51  49 of 91 PASS not_null_stg_yellow_trips_total_amount ........................... [[32mPASS[0m in 0.05s]
+[0m14:40:51  51 of 91 PASS not_null_stg_yellow_trips_trip_id ................................ [[32mPASS[0m in 0.04s]
+[0m14:40:51  52 of 91 START test not_null_stg_yellow_trips_vendor_id ........................ [RUN]
+[0m14:40:51  50 of 91 PASS not_null_stg_yellow_trips_trip_distance_miles .................... [[32mPASS[0m in 0.05s]
+[0m14:40:51  53 of 91 START test unique_stg_yellow_trips_trip_id ............................ [RUN]
+[0m14:40:51  54 of 91 START test relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+[0m14:40:51  55 of 91 START test relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+[0m14:40:51  52 of 91 PASS not_null_stg_yellow_trips_vendor_id .............................. [[32mPASS[0m in 0.06s]
+[0m14:40:51  54 of 91 PASS relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.15s]
+[0m14:40:51  55 of 91 PASS relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.14s]
+[0m14:40:51  53 of 91 PASS unique_stg_yellow_trips_trip_id .................................. [[32mPASS[0m in 0.19s]
+[0m14:40:51  56 of 91 START sql view model main.int_trip_metrics ............................ [RUN]
+[0m14:40:51  56 of 91 OK created sql view model main.int_trip_metrics ....................... [[32mOK[0m in 0.16s]
+[0m14:40:51  57 of 91 START test assert_trip_duration_positive .............................. [RUN]
+[0m14:40:51  58 of 91 START test dbt_utils_accepted_range_int_trip_metrics_pickup_hour__23__0  [RUN]
+[0m14:40:51  59 of 91 START test dbt_utils_accepted_range_int_trip_metrics_trip_duration_minutes__720__1  [RUN]
+[0m14:40:51  60 of 91 START test not_null_int_trip_metrics_is_weekend ....................... [RUN]
+[0m14:40:52  57 of 91 PASS assert_trip_duration_positive .................................... [[32mPASS[0m in 0.05s]
+[0m14:40:52  60 of 91 PASS not_null_int_trip_metrics_is_weekend ............................. [[32mPASS[0m in 0.06s]
+[0m14:40:52  61 of 91 START test not_null_int_trip_metrics_pickup_date ...................... [RUN]
+[0m14:40:52  62 of 91 START test not_null_int_trip_metrics_pickup_hour ...................... [RUN]
+[0m14:40:52  58 of 91 PASS dbt_utils_accepted_range_int_trip_metrics_pickup_hour__23__0 ..... [[32mPASS[0m in 0.10s]
+[0m14:40:52  63 of 91 START test not_null_int_trip_metrics_trip_duration_minutes ............ [RUN]
+[0m14:40:52  59 of 91 PASS dbt_utils_accepted_range_int_trip_metrics_trip_duration_minutes__720__1  [[32mPASS[0m in 0.11s]
+[0m14:40:52  64 of 91 START test not_null_int_trip_metrics_trip_id .......................... [RUN]
+[0m14:40:52  62 of 91 PASS not_null_int_trip_metrics_pickup_hour ............................ [[32mPASS[0m in 0.07s]
+[0m14:40:52  61 of 91 PASS not_null_int_trip_metrics_pickup_date ............................ [[32mPASS[0m in 0.09s]
+[0m14:40:52  64 of 91 PASS not_null_int_trip_metrics_trip_id ................................ [[32mPASS[0m in 0.04s]
+[0m14:40:52  63 of 91 PASS not_null_int_trip_metrics_trip_duration_minutes .................. [[32mPASS[0m in 0.09s]
+[0m14:40:52  65 of 91 START sql view model main.int_daily_summary ........................... [RUN]
+[0m14:40:52  66 of 91 START sql view model main.int_hourly_patterns ......................... [RUN]
+[0m14:40:52  67 of 91 START sql incremental model main.fct_trips ............................ [RUN]
+[0m14:40:52  65 of 91 OK created sql view model main.int_daily_summary ...................... [[32mOK[0m in 0.10s]
+[0m14:40:52  68 of 91 START test dbt_utils_accepted_range_int_daily_summary_total_trips__0 .. [RUN]
+[0m14:40:52  69 of 91 START test not_null_int_daily_summary_pickup_date ..................... [RUN]
+[0m14:40:52  66 of 91 OK created sql view model main.int_hourly_patterns .................... [[32mOK[0m in 0.12s]
+[0m14:40:52  70 of 91 START test not_null_int_daily_summary_total_revenue ................... [RUN]
+[0m14:40:52  69 of 91 PASS not_null_int_daily_summary_pickup_date ........................... [[32mPASS[0m in 0.15s]
+[0m14:40:52  71 of 91 START test not_null_int_daily_summary_total_trips ..................... [RUN]
+[0m14:40:52  70 of 91 PASS not_null_int_daily_summary_total_revenue ......................... [[32mPASS[0m in 0.29s]
+[0m14:40:52  72 of 91 START test unique_int_daily_summary_pickup_date ....................... [RUN]
+[0m14:40:52  68 of 91 PASS dbt_utils_accepted_range_int_daily_summary_total_trips__0 ........ [[32mPASS[0m in 0.39s]
+[0m14:40:52  73 of 91 START test dbt_utils_accepted_range_int_hourly_patterns_pickup_hour__23__0  [RUN]
+[0m14:40:52  73 of 91 PASS dbt_utils_accepted_range_int_hourly_patterns_pickup_hour__23__0 .. [[32mPASS[0m in 0.03s]
+[0m14:40:52  74 of 91 START test not_null_int_hourly_patterns_pickup_date ................... [RUN]
+[0m14:40:52  74 of 91 PASS not_null_int_hourly_patterns_pickup_date ......................... [[32mPASS[0m in 0.03s]
+[0m14:40:52  75 of 91 START test not_null_int_hourly_patterns_pickup_hour ................... [RUN]
+[0m14:40:52  71 of 91 PASS not_null_int_daily_summary_total_trips ........................... [[32mPASS[0m in 0.30s]
+[0m14:40:52  76 of 91 START test not_null_int_hourly_patterns_total_trips ................... [RUN]
+[0m14:40:52  75 of 91 PASS not_null_int_hourly_patterns_pickup_hour ......................... [[32mPASS[0m in 0.03s]
+[0m14:40:52  72 of 91 PASS unique_int_daily_summary_pickup_date ............................. [[32mPASS[0m in 0.17s]
+[0m14:40:52  77 of 91 START sql table model main.mart_daily_revenue ......................... [RUN]
+[0m14:40:52  76 of 91 PASS not_null_int_hourly_patterns_total_trips ......................... [[32mPASS[0m in 0.13s]
+[0m14:40:52  78 of 91 START sql table model main.mart_hourly_demand ......................... [RUN]
+[0m14:40:53  77 of 91 OK created sql table model main.mart_daily_revenue .................... [[32mOK[0m in 0.23s]
+[0m14:40:53  79 of 91 START test not_null_mart_daily_revenue_date_key ....................... [RUN]
+[0m14:40:53  80 of 91 START test not_null_mart_daily_revenue_total_revenue .................. [RUN]
+[0m14:40:53  80 of 91 PASS not_null_mart_daily_revenue_total_revenue ........................ [[32mPASS[0m in 0.03s]
+[0m14:40:53  79 of 91 PASS not_null_mart_daily_revenue_date_key ............................. [[32mPASS[0m in 0.04s]
+[0m14:40:53  81 of 91 START test unique_mart_daily_revenue_date_key ......................... [RUN]
+[0m14:40:53  78 of 91 OK created sql table model main.mart_hourly_demand .................... [[32mOK[0m in 0.19s]
+[0m14:40:53  82 of 91 START test not_null_mart_hourly_demand_is_weekend ..................... [RUN]
+[0m14:40:53  83 of 91 START test not_null_mart_hourly_demand_pickup_hour .................... [RUN]
+[0m14:40:53  81 of 91 PASS unique_mart_daily_revenue_date_key ............................... [[32mPASS[0m in 0.03s]
+[0m14:40:53  82 of 91 PASS not_null_mart_hourly_demand_is_weekend ........................... [[32mPASS[0m in 0.02s]
+[0m14:40:53  83 of 91 PASS not_null_mart_hourly_demand_pickup_hour .......................... [[32mPASS[0m in 0.03s]
+[0m14:40:58  67 of 91 OK created sql incremental model main.fct_trips ....................... [[32mOK[0m in 6.03s]
+[0m14:40:58  84 of 91 START test not_null_fct_trips_pickup_datetime ......................... [RUN]
+[0m14:40:58  85 of 91 START test not_null_fct_trips_total_amount ............................ [RUN]
+[0m14:40:58  86 of 91 START test not_null_fct_trips_trip_id ................................. [RUN]
+[0m14:40:58  87 of 91 START test unique_fct_trips_trip_id ................................... [RUN]
+[0m14:40:58  86 of 91 PASS not_null_fct_trips_trip_id ....................................... [[32mPASS[0m in 0.07s]
+[0m14:40:58  84 of 91 PASS not_null_fct_trips_pickup_datetime ............................... [[32mPASS[0m in 0.07s]
+[0m14:40:58  85 of 91 PASS not_null_fct_trips_total_amount .................................. [[32mPASS[0m in 0.08s]
+[0m14:40:58  87 of 91 PASS unique_fct_trips_trip_id ......................................... [[32mPASS[0m in 0.18s]
+[0m14:40:58  88 of 91 START sql table model main.mart_location_performance .................. [RUN]
+[0m14:40:58  88 of 91 OK created sql table model main.mart_location_performance ............. [[32mOK[0m in 0.22s]
+[0m14:40:58  89 of 91 START test not_null_mart_location_performance_pickup_location_id ...... [RUN]
+[0m14:40:58  90 of 91 START test not_null_mart_location_performance_total_pickups ........... [RUN]
+[0m14:40:58  91 of 91 START test unique_mart_location_performance_pickup_location_id ........ [RUN]
+[0m14:40:58  89 of 91 PASS not_null_mart_location_performance_pickup_location_id ............ [[32mPASS[0m in 0.04s]
+[0m14:40:58  90 of 91 PASS not_null_mart_location_performance_total_pickups ................. [[32mPASS[0m in 0.04s]
+[0m14:40:58  91 of 91 PASS unique_mart_location_performance_pickup_location_id .............. [[32mPASS[0m in 0.05s]
+[0m14:40:58  
+[0m14:40:58  Finished running 1 incremental model, 3 seeds, 7 table models, 74 data tests, 6 view models in 0 hours 0 minutes and 9.38 seconds (9.38s).
+[0m14:40:58  
+[0m14:40:58  [32mCompleted successfully[0m
+[0m14:40:58  
+[0m14:40:58  Done. PASS=91 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=91
+
+real	0m16.014s
+user	0m0.030s
+sys	0m0.060s
+docker compose down -v
+ Container 00-batch-baseline-dbt-1  Stopping
+ Container 00-batch-baseline-dbt-1  Stopped
+ Container 00-batch-baseline-dbt-1  Removing
+ Container 00-batch-baseline-dbt-1  Removed
+ Network 00-batch-baseline_default  Removing
+ Network 00-batch-baseline_default  Removed
+make: *** No rule to make target 'clean'.  Stop.

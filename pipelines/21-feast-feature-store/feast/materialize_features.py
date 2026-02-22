@@ -31,11 +31,11 @@ def main():
                 trip_id,
                 vendor_id,
                 passenger_count,
-                trip_distance,
+                trip_distance_miles,
                 fare_amount,
                 tip_amount,
                 total_amount,
-                payment_type,
+                payment_type_id,
                 pickup_location_id,
                 dropoff_location_id,
                 pickup_datetime
@@ -54,7 +54,7 @@ def main():
             SELECT
                 pickup_location_id,
                 AVG(fare_amount) as avg_fare,
-                AVG(trip_distance) as avg_trip_distance,
+                AVG(trip_distance_miles) as avg_trip_distance,
                 AVG(CASE WHEN fare_amount > 0 THEN tip_amount / fare_amount * 100 ELSE 0 END) as avg_tip_percentage,
                 COUNT(*) as trip_count,
                 CURRENT_TIMESTAMP as feature_timestamp

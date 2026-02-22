@@ -1,8 +1,8 @@
 # Real-Time Data Engineering Documentation
 
 **Project:** 24-Pipeline Streaming Comparison Framework
-**Status:** 10/24 full PASS (dbt green), 8 partial, 6 known failures
-**Latest Benchmark:** 2026-02-16
+**Status:** 22/24 PASS, 2 PARTIAL (P11 Elementary/DuckDB, P14 Materialize/dbt), 0 failures
+**Latest Benchmark:** 2026-02-22
 **Technologies:** Kafka, Flink, Spark, Iceberg, Delta, Hudi, dbt, Dagster, Kestra, and more
 
 ---
@@ -16,7 +16,7 @@ The industry-standard Kafka + Flink + Iceberg + dbt stack -- production-hardened
 
 - **[Interactive Notebook](../notebooks/P01_Complete_Pipeline_Notebook.ipynb)** - 118-cell Jupyter notebook with executable code
 - **[Production Guide](P01_PRODUCTION_GUIDE.md)** - Markdown walkthrough for easy reading
-- **Status:** 94/94 tests passing, 175s E2E, 7.7GB peak memory
+- **Status:** 94/94 tests passing, 151s E2E, 5.8GB peak memory
 
 **What You'll Learn:**
 1. Architecture design (data plane vs control plane)
@@ -169,28 +169,28 @@ real_time_data_engineering/
 1. Read [Real-Time Streaming Data Paths](../real_time_streaming_data_paths.md) - Complete technology map
 2. Study [Benchmark Results](../BENCHMARK_RESULTS.md) - Performance trade-offs
 3. Design custom pipeline combining best components
-4. Contribute fixes for partial pipelines (P02, P13, P21, P22)
+4. Explore partial pipelines (P11, P14) for upstream fixes
 
 ---
 
-## Benchmark Results Summary (2026-02-16)
+## Benchmark Results Summary (2026-02-22)
 
 From [BENCHMARK_RESULTS.md](../BENCHMARK_RESULTS.md):
 
-| Pipeline | E2E Time | Memory | dbt Tests | Status |
-|----------|----------|--------|-----------|--------|
-| P01 Kafka+Flink+Iceberg | 175s | 7.7GB | 94/94 | Production |
-| P04 Redpanda+Flink+Iceberg | 151s | 6.1GB | 91/91 | Production |
-| P09 Dagster Orchestrated | 109s | 7.0GB | 91/91 | Production |
-| P12 CDC Debezium | 112s | 5.4GB | 91/91 | Production |
-| P15 Kafka Streams | 30s | 3.6GB | n/a | Production |
-| P16 Pinot OLAP | 94s | 6.0GB | n/a | Production |
-| P17 Druid Timeseries | 70s | 7.0GB | n/a | Production |
-| P20 Bytewax Python | 40s | 3.6GB | n/a | Production |
-| P23 Full Stack Capstone | 155s | 8.0GB | 91/91 | Production |
+| Pipeline | E2E Time | dbt Tests | Status |
+|----------|----------|-----------|--------|
+| P01 Kafka+Flink+Iceberg | 151s | 94/94 | Production |
+| P04 Redpanda+Flink+Iceberg | 147s | 91/91 | Production |
+| P09 Dagster Orchestrated | 97s | 91/91 | Production |
+| P12 CDC Debezium | 139s | 91/91 | Production |
+| P15 Kafka Streams | 115s | n/a | Production |
+| P16 Pinot OLAP | 136s | n/a | Production |
+| P17 Druid Timeseries | 101s | n/a | Production |
+| P20 Bytewax Python | 62s | n/a | Production |
+| P23 Full Stack Capstone | 176s | 91/91 | Production |
 
-**Fastest:** P15 Kafka Streams (30s)
-**Most Efficient:** P06 Redpanda+RisingWave (449 MB)
+**Fastest Processing:** RisingWave P03/P06 (2s processing)
+**Fastest E2E:** P19 Mage AI (51s), P20 Bytewax (62s)
 **Best All-Around:** P01 Kafka+Flink+Iceberg (94/94 tests, production-hardened)
 
 ---
@@ -201,23 +201,23 @@ Based on [BENCHMARK_RESULTS.md](../BENCHMARK_RESULTS.md):
 
 ### Best Overall: P01 Kafka + Flink + Iceberg
 - 94/94 dbt tests passing, defense-in-depth data quality
-- 175s E2E, production-hardened with idempotent producer, DLQ, watermarks, dedup
+- 151s E2E, production-hardened with idempotent producer, DLQ, watermarks, dedup
 - **Use when:** Building enterprise streaming platform
 
-### Best Performance: P15 Kafka Streams
-- Fastest: 30s E2E, lightest: 3.6GB, 6 containers
-- **Use when:** Java microservices, simple transformations
+### Best Performance: P03/P06 RisingWave
+- Fastest processing: 2s for 10k events, streaming SQL
+- **Use when:** Real-time SQL analytics, low-latency queries
 
 ### Best Orchestrated: P09 Dagster
-- 109s E2E (fastest orchestrated), 91/91 dbt tests
+- 97s E2E (fastest orchestrated), 91/91 dbt tests
 - **Use when:** Asset-centric data platform with lineage
 
 ### Best Efficiency: P04 Redpanda + Flink + Iceberg
-- 14% faster than P01, 25-35% less memory, same API
+- 3% faster than P01 (147s vs 151s), 25-35% less memory, same API
 - **Use when:** Cost optimization is priority
 
 ### Best for CDC: P12 Debezium + Flink + Iceberg
-- 112s E2E, 32,258 evt/s from PostgreSQL WAL
+- 139s E2E, 0.3s ingestion via PostgreSQL WAL snapshot
 - **Use when:** Capturing database changes in real-time
 
 ### Best End-to-End: P23 Full Stack Capstone

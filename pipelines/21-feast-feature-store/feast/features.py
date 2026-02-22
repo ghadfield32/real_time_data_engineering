@@ -29,11 +29,11 @@ trip_features = FeatureView(
     schema=[
         Feature(name="vendor_id", dtype=Int64),
         Feature(name="passenger_count", dtype=Float64),
-        Feature(name="trip_distance", dtype=Float64),
+        Feature(name="trip_distance_miles", dtype=Float64),
         Feature(name="fare_amount", dtype=Float64),
         Feature(name="tip_amount", dtype=Float64),
         Feature(name="total_amount", dtype=Float64),
-        Feature(name="payment_type", dtype=Int64),
+        Feature(name="payment_type_id", dtype=Int64),
         Feature(name="pickup_location_id", dtype=Int64),
         Feature(name="dropoff_location_id", dtype=Int64),
     ],

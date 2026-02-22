@@ -1,0 +1,101 @@
+docker compose down -v
+docker compose up -d
+ Network p10-pipeline-net  Creating
+ Network p10-pipeline-net  Created
+ Volume 10-serving-comparison_superset-data  Creating
+ Volume 10-serving-comparison_superset-data  Created
+ Volume 10-serving-comparison_clickhouse-data  Creating
+ Volume 10-serving-comparison_clickhouse-data  Created
+ Volume 10-serving-comparison_metabase-data  Creating
+ Volume 10-serving-comparison_metabase-data  Created
+ Container p10-clickhouse  Creating
+ Container p10-clickhouse  Created
+ Container p10-superset  Creating
+ Container p10-metabase  Creating
+ Container p10-metabase  Created
+ Container p10-superset  Created
+ Container p10-clickhouse  Starting
+ Container p10-clickhouse  Started
+ Container p10-clickhouse  Waiting
+ Container p10-clickhouse  Waiting
+ Container p10-clickhouse  Healthy
+ Container p10-metabase  Starting
+ Container p10-clickhouse  Healthy
+ Container p10-superset  Starting
+ Container p10-metabase  Started
+ Container p10-superset  Started
+
+=== Pipeline 10: Serving Comparison ===
+ClickHouse HTTP:  http://localhost:8123
+ClickHouse TCP:   localhost:9100
+Metabase:         http://localhost:3030
+Superset:         http://localhost:8088  (admin/admin)
+
+docker compose up -d
+ Container p10-clickhouse  Running
+ Container p10-metabase  Running
+ Container p10-superset  Running
+ Container p10-clickhouse  Waiting
+ Container p10-clickhouse  Waiting
+ Container p10-clickhouse  Healthy
+ Container p10-clickhouse  Healthy
+
+=== Pipeline 10: Serving Comparison ===
+ClickHouse HTTP:  http://localhost:8123
+ClickHouse TCP:   localhost:9100
+Metabase:         http://localhost:3030
+Superset:         http://localhost:8088  (admin/admin)
+
+=== ClickHouse Query Benchmarks ===
+
+--- Query: 01-daily-revenue ---
+  Run 1: 346ms
+  Run 2: 343ms
+  Run 3: 351ms
+  Run 4: 352ms
+  Run 5: 331ms
+
+--- Query: 02-top-zones ---
+  Run 1: 353ms
+  Run 2: 384ms
+  Run 3: 359ms
+  Run 4: 351ms
+  Run 5: 330ms
+
+--- Query: 03-hourly-heatmap ---
+  Run 1: 382ms
+  Run 2: 367ms
+  Run 3: 377ms
+  Run 4: 381ms
+  Run 5: 409ms
+
+--- Query: 04-complex-revenue ---
+  Run 1: 405ms
+  Run 2: 355ms
+  Run 3: 411ms
+  Run 4: 335ms
+  Run 5: 326ms
+
+=== Benchmark complete ===
+docker compose down -v
+ Container p10-superset  Stopping
+ Container p10-metabase  Stopping
+ Container p10-superset  Stopped
+ Container p10-superset  Removing
+ Container p10-metabase  Stopped
+ Container p10-metabase  Removing
+ Container p10-superset  Removed
+ Container p10-metabase  Removed
+ Container p10-clickhouse  Stopping
+ Container p10-clickhouse  Stopped
+ Container p10-clickhouse  Removing
+ Container p10-clickhouse  Removed
+ Volume 10-serving-comparison_clickhouse-data  Removing
+ Network p10-pipeline-net  Removing
+ Volume 10-serving-comparison_superset-data  Removing
+ Volume 10-serving-comparison_metabase-data  Removing
+ Volume 10-serving-comparison_superset-data  Removed
+ Volume 10-serving-comparison_clickhouse-data  Removed
+ Volume 10-serving-comparison_metabase-data  Removed
+ Network p10-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.

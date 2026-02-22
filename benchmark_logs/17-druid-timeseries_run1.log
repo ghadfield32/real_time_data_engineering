@@ -1,0 +1,468 @@
+docker compose --profile generator down -v --remove-orphans
+docker compose up -d
+ Network p17-pipeline-net  Creating
+ Network p17-pipeline-net  Created
+ Volume 17-druid-timeseries_druid-data  Creating
+ Volume 17-druid-timeseries_druid-data  Created
+ Volume 17-druid-timeseries_flink-checkpoints  Creating
+ Volume 17-druid-timeseries_flink-checkpoints  Created
+ Volume 17-druid-timeseries_minio-data  Creating
+ Volume 17-druid-timeseries_minio-data  Created
+ Volume 17-druid-timeseries_grafana-data  Creating
+ Volume 17-druid-timeseries_grafana-data  Created
+ Container p17-druid-zookeeper  Creating
+ Container p17-minio  Creating
+ Container p17-kafka  Creating
+ Container p17-minio  Created
+ Container p17-mc-init  Creating
+ Container p17-druid-zookeeper  Created
+ Container p17-druid-historical  Creating
+ Container p17-druid-middlemanager  Creating
+ Container p17-druid-coordinator  Creating
+ Container p17-druid-broker  Creating
+ Container p17-druid-router  Creating
+ Container p17-kafka  Created
+ Container p17-mc-init  Created
+ Container p17-flink-jobmanager  Creating
+ Container p17-druid-coordinator  Created
+ Container p17-druid-historical  Created
+ Container p17-druid-middlemanager  Created
+ Container p17-druid-router  Created
+ Container p17-druid-broker  Created
+ Container p17-grafana  Creating
+ Container p17-flink-jobmanager  Created
+ Container p17-flink-taskmanager  Creating
+ Container p17-grafana  Created
+ Container p17-flink-taskmanager  Created
+ Container p17-minio  Starting
+ Container p17-druid-zookeeper  Starting
+ Container p17-kafka  Starting
+ Container p17-minio  Started
+ Container p17-minio  Waiting
+ Container p17-kafka  Started
+ Container p17-druid-zookeeper  Started
+ Container p17-druid-zookeeper  Waiting
+ Container p17-druid-zookeeper  Waiting
+ Container p17-druid-zookeeper  Waiting
+ Container p17-druid-zookeeper  Waiting
+ Container p17-druid-zookeeper  Waiting
+ Container p17-minio  Healthy
+ Container p17-mc-init  Starting
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-broker  Starting
+ Container p17-druid-historical  Starting
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-middlemanager  Starting
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-coordinator  Starting
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-router  Starting
+ Container p17-mc-init  Started
+ Container p17-mc-init  Waiting
+ Container p17-kafka  Waiting
+ Container p17-druid-router  Started
+ Container p17-druid-coordinator  Started
+ Container p17-druid-historical  Started
+ Container p17-druid-middlemanager  Started
+ Container p17-druid-broker  Started
+ Container p17-grafana  Starting
+ Container p17-mc-init  Exited
+ Container p17-grafana  Started
+ Container p17-kafka  Healthy
+ Container p17-flink-jobmanager  Starting
+ Container p17-flink-jobmanager  Started
+ Container p17-flink-jobmanager  Waiting
+ Container p17-flink-jobmanager  Healthy
+ Container p17-flink-taskmanager  Starting
+ Container p17-flink-taskmanager  Started
+
+=== Pipeline 17: Kafka + Flink + Druid + Grafana ===
+Kafka:           localhost:9092
+Flink Dashboard: http://localhost:8081
+Druid Console:   http://localhost:8889
+Grafana:         http://localhost:3000  (admin/admin)
+MinIO Console:   http://localhost:9001  (minioadmin/minioadmin)
+============================================================
+  Pipeline 17 Benchmark: Kafka + Flink + Druid + Grafana
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+docker compose --profile generator down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+docker compose up -d
+ Network p17-pipeline-net  Creating
+ Network p17-pipeline-net  Created
+ Volume 17-druid-timeseries_flink-checkpoints  Creating
+ Volume 17-druid-timeseries_flink-checkpoints  Created
+ Volume 17-druid-timeseries_grafana-data  Creating
+ Volume 17-druid-timeseries_grafana-data  Created
+ Volume 17-druid-timeseries_minio-data  Creating
+ Volume 17-druid-timeseries_minio-data  Created
+ Volume 17-druid-timeseries_druid-data  Creating
+ Volume 17-druid-timeseries_druid-data  Created
+ Container p17-kafka  Creating
+ Container p17-minio  Creating
+ Container p17-druid-zookeeper  Creating
+ Container p17-kafka  Created
+ Container p17-minio  Created
+ Container p17-mc-init  Creating
+ Container p17-druid-zookeeper  Created
+ Container p17-druid-broker  Creating
+ Container p17-druid-coordinator  Creating
+ Container p17-druid-router  Creating
+ Container p17-druid-historical  Creating
+ Container p17-druid-middlemanager  Creating
+ Container p17-mc-init  Created
+ Container p17-flink-jobmanager  Creating
+ Container p17-druid-coordinator  Created
+ Container p17-druid-broker  Created
+ Container p17-grafana  Creating
+ Container p17-druid-historical  Created
+ Container p17-druid-middlemanager  Created
+ Container p17-druid-router  Created
+ Container p17-flink-jobmanager  Created
+ Container p17-flink-taskmanager  Creating
+ Container p17-grafana  Created
+ Container p17-flink-taskmanager  Created
+ Container p17-minio  Starting
+ Container p17-kafka  Starting
+ Container p17-druid-zookeeper  Starting
+ Container p17-druid-zookeeper  Started
+ Container p17-druid-zookeeper  Waiting
+ Container p17-druid-zookeeper  Waiting
+ Container p17-druid-zookeeper  Waiting
+ Container p17-druid-zookeeper  Waiting
+ Container p17-druid-zookeeper  Waiting
+ Container p17-kafka  Started
+ Container p17-minio  Started
+ Container p17-minio  Waiting
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-coordinator  Starting
+ Container p17-druid-router  Starting
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-historical  Starting
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-broker  Starting
+ Container p17-druid-zookeeper  Healthy
+ Container p17-druid-middlemanager  Starting
+ Container p17-minio  Healthy
+ Container p17-mc-init  Starting
+ Container p17-druid-historical  Started
+ Container p17-druid-middlemanager  Started
+ Container p17-druid-broker  Started
+ Container p17-grafana  Starting
+ Container p17-druid-coordinator  Started
+ Container p17-druid-router  Started
+ Container p17-mc-init  Started
+ Container p17-mc-init  Waiting
+ Container p17-kafka  Waiting
+ Container p17-grafana  Started
+ Container p17-mc-init  Exited
+ Container p17-kafka  Healthy
+ Container p17-flink-jobmanager  Starting
+ Container p17-flink-jobmanager  Started
+ Container p17-flink-jobmanager  Waiting
+ Container p17-flink-jobmanager  Healthy
+ Container p17-flink-taskmanager  Starting
+ Container p17-flink-taskmanager  Started
+
+=== Pipeline 17: Kafka + Flink + Druid + Grafana ===
+Kafka:           localhost:9092
+Flink Dashboard: http://localhost:8081
+Druid Console:   http://localhost:8889
+Grafana:         http://localhost:3000  (admin/admin)
+MinIO Console:   http://localhost:9001  (minioadmin/minioadmin)
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 --create --if-not-exists \
+	--topic taxi.raw_trips --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.raw_trips.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+Creating Druid Kafka supervisor...
+curl -s -X POST "http://localhost:8082/druid/indexer/v1/supervisor" \
+	-H "Content-Type: application/json" \
+	-d @druid/conf/supervisor-spec.json | python3 -m json.tool
+{
+    "id": "taxi_trips"
+}
+Druid supervisor created. Will auto-ingest from Kafka.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p17-kafka  Running
+%4|1771686635.348|GETPID|rdkafka#producer-1| [thrd:main]: Failed to acquire idempotence PID from broker kafka:9092/1: Broker: Coordinator load in progress: retrying
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     kafka:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.99s
+  Rate:    10,051 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited data generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+Waiting for Druid ingestion (20s)...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+=== Druid Query Benchmark ===
+Q1: Total count
+(Druid not ready)
+
+Q2: By location
+(Druid not ready)
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+=== Flink Bronze ===
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/05-bronze.sql
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+2026-02-21 15:11:01,108 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-21 15:11:01,145 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-21 15:11:01,145 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 21, 2026 3:11:01 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 17: Bronze Layer (Kafka -> Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS bronze.raw_trips (
+>     VendorID                BIGINT,
+>     tpep_pickup_datetime    TIMESTAMP(3),
+>     tpep_dropoff_datetime   TIMESTAMP(3),
+>     passenger_count         BIGINT,
+>     trip_distance           DOUBLE,
+>     RatecodeID              BIGINT,
+>     store_and_fwd_flag      STRING,
+>     PULocationID            BIGINT,
+>     DOLocationID            BIGINT,
+>     payment_type            BIGINT,
+>     fare_amount             DOUBLE,
+>     extra                   DOUBLE,
+>     mta_tax                 DOUBLE,
+>     tip_amount              DOUBLE,
+>     tolls_amount            DOUBLE,
+>     improvement_surcharge   DOUBLE,
+>     total_amount            DOUBLE,
+>     congestion_surcharge    DOUBLE,
+>     Airport_fee             DOUBLE,
+>     ingestion_ts            TIMESTAMP(3)
+> )
+> WITH (
+>     'format-version' = '1',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> INSERT INTO iceberg_catalog.bronze.raw_trips
+> SELECT
+>     VendorID,
+>     TO_TIMESTAMP(tpep_pickup_datetime, 'yyyy-MM-dd''T''HH:mm:ss')   AS tpep_pickup_datetime,
+>     TO_TIMESTAMP(tpep_dropoff_datetime, 'yyyy-MM-dd''T''HH:mm:ss')[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+=== Flink Silver ===
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver.sql
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+WARNING: Unknown module: jdk.compiler specified to --add-exports
+2026-02-21 15:11:13,054 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-21 15:11:13,098 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-21 15:11:13,098 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 21, 2026 3:11:13 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 17: Silver Layer (Bronze Iceberg -> Silver Iceberg)[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
+>     trip_id                 STRING,
+>     vendor_id               INT,
+>     rate_code_id            INT,
+>     pickup_location_id      INT,
+>     dropoff_location_id     INT,
+>     payment_type_id         INT,
+>     pickup_datetime         TIMESTAMP(3),
+>     dropoff_datetime        TIMESTAMP(3),
+>     passenger_count         INT,
+>     trip_distance_miles     DOUBLE,
+>     store_and_fwd_flag      STRING,
+>     fare_amount             DECIMAL(10, 2),
+>     extra_amount            DECIMAL(10, 2),
+>     mta_tax                 DECIMAL(10, 2),
+>     tip_amount              DECIMAL(10, 2),
+>     tolls_amount            DECIMAL(10, 2),
+>     improvement_surcharge   DECIMAL(10, 2),
+>     total_amount            DECIMAL(10, 2),
+>     congestion_surcharge    DECIMAL(10, 2),
+>     airport_fee             DECIMAL(10, 2),
+>     pickup_date             DATE
+> ) PARTITIONED BY (pickup_date)
+> WITH (
+>     'format-version' = '2',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> -- Deduplication: ROW_NUMBER partitioned by natural key, keeping latest ingestion
+> INSERT INTO iceberg_catalog.silver.cleaned_trips
+> WITH deduped AS (
+>     SELECT *,
+>         ROW_NUMBER() OVER (
+>             PARTITION BY VendorID, tpep_pickup_datetime, tpep_dropoff_datetime,
+>                          PULocationID, DOLocationID, fare_amount, total_amount
+>             ORDER BY ingestion_ts DESC
+>         ) AS rn
+>     FROM iceberg_catalog.bronze.raw_trips
+>     WHERE tpep_pickup_datetime IS NOT NULL
+>       AND tpep_dropoff_datetime IS NOT NULL
+>       AND trip_distance >= 0
+>       AND fare_amount >= 0
+>       AND CAST(tpep_pickup_datetime AS DATE) >= DATE '2024-01-01'
+>       AND CAST(tpep_pickup_datetime AS DATE) <  DATE '2024-02-01'
+> )
+> SELECT
+>     CAST(MD5(CONCAT_WS('|',
+>         CAST(VendorID AS STRING),
+>         CAST(tpep_pickup_datetime AS STRING),
+>         CAST(tpep_dropoff_datetime AS STRING),
+>         CAST(PULocationID AS STRING),
+>         CAST(DOLocationID AS STRING),
+>         CAST(fare_amount AS STRING),
+>         CAST(total_amount AS STRING)
+>     )) AS STRING) AS trip_id,
+>     CAST(VendorID AS INT)       AS vendor_id,
+>     CAST(RatecodeID AS INT)     AS rate_code_id,
+>     CAST(PULocationID AS INT)   AS pickup_location_id,
+>     CAST(DOLocationID AS INT)   AS dropoff_location_id,
+>     CAST(payment_type AS INT)   AS payment_type_id,
+>     tpep_pickup_datetime        AS pickup_datetime,
+>     tpep_dropoff_datetime       AS dropoff_datetime,
+>     CAST(passenger_count AS INT) AS passenger_count,
+>     trip_distance               AS trip_distance_miles,
+>     store_and_fwd_flag,
+>     CAST(ROUND(fare_amount, 2)             AS DECIMAL(10, 2)) AS fare_amount,
+>     CAST(ROUND(extra, 2)                   AS DECIMAL(10, 2)) AS extra_amount,
+>     CAST(ROUND(mta_tax, 2)                 AS DECIMAL(10, 2)) AS mta_tax,
+>     CAST(ROUND(tip_amount, 2)              AS DECIMAL(10, 2)) AS tip_amount,
+>     CAST(ROUND(tolls_amount, 2)            AS DECIMAL(10, 2)) AS tolls_amount,
+>     CAST(ROUND(improvement_surcharge, 2)   AS DECIMAL(10, 2)) AS improvement_surcharge,
+>     CAST(ROUND(total_amount, 2)            AS DECIMAL(10, 2)) AS total_amount,
+>     CAST(ROUND(congestion_surcharge, 2)    AS DECIMAL(10, 2)) AS congestion_surcharge,
+>     CAST(ROUND(Airport_fee, 2)             AS DECIMAL(10, 2)) AS airport_fee,
+>     CAST(tpep_pickup_datetime AS DATE)[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/17-druid-timeseries'
+
+============================================================
+  BENCHMARK COMPLETE
+  Total elapsed: 66s
+============================================================
+Results saved to benchmark_results/latest.json
+docker compose --profile generator down -v --remove-orphans
+ Container p17-druid-historical  Stopping
+ Container p17-druid-coordinator  Stopping
+ Container p17-druid-middlemanager  Stopping
+ Container p17-grafana  Stopping
+ Container p17-druid-router  Stopping
+ Container p17-flink-taskmanager  Stopping
+ Container p17-grafana  Stopped
+ Container p17-grafana  Removing
+ Container p17-grafana  Removed
+ Container p17-druid-broker  Stopping
+ Container p17-druid-coordinator  Stopped
+ Container p17-druid-coordinator  Removing
+ Container p17-druid-coordinator  Removed
+ Container p17-flink-taskmanager  Stopped
+ Container p17-flink-taskmanager  Removing
+ Container p17-flink-taskmanager  Removed
+ Container p17-flink-jobmanager  Stopping
+ Container p17-druid-historical  Stopped
+ Container p17-druid-historical  Removing
+ Container p17-druid-router  Stopped
+ Container p17-druid-router  Removing
+ Container p17-druid-historical  Removed
+ Container p17-druid-router  Removed
+ Container p17-druid-middlemanager  Stopped
+ Container p17-druid-middlemanager  Removing
+ Container p17-druid-middlemanager  Removed
+ Container p17-druid-broker  Stopped
+ Container p17-druid-broker  Removing
+ Container p17-druid-broker  Removed
+ Container p17-druid-zookeeper  Stopping
+ Container p17-flink-jobmanager  Stopped
+ Container p17-flink-jobmanager  Removing
+ Container p17-flink-jobmanager  Removed
+ Container p17-mc-init  Stopping
+ Container p17-kafka  Stopping
+ Container p17-mc-init  Stopped
+ Container p17-mc-init  Removing
+ Container p17-mc-init  Removed
+ Container p17-minio  Stopping
+ Container p17-minio  Stopped
+ Container p17-minio  Removing
+ Container p17-minio  Removed
+ Container p17-druid-zookeeper  Stopped
+ Container p17-druid-zookeeper  Removing
+ Container p17-druid-zookeeper  Removed
+ Container p17-kafka  Stopped
+ Container p17-kafka  Removing
+ Container p17-kafka  Removed
+ Volume 17-druid-timeseries_minio-data  Removing
+ Volume 17-druid-timeseries_flink-checkpoints  Removing
+ Volume 17-druid-timeseries_druid-data  Removing
+ Network p17-pipeline-net  Removing
+ Volume 17-druid-timeseries_minio-data  Removed
+ Volume 17-druid-timeseries_grafana-data  Removing
+ Volume 17-druid-timeseries_flink-checkpoints  Removed
+ Volume 17-druid-timeseries_grafana-data  Removed
+ Volume 17-druid-timeseries_druid-data  Removed
+ Network p17-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.

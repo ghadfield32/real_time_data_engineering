@@ -1,0 +1,217 @@
+docker compose --profile generator down -v --remove-orphans
+docker compose up -d --build
+#1 [internal] load local bake definitions
+#1 reading from stdin 686B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 225B 0.0s done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 0.1s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 68B done
+#5 DONE 0.0s
+
+#6 [1/5] FROM docker.io/library/python:3.12-slim@sha256:9e01bf1ae5db7649a236da7be1e94ffbbbdd7a93f867dd0d8d5720d9e1f89fab
+#6 resolve docker.io/library/python:3.12-slim@sha256:9e01bf1ae5db7649a236da7be1e94ffbbbdd7a93f867dd0d8d5720d9e1f89fab 0.0s done
+#6 DONE 0.0s
+
+#7 [3/5] COPY requirements.txt .
+#7 CACHED
+
+#8 [4/5] RUN pip install --no-cache-dir -r requirements.txt
+#8 CACHED
+
+#9 [2/5] WORKDIR /app
+#9 CACHED
+
+#10 [5/5] COPY dataflow.py .
+#10 CACHED
+
+#11 exporting to image
+#11 exporting layers done
+#11 exporting manifest sha256:0be08cad33ae2b53e739a1fbd49fe16e3d500269064e78b23a9b175215e4e982 done
+#11 exporting config sha256:7951d358f3f74c4a8876a0dc6b3ab58835e9d7d642ef571944f454f35cf094ac done
+#11 exporting attestation manifest sha256:b55e791cb5f22d6aeaa147dfe6a936c95479b99c340e1bb57662fc82da7eb67f 0.0s done
+#11 exporting manifest list sha256:8c01ea3bc0066fb4d72cff8be78e26babae30566a2f5075f22d24972eea1d28e
+#11 exporting manifest list sha256:8c01ea3bc0066fb4d72cff8be78e26babae30566a2f5075f22d24972eea1d28e 0.0s done
+#11 naming to docker.io/library/20-kafka-bytewax-bytewax-processor:latest done
+#11 unpacking to docker.io/library/20-kafka-bytewax-bytewax-processor:latest done
+#11 DONE 0.1s
+
+#12 resolving provenance for metadata file
+#12 DONE 0.0s
+ 20-kafka-bytewax-bytewax-processor  Built
+ Network p20-pipeline-net  Creating
+ Network p20-pipeline-net  Created
+ Container p20-kafka  Creating
+ Container p20-kafka  Created
+ Container p20-bytewax  Creating
+ Container p20-bytewax  Created
+ Container p20-kafka  Starting
+ Container p20-kafka  Started
+ Container p20-kafka  Waiting
+ Container p20-kafka  Healthy
+ Container p20-bytewax  Starting
+ Container p20-bytewax  Started
+
+=== Pipeline 20: Kafka + Bytewax ===
+Kafka: localhost:9092
+Bytewax processor is running and auto-processing events.
+
+Next: make generate
+============================================================
+  Pipeline 20 Benchmark: Kafka + Bytewax (Python Streaming)
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+docker compose --profile generator down -v --remove-orphans
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+docker compose up -d --build
+#1 [internal] load local bake definitions
+#1 reading from stdin 686B done
+#1 DONE 0.0s
+
+#2 [internal] load build definition from Dockerfile
+#2 transferring dockerfile: 225B done
+#2 DONE 0.0s
+
+#3 [internal] load metadata for docker.io/library/python:3.12-slim
+#3 DONE 0.0s
+
+#4 [internal] load .dockerignore
+#4 transferring context: 2B done
+#4 DONE 0.0s
+
+#5 [internal] load build context
+#5 transferring context: 68B done
+#5 DONE 0.0s
+
+#6 [1/5] FROM docker.io/library/python:3.12-slim@sha256:9e01bf1ae5db7649a236da7be1e94ffbbbdd7a93f867dd0d8d5720d9e1f89fab
+#6 resolve docker.io/library/python:3.12-slim@sha256:9e01bf1ae5db7649a236da7be1e94ffbbbdd7a93f867dd0d8d5720d9e1f89fab 0.0s done
+#6 DONE 0.0s
+
+#7 [2/5] WORKDIR /app
+#7 CACHED
+
+#8 [3/5] COPY requirements.txt .
+#8 CACHED
+
+#9 [4/5] RUN pip install --no-cache-dir -r requirements.txt
+#9 CACHED
+
+#10 [5/5] COPY dataflow.py .
+#10 CACHED
+
+#11 exporting to image
+#11 exporting layers done
+#11 exporting manifest sha256:0be08cad33ae2b53e739a1fbd49fe16e3d500269064e78b23a9b175215e4e982 done
+#11 exporting config sha256:7951d358f3f74c4a8876a0dc6b3ab58835e9d7d642ef571944f454f35cf094ac done
+#11 exporting attestation manifest sha256:347e1bd6d69619920c047a14cd9b851ef231e2fa17453ceac766bbf9fed7ae70 0.0s done
+#11 exporting manifest list sha256:294269720137db9ae1766273327c2882c9966b8ecfb9a564a68a5364e87f3766 0.0s done
+#11 naming to docker.io/library/20-kafka-bytewax-bytewax-processor:latest done
+#11 unpacking to docker.io/library/20-kafka-bytewax-bytewax-processor:latest done
+#11 DONE 0.1s
+
+#12 resolving provenance for metadata file
+#12 DONE 0.0s
+ 20-kafka-bytewax-bytewax-processor  Built
+ Network p20-pipeline-net  Creating
+ Network p20-pipeline-net  Created
+ Container p20-kafka  Creating
+ Container p20-kafka  Created
+ Container p20-bytewax  Creating
+ Container p20-bytewax  Created
+ Container p20-kafka  Starting
+ Container p20-kafka  Started
+ Container p20-kafka  Waiting
+ Container p20-kafka  Healthy
+ Container p20-bytewax  Starting
+ Container p20-bytewax  Started
+
+=== Pipeline 20: Kafka + Bytewax ===
+Kafka: localhost:9092
+Bytewax processor is running and auto-processing events.
+
+Next: make generate
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.raw_trips --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.bronze --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.bronze.
+docker compose exec kafka /opt/kafka/bin/kafka-topics.sh \
+	--bootstrap-server localhost:9092 \
+	--create --if-not-exists \
+	--topic taxi.silver --partitions 3 --replication-factor 1
+WARNING: Due to limitations in metric names, topics with a period ('.') or underscore ('_') could collide. To avoid issues it is best to use either, but not both.
+Created topic taxi.silver.
+All topics created.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+MSYS_NO_PATHCONV=1 docker compose run --rm -e MAX_EVENTS=10000 data-generator
+ Container p20-kafka  Running
+WARNING: Running pip as the 'root' user can result in broken permissions and conflicting behaviour with the system package manager, possibly rendering your system unusable. It is recommended to use a virtual environment instead: https://pip.pypa.io/warnings/venv. Use the --root-user-action option if you know what you are doing and want to suppress this warning.
+
+[notice] A new release of pip is available: 25.0.1 -> 26.0.1
+[notice] To update, run: pip install --upgrade pip
+%4|1771686807.412|GETPID|rdkafka#producer-1| [thrd:main]: Failed to acquire idempotence PID from broker kafka:9092/1: Broker: Coordinator load in progress: retrying
+============================================================
+  Taxi Trip Event Generator
+============================================================
+  Broker:     kafka:9092
+  Topic:      taxi.raw_trips
+  Mode:       burst
+  Data:       /data/yellow_tripdata_2024-01.parquet
+  Max events: 10,000
+
+  Source: /data/yellow_tripdata_2024-01.parquet (2,964,624 rows, sending 10,000)
+
+============================================================
+  GENERATOR COMPLETE
+  Events:  10,000
+  Elapsed: 0.78s
+  Rate:    12,743 events/sec
+============================================================
+  Metrics written to /tmp/generator_metrics.json
+Limited data generation complete (10k events).
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+Waiting for Bytewax processing (15s)...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+=== Message Counts ===
+raw_trips: 
+bronze:    
+silver:    
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/20-kafka-bytewax'
+
+============================================================
+  BENCHMARK COMPLETE
+  Total elapsed: 42s
+============================================================
+Results saved to benchmark_results/latest.json
+docker compose --profile generator down -v --remove-orphans
+ Container p20-bytewax  Stopping
+ Container p20-bytewax  Stopped
+ Container p20-bytewax  Removing
+ Container p20-bytewax  Removed
+ Container p20-kafka  Stopping
+ Container p20-kafka  Stopped
+ Container p20-kafka  Removing
+ Container p20-kafka  Removed
+ Network p20-pipeline-net  Removing
+ Network p20-pipeline-net  Removed
+make: *** No rule to make target 'clean'.  Stop.

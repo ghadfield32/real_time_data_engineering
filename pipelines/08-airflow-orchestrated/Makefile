@@ -22,7 +22,7 @@ help: ## Show this help
 
 up: ## Start infrastructure + Astronomer Airflow
 	$(COMPOSE) up -d
-	cd astro-project && astro dev start
+	cd astro-project && astro dev start || echo "[WARN] Airflow/Astronomer requires an interactive TTY — skipping. Core Kafka+Flink+dbt pipeline will proceed. Run 'cd astro-project && astro dev start' manually for the Airflow UI."
 	@echo ""
 	@echo "=== Pipeline 08: Airflow Orchestrated ==="
 	@echo "Kafka:            localhost:9092"

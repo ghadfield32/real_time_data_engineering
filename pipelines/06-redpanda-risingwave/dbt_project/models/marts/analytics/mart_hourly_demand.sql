@@ -12,10 +12,10 @@ final as (
         is_weekend,
 
         count(*) as days_observed,
-        round(avg(total_trips), 0) as avg_trips_per_period,
-        round(avg(avg_distance), 2) as avg_distance,
-        round(avg(avg_duration_min), 2) as avg_duration_min,
-        round(avg(total_revenue), 2) as avg_revenue_per_period,
+        round(avg(total_trips)::numeric, 0) as avg_trips_per_period,
+        round(avg(avg_distance)::numeric, 2) as avg_distance,
+        round(avg(avg_duration_min)::numeric, 2) as avg_duration_min,
+        round(avg(total_revenue)::numeric, 2) as avg_revenue_per_period,
         sum(total_trips) as total_trips_all_days
 
     from hourly

@@ -1,0 +1,630 @@
+docker compose --profile loader --profile dbt down -v
+Pipeline 12 stopped and volumes removed.
+docker compose up -d
+ Network p12-pipeline-net  Creating
+ Network p12-pipeline-net  Created
+ Volume 12-cdc-debezium-pipeline_postgres-data  Creating
+ Volume 12-cdc-debezium-pipeline_postgres-data  Created
+ Volume 12-cdc-debezium-pipeline_minio-data  Creating
+ Volume 12-cdc-debezium-pipeline_minio-data  Created
+ Volume 12-cdc-debezium-pipeline_flink-checkpoints  Creating
+ Volume 12-cdc-debezium-pipeline_flink-checkpoints  Created
+ Container p12-kafka  Creating
+ Container p12-minio  Creating
+ Container p12-postgres-source  Creating
+ Container p12-minio  Created
+ Container p12-mc-init  Creating
+ Container p12-kafka  Created
+ Container p12-kafka-connect  Creating
+ Container p12-postgres-source  Created
+ Container p12-mc-init  Created
+ Container p12-flink-jobmanager  Creating
+ Container p12-kafka-connect  Created
+ Container p12-flink-jobmanager  Created
+ Container p12-flink-taskmanager  Creating
+ Container p12-flink-taskmanager  Created
+ Container p12-postgres-source  Starting
+ Container p12-minio  Starting
+ Container p12-kafka  Starting
+ Container p12-minio  Started
+ Container p12-minio  Waiting
+ Container p12-postgres-source  Started
+ Container p12-kafka  Started
+ Container p12-kafka  Waiting
+ Container p12-minio  Healthy
+ Container p12-mc-init  Starting
+ Container p12-mc-init  Started
+ Container p12-kafka  Waiting
+ Container p12-mc-init  Waiting
+ Container p12-mc-init  Exited
+ Container p12-kafka  Healthy
+ Container p12-kafka-connect  Starting
+ Container p12-kafka  Healthy
+ Container p12-flink-jobmanager  Starting
+ Container p12-kafka-connect  Started
+ Container p12-flink-jobmanager  Started
+ Container p12-flink-jobmanager  Waiting
+ Container p12-flink-jobmanager  Healthy
+ Container p12-flink-taskmanager  Starting
+ Container p12-flink-taskmanager  Started
+
+=== Pipeline 12: CDC Pipeline (Debezium) ===
+PostgreSQL:       localhost:5432  (taxi/taxi/taxidb)
+Kafka:            localhost:9092
+Schema Registry:  http://localhost:8085
+Kafka Connect:    http://localhost:8083
+Flink Dashboard:  http://localhost:8081
+MinIO Console:    http://localhost:9001  (minioadmin/minioadmin)
+
+Next steps:
+  make register-connector  # Register Debezium CDC connector
+  make load-data           # Load taxi data into PostgreSQL (triggers CDC)
+  make process             # Submit Flink SQL jobs
+  make dbt-build           # Run dbt transformations
+============================================================
+  Pipeline 12 Benchmark: CDC (Debezium) Pipeline
+============================================================
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+docker compose --profile loader --profile dbt down -v
+Pipeline 12 stopped and volumes removed.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+docker compose up -d
+ Network p12-pipeline-net  Creating
+ Network p12-pipeline-net  Created
+ Volume 12-cdc-debezium-pipeline_minio-data  Creating
+ Volume 12-cdc-debezium-pipeline_minio-data  Created
+ Volume 12-cdc-debezium-pipeline_flink-checkpoints  Creating
+ Volume 12-cdc-debezium-pipeline_flink-checkpoints  Created
+ Volume 12-cdc-debezium-pipeline_postgres-data  Creating
+ Volume 12-cdc-debezium-pipeline_postgres-data  Created
+ Container p12-kafka  Creating
+ Container p12-minio  Creating
+ Container p12-postgres-source  Creating
+ Container p12-minio  Created
+ Container p12-mc-init  Creating
+ Container p12-postgres-source  Created
+ Container p12-kafka  Created
+ Container p12-kafka-connect  Creating
+ Container p12-mc-init  Created
+ Container p12-flink-jobmanager  Creating
+ Container p12-kafka-connect  Created
+ Container p12-flink-jobmanager  Created
+ Container p12-flink-taskmanager  Creating
+ Container p12-flink-taskmanager  Created
+ Container p12-postgres-source  Starting
+ Container p12-kafka  Starting
+ Container p12-minio  Starting
+ Container p12-kafka  Started
+ Container p12-kafka  Waiting
+ Container p12-minio  Started
+ Container p12-minio  Waiting
+ Container p12-postgres-source  Started
+ Container p12-minio  Healthy
+ Container p12-mc-init  Starting
+ Container p12-mc-init  Started
+ Container p12-mc-init  Waiting
+ Container p12-kafka  Waiting
+ Container p12-mc-init  Exited
+ Container p12-kafka  Healthy
+ Container p12-kafka-connect  Starting
+ Container p12-kafka-connect  Started
+ Container p12-kafka  Healthy
+ Container p12-flink-jobmanager  Starting
+ Container p12-flink-jobmanager  Started
+ Container p12-flink-jobmanager  Waiting
+ Container p12-flink-jobmanager  Healthy
+ Container p12-flink-taskmanager  Starting
+ Container p12-flink-taskmanager  Started
+
+=== Pipeline 12: CDC Pipeline (Debezium) ===
+PostgreSQL:       localhost:5432  (taxi/taxi/taxidb)
+Kafka:            localhost:9092
+Schema Registry:  http://localhost:8085
+Kafka Connect:    http://localhost:8083
+Flink Dashboard:  http://localhost:8081
+MinIO Console:    http://localhost:9001  (minioadmin/minioadmin)
+
+Next steps:
+  make register-connector  # Register Debezium CDC connector
+  make load-data           # Load taxi data into PostgreSQL (triggers CDC)
+  make process             # Submit Flink SQL jobs
+  make dbt-build           # Run dbt transformations
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+Waiting for services to stabilize...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+Registering Debezium CDC connector...
+curl -s -X POST http://localhost:8083/connectors \
+	-H "Content-Type: application/json" \
+	-d @kafka-connect/register-connector.json | python3 -m json.tool
+{
+    "name": "taxi-cdc-connector",
+    "config": {
+        "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+        "database.hostname": "postgres",
+        "database.port": "5432",
+        "database.user": "taxi",
+        "database.password": "taxi",
+        "database.dbname": "taxidb",
+        "topic.prefix": "dbserver1",
+        "table.include.list": "public.taxi_trips",
+        "plugin.name": "pgoutput",
+        "publication.name": "taxi_publication",
+        "slot.name": "taxi_slot",
+        "snapshot.mode": "initial",
+        "key.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "key.converter.schemas.enable": "false",
+        "value.converter": "org.apache.kafka.connect.json.JsonConverter",
+        "value.converter.schemas.enable": "false",
+        "decimal.handling.mode": "double",
+        "time.precision.mode": "connect",
+        "name": "taxi-cdc-connector"
+    },
+    "tasks": [],
+    "type": "source"
+}
+
+Connector registered. CDC events will flow to Kafka topic: dbserver1.public.taxi_trips
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+MSYS_NO_PATHCONV=1 docker compose run --rm postgres-loader
+ Container p12-postgres-source  Running
+Waiting for PostgreSQL at postgres:5432...
+PostgreSQL is ready (attempt 1)
+Reading parquet file: /data/yellow_tripdata_2024-01.parquet
+Loading 10000 rows into PostgreSQL taxi_trips table...
+  Loaded 1000/10000 rows...
+  Loaded 2000/10000 rows...
+  Loaded 3000/10000 rows...
+  Loaded 4000/10000 rows...
+  Loaded 5000/10000 rows...
+  Loaded 6000/10000 rows...
+  Loaded 7000/10000 rows...
+  Loaded 8000/10000 rows...
+  Loaded 9000/10000 rows...
+  Loaded 10000/10000 rows...
+COMPLETE: 10000 rows loaded into PostgreSQL taxi_trips table.
+Data loaded into PostgreSQL. Debezium will capture changes via CDC.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+Waiting for CDC events to flow through Kafka...
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+=== Bronze: CDC Events -> Iceberg ===
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/05-bronze-cdc.sql
+2026-02-21 15:01:16,913 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-21 15:01:16,956 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-21 15:01:16,956 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 21, 2026 3:01:17 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 12: Bronze Layer (Kafka CDC Events -> Iceberg)
+> -- =============================================================================
+> -- Run: sql-client.sh embedded -i 00-init.sql -f 05-bronze-cdc.sql
+> -- =============================================================================
+> -- Reads raw Debezium CDC events from Kafka topic and stores them as-is in
+> -- Iceberg Bronze layer for auditability and reprocessing.
+> -- =============================================================================
+> 
+> -- Create Kafka source for Debezium CDC events (raw JSON)
+> CREATE TEMPORARY TABLE cdc_source (
+>     `payload` STRING
+> ) WITH (
+>     'connector' = 'kafka',
+>     'topic' = 'dbserver1.public.taxi_trips',
+>     'properties.bootstrap.servers' = 'kafka:9092',
+>     'properties.group.id' = 'flink-cdc-bronze',
+>     'scan.startup.mode' = 'earliest-offset',
+>     'scan.bounded.mode' = 'latest-offset',
+>     'format' = 'raw'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS bronze.cdc_raw_trips (
+>     cdc_payload       STRING,
+>     ingested_at       TIMESTAMP(3)
+> )
+> WITH (
+>     'format-version' = '1',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+Bronze layer complete.
+=== Silver: Bronze CDC -> Cleaned Iceberg ===
+MSYS_NO_PATHCONV=1 docker compose exec -T flink-jobmanager /opt/flink/bin/sql-client.sh embedded -i /opt/flink/sql/00-init.sql -f /opt/flink/sql/06-silver-cdc.sql
+2026-02-21 15:01:27,568 WARN  org.apache.hadoop.metrics2.impl.MetricsConfig                [] - Cannot locate configuration: tried hadoop-metrics2-s3a-file-system.properties,hadoop-metrics2.properties
+2026-02-21 15:01:27,624 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - Scheduled Metric snapshot period at 10 second(s).
+2026-02-21 15:01:27,624 INFO  org.apache.hadoop.metrics2.impl.MetricsSystemImpl            [] - s3a-file-system metrics system started
+Successfully initialized from sql script: file:/opt/flink/sql/00-init.sql
+Feb 21, 2026 3:01:28 PM org.jline.utils.Log logr
+WARNING: Unable to create a system terminal, creating a dumb terminal (enable debug logging for more information)
+[34;1m[INFO] Executing SQL from file.[0m
+
+Command history file path: /root/.flink-sql-history
+Flink SQL> -- =============================================================================
+> -- Pipeline 12: Silver Layer (Bronze CDC -> Cleaned Iceberg)
+> -- =============================================================================
+> -- Run: sql-client.sh embedded -i 00-init.sql -f 06-silver-cdc.sql
+> -- =============================================================================
+> -- Parses CDC JSON payloads from Bronze, extracts the after-image (current
+> -- state of each row), applies quality filters, and writes to Silver.
+> --
+> -- Debezium CDC JSON structure (with schemas disabled):
+> -- {
+> --   "before": null | { ... },
+> --   "after": { "VendorID": 2, "tpep_pickup_datetime": 1706745600000000, ... },
+> --   "source": { ... },
+> --   "op": "c" | "u" | "d" | "r",
+> --   "ts_ms": 1706745600000
+> -- }[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> [34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> CREATE TABLE IF NOT EXISTS silver.cleaned_trips (
+>     trip_id                 STRING,
+>     vendor_id               INT,
+>     rate_code_id            INT,
+>     pickup_location_id      INT,
+>     dropoff_location_id     INT,
+>     payment_type_id         INT,
+>     pickup_datetime         TIMESTAMP(3),
+>     dropoff_datetime        TIMESTAMP(3),
+>     passenger_count         INT,
+>     trip_distance_miles     DOUBLE,
+>     store_and_fwd_flag      STRING,
+>     fare_amount             DECIMAL(10, 2),
+>     extra_amount            DECIMAL(10, 2),
+>     mta_tax                 DECIMAL(10, 2),
+>     tip_amount              DECIMAL(10, 2),
+>     tolls_amount            DECIMAL(10, 2),
+>     improvement_surcharge   DECIMAL(10, 2),
+>     total_amount            DECIMAL(10, 2),
+>     congestion_surcharge    DECIMAL(10, 2),
+>     airport_fee             DECIMAL(10, 2),
+>     pickup_date             DATE
+> )
+> PARTITIONED BY (pickup_date)
+> WITH (
+>     'format-version' = '2',
+>     'write.format.default' = 'parquet',
+>     'write.parquet.compression-codec' = 'zstd',
+>     'write.metadata.delete-after-commit.enabled' = 'true',
+>     'write.metadata.previous-versions-max' = '10',
+>     'write.target-file-size-bytes' = '134217728'
+> )[34;1m[INFO] Execute statement succeeded.[0m
+
+Flink SQL> 
+> -- Parse CDC JSON and extract after-image fields, apply quality filters
+> -- Only process records where op is 'c' (create), 'r' (read/snapshot), or 'u' (update)
+> -- Skip 'd' (delete) operations since we want the current state
+> INSERT INTO iceberg_catalog.silver.cleaned_trips
+> SELECT
+>     CAST(MD5(CONCAT_WS('|',
+>         CAST(CAST(JSON_VALUE(cdc_payload, '$.after.VendorID') AS INT) AS STRING),
+>         CAST(CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT) AS STRING),
+>         CAST(CAST(JSON_VALUE(cdc_payload, '$.after.tpep_dropoff_datetime') AS BIGINT) AS STRING),
+>         CAST(CAST(JSON_VALUE(cdc_payload, '$.after.PULocationID') AS INT) AS STRING),
+>         CAST(CAST(JSON_VALUE(cdc_payload, '$.after.DOLocationID') AS INT) AS STRING),
+>         JSON_VALUE(cdc_payload, '$.after.fare_amount'),
+>         JSON_VALUE(cdc_payload, '$.after.total_amount')
+>     )) AS STRING) AS trip_id,
+> 
+>     CAST(JSON_VALUE(cdc_payload, '$.after.VendorID') AS INT) AS vendor_id,
+>     CAST(JSON_VALUE(cdc_payload, '$.after.RatecodeID') AS INT) AS rate_code_id,
+>     CAST(JSON_VALUE(cdc_payload, '$.after.PULocationID') AS INT) AS pickup_location_id,
+>     CAST(JSON_VALUE(cdc_payload, '$.after.DOLocationID') AS INT) AS dropoff_location_id,
+>     CAST(JSON_VALUE(cdc_payload, '$.after.payment_type') AS INT) AS payment_type_id,
+> 
+>     TO_TIMESTAMP_LTZ(
+>         CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT) / 1000000,
+>         0
+>     ) AS pickup_datetime,
+>     TO_TIMESTAMP_LTZ(
+>         CAST(JSON_VALUE(cdc_payload, '$.after.tpep_dropoff_datetime') AS BIGINT) / 1000000,
+>         0
+>     ) AS dropoff_datetime,
+> 
+>     CAST(JSON_VALUE(cdc_payload, '$.after.passenger_count') AS INT) AS passenger_count,
+>     CAST(JSON_VALUE(cdc_payload, '$.after.trip_distance') AS DOUBLE) AS trip_distance_miles,
+>     JSON_VALUE(cdc_payload, '$.after.store_and_fwd_flag') AS store_and_fwd_flag,
+> 
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.fare_amount') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS fare_amount,
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.extra') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS extra_amount,
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.mta_tax') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS mta_tax,
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.tip_amount') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS tip_amount,
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.tolls_amount') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS tolls_amount,
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.improvement_surcharge') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS improvement_surcharge,
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.total_amount') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS total_amount,
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.congestion_surcharge') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS congestion_surcharge,
+>     CAST(ROUND(CAST(JSON_VALUE(cdc_payload, '$.after.Airport_fee') AS DOUBLE), 2) AS DECIMAL(10, 2)) AS airport_fee,
+> 
+>     -- Derived: pickup date (for partitioning)
+>     CAST(
+>         TO_TIMESTAMP_LTZ(
+>             CAST(JSON_VALUE(cdc_payload, '$.after.tpep_pickup_datetime') AS BIGINT) / 1000000,
+>             0
+>         ) AS DATE
+>     ) AS pickup_date
+> 
+> FROM iceberg_catalog.bronze.cdc_raw_trips
+> WHERE JSON_VALUE(cdc_payload, '$.after.VendorID') IS NOT NULL
+>   AND JSON_VALUE(cdc_payload, '$.op') IN ('c', 'r', 'u')
+>   AND CAST(JSON_VALUE(cdc_payload, '$.after.trip_distance') AS DOUBLE) >= 0
+>   AND CAST(JSON_VALUE(cdc_payload, '$.after.fare_amount') AS DOUBLE)[34;1m[INFO] Complete execution of the SQL update statement.[0m
+
+Flink SQL> 
+Shutting down the session...
+done.
+Silver layer complete.
+All Flink SQL jobs complete.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+make[1]: Entering directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+MSYS_NO_PATHCONV=1 docker compose run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
+ Container p12-minio  Running
+[0m15:01:37  Running with dbt=1.11.5
+[0m15:01:37  Installing dbt-labs/dbt_utils
+[0m15:01:40  Installed from version 1.3.3
+[0m15:01:40  Up to date!
+[0m15:01:42  Running with dbt=1.11.5
+[0m15:01:42  Registered adapter: duckdb=1.10.0
+[0m15:01:43  Found 14 models, 74 data tests, 3 seeds, 1 source, 606 macros
+[0m15:01:43  
+[0m15:01:43  Concurrency: 4 threads (target='dev')
+[0m15:01:43  
+[0m15:01:47  1 of 91 START sql table model main_marts.dim_dates ............................. [RUN]
+[0m15:01:47  2 of 91 START sql table model main_staging.stg_yellow_trips .................... [RUN]
+[0m15:01:47  3 of 91 START seed file main_raw.payment_type_lookup ........................... [RUN]
+[0m15:01:47  4 of 91 START seed file main_raw.rate_code_lookup .............................. [RUN]
+[0m15:01:47  3 of 91 OK loaded seed file main_raw.payment_type_lookup ....................... [[32mCREATE 6[0m in 0.12s]
+[0m15:01:47  5 of 91 START seed file main_raw.taxi_zone_lookup .............................. [RUN]
+[0m15:01:47  4 of 91 OK loaded seed file main_raw.rate_code_lookup .......................... [[32mCREATE 7[0m in 0.14s]
+[0m15:01:47  6 of 91 START test not_null_payment_type_lookup_payment_type_id ................ [RUN]
+[0m15:01:47  1 of 91 OK created sql table model main_marts.dim_dates ........................ [[32mOK[0m in 0.17s]
+[0m15:01:47  7 of 91 START test unique_payment_type_lookup_payment_type_id .................. [RUN]
+[0m15:01:47  2 of 91 OK created sql table model main_staging.stg_yellow_trips ............... [[32mOK[0m in 0.19s]
+[0m15:01:47  8 of 91 START test not_null_rate_code_lookup_rate_code_id ...................... [RUN]
+[0m15:01:47  6 of 91 PASS not_null_payment_type_lookup_payment_type_id ...................... [[32mPASS[0m in 0.07s]
+[0m15:01:47  9 of 91 START test unique_rate_code_lookup_rate_code_id ........................ [RUN]
+[0m15:01:47  5 of 91 OK loaded seed file main_raw.taxi_zone_lookup .......................... [[32mCREATE 265[0m in 0.09s]
+[0m15:01:47  10 of 91 START test not_null_dim_dates_date_key ................................ [RUN]
+[0m15:01:47  7 of 91 PASS unique_payment_type_lookup_payment_type_id ........................ [[32mPASS[0m in 0.07s]
+[0m15:01:47  11 of 91 START test not_null_dim_dates_day_of_week_name ........................ [RUN]
+[0m15:01:47  8 of 91 PASS not_null_rate_code_lookup_rate_code_id ............................ [[32mPASS[0m in 0.06s]
+[0m15:01:47  12 of 91 START test not_null_dim_dates_is_holiday .............................. [RUN]
+[0m15:01:47  9 of 91 PASS unique_rate_code_lookup_rate_code_id .............................. [[32mPASS[0m in 0.05s]
+[0m15:01:47  13 of 91 START test not_null_dim_dates_is_weekend .............................. [RUN]
+[0m15:01:47  10 of 91 PASS not_null_dim_dates_date_key ...................................... [[32mPASS[0m in 0.07s]
+[0m15:01:47  11 of 91 PASS not_null_dim_dates_day_of_week_name .............................. [[32mPASS[0m in 0.06s]
+[0m15:01:47  14 of 91 START test unique_dim_dates_date_key .................................. [RUN]
+[0m15:01:47  15 of 91 START test accepted_values_stg_yellow_trips_payment_type_id__0__1__2__3__4__5__6  [RUN]
+[0m15:01:47  12 of 91 PASS not_null_dim_dates_is_holiday .................................... [[32mPASS[0m in 0.08s]
+[0m15:01:47  16 of 91 START test accepted_values_stg_yellow_trips_rate_code_id__1__2__3__4__5__6__99  [RUN]
+[0m15:01:47  13 of 91 PASS not_null_dim_dates_is_weekend .................................... [[32mPASS[0m in 0.06s]
+[0m15:01:47  17 of 91 START test accepted_values_stg_yellow_trips_vendor_id__1__2__6 ........ [RUN]
+[0m15:01:47  14 of 91 PASS unique_dim_dates_date_key ........................................ [[32mPASS[0m in 0.07s]
+[0m15:01:47  18 of 91 START test assert_fare_not_exceeds_total .............................. [RUN]
+[0m15:01:47  15 of 91 PASS accepted_values_stg_yellow_trips_payment_type_id__0__1__2__3__4__5__6  [[32mPASS[0m in 0.06s]
+[0m15:01:47  19 of 91 START test not_null_stg_yellow_trips_dropoff_datetime ................. [RUN]
+[0m15:01:47  16 of 91 PASS accepted_values_stg_yellow_trips_rate_code_id__1__2__3__4__5__6__99  [[32mPASS[0m in 0.07s]
+[0m15:01:47  17 of 91 PASS accepted_values_stg_yellow_trips_vendor_id__1__2__6 .............. [[32mPASS[0m in 0.05s]
+[0m15:01:47  20 of 91 START test not_null_stg_yellow_trips_dropoff_location_id .............. [RUN]
+[0m15:01:47  21 of 91 START test not_null_stg_yellow_trips_fare_amount ...................... [RUN]
+[0m15:01:47  18 of 91 PASS assert_fare_not_exceeds_total .................................... [[32mPASS[0m in 0.04s]
+[0m15:01:47  19 of 91 PASS not_null_stg_yellow_trips_dropoff_datetime ....................... [[32mPASS[0m in 0.04s]
+[0m15:01:47  22 of 91 START test not_null_stg_yellow_trips_pickup_datetime .................. [RUN]
+[0m15:01:47  23 of 91 START test not_null_stg_yellow_trips_pickup_location_id ............... [RUN]
+[0m15:01:47  21 of 91 PASS not_null_stg_yellow_trips_fare_amount ............................ [[32mPASS[0m in 0.04s]
+[0m15:01:47  24 of 91 START test not_null_stg_yellow_trips_total_amount ..................... [RUN]
+[0m15:01:47  20 of 91 PASS not_null_stg_yellow_trips_dropoff_location_id .................... [[32mPASS[0m in 0.05s]
+[0m15:01:47  25 of 91 START test not_null_stg_yellow_trips_trip_distance_miles .............. [RUN]
+[0m15:01:47  23 of 91 PASS not_null_stg_yellow_trips_pickup_location_id ..................... [[32mPASS[0m in 0.04s]
+[0m15:01:47  22 of 91 PASS not_null_stg_yellow_trips_pickup_datetime ........................ [[32mPASS[0m in 0.05s]
+[0m15:01:47  26 of 91 START test not_null_stg_yellow_trips_trip_id .......................... [RUN]
+[0m15:01:47  27 of 91 START test not_null_stg_yellow_trips_vendor_id ........................ [RUN]
+[0m15:01:47  24 of 91 PASS not_null_stg_yellow_trips_total_amount ........................... [[32mPASS[0m in 0.05s]
+[0m15:01:47  28 of 91 START test unique_stg_yellow_trips_trip_id ............................ [RUN]
+[0m15:01:47  25 of 91 PASS not_null_stg_yellow_trips_trip_distance_miles .................... [[32mPASS[0m in 0.05s]
+[0m15:01:47  29 of 91 START test not_null_taxi_zone_lookup_Borough .......................... [RUN]
+[0m15:01:47  26 of 91 PASS not_null_stg_yellow_trips_trip_id ................................ [[32mPASS[0m in 0.04s]
+[0m15:01:47  30 of 91 START test not_null_taxi_zone_lookup_LocationID ....................... [RUN]
+[0m15:01:47  27 of 91 PASS not_null_stg_yellow_trips_vendor_id .............................. [[32mPASS[0m in 0.05s]
+[0m15:01:47  31 of 91 START test unique_taxi_zone_lookup_LocationID ......................... [RUN]
+[0m15:01:47  29 of 91 PASS not_null_taxi_zone_lookup_Borough ................................ [[32mPASS[0m in 0.04s]
+[0m15:01:47  32 of 91 START sql view model main_staging.stg_payment_types ................... [RUN]
+[0m15:01:47  28 of 91 PASS unique_stg_yellow_trips_trip_id .................................. [[32mPASS[0m in 0.05s]
+[0m15:01:47  33 of 91 START sql view model main_staging.stg_rate_codes ...................... [RUN]
+[0m15:01:47  31 of 91 PASS unique_taxi_zone_lookup_LocationID ............................... [[32mPASS[0m in 0.04s]
+[0m15:01:47  30 of 91 PASS not_null_taxi_zone_lookup_LocationID ............................. [[32mPASS[0m in 0.06s]
+[0m15:01:47  34 of 91 START sql view model main_intermediate.int_trip_metrics ............... [RUN]
+[0m15:01:47  35 of 91 START sql view model main_staging.stg_taxi_zones ...................... [RUN]
+[0m15:01:47  32 of 91 OK created sql view model main_staging.stg_payment_types .............. [[32mOK[0m in 0.07s]
+[0m15:01:47  33 of 91 OK created sql view model main_staging.stg_rate_codes ................. [[32mOK[0m in 0.07s]
+[0m15:01:47  36 of 91 START test not_null_stg_payment_types_payment_type_id ................. [RUN]
+[0m15:01:47  37 of 91 START test not_null_stg_payment_types_payment_type_name ............... [RUN]
+[0m15:01:47  35 of 91 OK created sql view model main_staging.stg_taxi_zones ................. [[32mOK[0m in 0.14s]
+[0m15:01:47  34 of 91 OK created sql view model main_intermediate.int_trip_metrics .......... [[32mOK[0m in 0.14s]
+[0m15:01:47  38 of 91 START test unique_stg_payment_types_payment_type_id ................... [RUN]
+[0m15:01:47  39 of 91 START test not_null_stg_rate_codes_rate_code_id ....................... [RUN]
+[0m15:01:47  36 of 91 PASS not_null_stg_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.11s]
+[0m15:01:47  40 of 91 START test not_null_stg_rate_codes_rate_code_name ..................... [RUN]
+[0m15:01:47  37 of 91 PASS not_null_stg_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.11s]
+[0m15:01:47  41 of 91 START test unique_stg_rate_codes_rate_code_id ......................... [RUN]
+[0m15:01:47  38 of 91 PASS unique_stg_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.05s]
+[0m15:01:47  42 of 91 START test not_null_stg_taxi_zones_borough ............................ [RUN]
+[0m15:01:47  39 of 91 PASS not_null_stg_rate_codes_rate_code_id ............................. [[32mPASS[0m in 0.06s]
+[0m15:01:47  43 of 91 START test not_null_stg_taxi_zones_location_id ........................ [RUN]
+[0m15:01:47  41 of 91 PASS unique_stg_rate_codes_rate_code_id ............................... [[32mPASS[0m in 0.04s]
+[0m15:01:47  40 of 91 PASS not_null_stg_rate_codes_rate_code_name ........................... [[32mPASS[0m in 0.05s]
+[0m15:01:47  44 of 91 START test not_null_stg_taxi_zones_zone_name .......................... [RUN]
+[0m15:01:47  45 of 91 START test relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+[0m15:01:47  43 of 91 PASS not_null_stg_taxi_zones_location_id .............................. [[32mPASS[0m in 0.05s]
+[0m15:01:47  42 of 91 PASS not_null_stg_taxi_zones_borough .................................. [[32mPASS[0m in 0.06s]
+[0m15:01:47  46 of 91 START test relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [RUN]
+[0m15:01:47  47 of 91 START test unique_stg_taxi_zones_location_id .......................... [RUN]
+[0m15:01:47  44 of 91 PASS not_null_stg_taxi_zones_zone_name ................................ [[32mPASS[0m in 0.06s]
+[0m15:01:47  48 of 91 START test assert_trip_duration_positive .............................. [RUN]
+[0m15:01:47  45 of 91 PASS relationships_stg_yellow_trips_dropoff_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.06s]
+[0m15:01:47  49 of 91 START test dbt_utils_accepted_range_int_trip_metrics_pickup_hour__23__0  [RUN]
+[0m15:01:47  47 of 91 PASS unique_stg_taxi_zones_location_id ................................ [[32mPASS[0m in 0.05s]
+[0m15:01:47  46 of 91 PASS relationships_stg_yellow_trips_pickup_location_id__location_id__ref_stg_taxi_zones_  [[32mPASS[0m in 0.06s]
+[0m15:01:47  50 of 91 START test dbt_utils_accepted_range_int_trip_metrics_trip_duration_minutes__720__1  [RUN]
+[0m15:01:47  48 of 91 PASS assert_trip_duration_positive .................................... [[32mPASS[0m in 0.04s]
+[0m15:01:47  51 of 91 START test not_null_int_trip_metrics_is_weekend ....................... [RUN]
+[0m15:01:47  52 of 91 START test not_null_int_trip_metrics_pickup_date ...................... [RUN]
+[0m15:01:47  49 of 91 PASS dbt_utils_accepted_range_int_trip_metrics_pickup_hour__23__0 ..... [[32mPASS[0m in 0.06s]
+[0m15:01:47  53 of 91 START test not_null_int_trip_metrics_pickup_hour ...................... [RUN]
+[0m15:01:48  50 of 91 PASS dbt_utils_accepted_range_int_trip_metrics_trip_duration_minutes__720__1  [[32mPASS[0m in 0.05s]
+[0m15:01:48  51 of 91 PASS not_null_int_trip_metrics_is_weekend ............................. [[32mPASS[0m in 0.05s]
+[0m15:01:48  54 of 91 START test not_null_int_trip_metrics_trip_duration_minutes ............ [RUN]
+[0m15:01:48  55 of 91 START test not_null_int_trip_metrics_trip_id .......................... [RUN]
+[0m15:01:48  52 of 91 PASS not_null_int_trip_metrics_pickup_date ............................ [[32mPASS[0m in 0.05s]
+[0m15:01:48  56 of 91 START sql table model main_marts.dim_payment_types .................... [RUN]
+[0m15:01:48  53 of 91 PASS not_null_int_trip_metrics_pickup_hour ............................ [[32mPASS[0m in 0.05s]
+[0m15:01:48  57 of 91 START sql table model main_marts.dim_locations ........................ [RUN]
+[0m15:01:48  55 of 91 PASS not_null_int_trip_metrics_trip_id ................................ [[32mPASS[0m in 0.05s]
+[0m15:01:48  54 of 91 PASS not_null_int_trip_metrics_trip_duration_minutes .................. [[32mPASS[0m in 0.05s]
+[0m15:01:48  58 of 91 START sql view model main_intermediate.int_daily_summary .............. [RUN]
+[0m15:01:48  59 of 91 START sql view model main_intermediate.int_hourly_patterns ............ [RUN]
+[0m15:01:48  56 of 91 OK created sql table model main_marts.dim_payment_types ............... [[32mOK[0m in 0.07s]
+[0m15:01:48  60 of 91 START test not_null_dim_payment_types_payment_type_id ................. [RUN]
+[0m15:01:48  57 of 91 OK created sql table model main_marts.dim_locations ................... [[32mOK[0m in 0.09s]
+[0m15:01:48  61 of 91 START test not_null_dim_payment_types_payment_type_name ............... [RUN]
+[0m15:01:48  59 of 91 OK created sql view model main_intermediate.int_hourly_patterns ....... [[32mOK[0m in 0.07s]
+[0m15:01:48  58 of 91 OK created sql view model main_intermediate.int_daily_summary ......... [[32mOK[0m in 0.08s]
+[0m15:01:48  62 of 91 START test unique_dim_payment_types_payment_type_id ................... [RUN]
+[0m15:01:48  63 of 91 START test not_null_dim_locations_borough ............................. [RUN]
+[0m15:01:48  60 of 91 PASS not_null_dim_payment_types_payment_type_id ....................... [[32mPASS[0m in 0.06s]
+[0m15:01:48  64 of 91 START test not_null_dim_locations_location_id ......................... [RUN]
+[0m15:01:48  61 of 91 PASS not_null_dim_payment_types_payment_type_name ..................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  65 of 91 START test not_null_dim_locations_zone_name ........................... [RUN]
+[0m15:01:48  62 of 91 PASS unique_dim_payment_types_payment_type_id ......................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  66 of 91 START test unique_dim_locations_location_id ........................... [RUN]
+[0m15:01:48  63 of 91 PASS not_null_dim_locations_borough ................................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  64 of 91 PASS not_null_dim_locations_location_id ............................... [[32mPASS[0m in 0.04s]
+[0m15:01:48  67 of 91 START test dbt_utils_accepted_range_int_hourly_patterns_pickup_hour__23__0  [RUN]
+[0m15:01:48  68 of 91 START test not_null_int_hourly_patterns_pickup_date ................... [RUN]
+[0m15:01:48  65 of 91 PASS not_null_dim_locations_zone_name ................................. [[32mPASS[0m in 0.05s]
+[0m15:01:48  69 of 91 START test not_null_int_hourly_patterns_pickup_hour ................... [RUN]
+[0m15:01:48  66 of 91 PASS unique_dim_locations_location_id ................................. [[32mPASS[0m in 0.04s]
+[0m15:01:48  70 of 91 START test not_null_int_hourly_patterns_total_trips ................... [RUN]
+[0m15:01:48  67 of 91 PASS dbt_utils_accepted_range_int_hourly_patterns_pickup_hour__23__0 .. [[32mPASS[0m in 0.05s]
+[0m15:01:48  68 of 91 PASS not_null_int_hourly_patterns_pickup_date ......................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  71 of 91 START test dbt_utils_accepted_range_int_daily_summary_total_trips__0 .. [RUN]
+[0m15:01:48  72 of 91 START test not_null_int_daily_summary_pickup_date ..................... [RUN]
+[0m15:01:48  69 of 91 PASS not_null_int_hourly_patterns_pickup_hour ......................... [[32mPASS[0m in 0.04s]
+[0m15:01:48  73 of 91 START test not_null_int_daily_summary_total_revenue ................... [RUN]
+[0m15:01:48  70 of 91 PASS not_null_int_hourly_patterns_total_trips ......................... [[32mPASS[0m in 0.04s]
+[0m15:01:48  74 of 91 START test not_null_int_daily_summary_total_trips ..................... [RUN]
+[0m15:01:48  72 of 91 PASS not_null_int_daily_summary_pickup_date ........................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  71 of 91 PASS dbt_utils_accepted_range_int_daily_summary_total_trips__0 ........ [[32mPASS[0m in 0.05s]
+[0m15:01:48  75 of 91 START test unique_int_daily_summary_pickup_date ....................... [RUN]
+[0m15:01:48  76 of 91 START sql incremental model main_marts.fct_trips ...................... [RUN]
+[0m15:01:48  74 of 91 PASS not_null_int_daily_summary_total_trips ........................... [[32mPASS[0m in 0.07s]
+[0m15:01:48  73 of 91 PASS not_null_int_daily_summary_total_revenue ......................... [[32mPASS[0m in 0.07s]
+[0m15:01:48  77 of 91 START sql table model main_marts.mart_hourly_demand ................... [RUN]
+[0m15:01:48  75 of 91 PASS unique_int_daily_summary_pickup_date ............................. [[32mPASS[0m in 0.06s]
+[0m15:01:48  78 of 91 START sql table model main_marts.mart_daily_revenue ................... [RUN]
+[0m15:01:48  76 of 91 OK created sql incremental model main_marts.fct_trips ................. [[32mOK[0m in 0.09s]
+[0m15:01:48  79 of 91 START test not_null_fct_trips_pickup_datetime ......................... [RUN]
+[0m15:01:48  80 of 91 START test not_null_fct_trips_total_amount ............................ [RUN]
+[0m15:01:48  77 of 91 OK created sql table model main_marts.mart_hourly_demand .............. [[32mOK[0m in 0.08s]
+[0m15:01:48  78 of 91 OK created sql table model main_marts.mart_daily_revenue .............. [[32mOK[0m in 0.07s]
+[0m15:01:48  81 of 91 START test not_null_fct_trips_trip_id ................................. [RUN]
+[0m15:01:48  82 of 91 START test unique_fct_trips_trip_id ................................... [RUN]
+[0m15:01:48  80 of 91 PASS not_null_fct_trips_total_amount .................................. [[32mPASS[0m in 0.05s]
+[0m15:01:48  79 of 91 PASS not_null_fct_trips_pickup_datetime ............................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  83 of 91 START test not_null_mart_hourly_demand_is_weekend ..................... [RUN]
+[0m15:01:48  84 of 91 START test not_null_mart_hourly_demand_pickup_hour .................... [RUN]
+[0m15:01:48  81 of 91 PASS not_null_fct_trips_trip_id ....................................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  85 of 91 START test not_null_mart_daily_revenue_date_key ....................... [RUN]
+[0m15:01:48  82 of 91 PASS unique_fct_trips_trip_id ......................................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  86 of 91 START test not_null_mart_daily_revenue_total_revenue .................. [RUN]
+[0m15:01:48  83 of 91 PASS not_null_mart_hourly_demand_is_weekend ........................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  87 of 91 START test unique_mart_daily_revenue_date_key ......................... [RUN]
+[0m15:01:48  84 of 91 PASS not_null_mart_hourly_demand_pickup_hour .......................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  88 of 91 START sql table model main_marts.mart_location_performance ............ [RUN]
+[0m15:01:48  86 of 91 PASS not_null_mart_daily_revenue_total_revenue ........................ [[32mPASS[0m in 0.05s]
+[0m15:01:48  85 of 91 PASS not_null_mart_daily_revenue_date_key ............................. [[32mPASS[0m in 0.06s]
+[0m15:01:48  87 of 91 PASS unique_mart_daily_revenue_date_key ............................... [[32mPASS[0m in 0.05s]
+[0m15:01:48  88 of 91 OK created sql table model main_marts.mart_location_performance ....... [[32mOK[0m in 0.07s]
+[0m15:01:48  89 of 91 START test not_null_mart_location_performance_pickup_location_id ...... [RUN]
+[0m15:01:48  90 of 91 START test not_null_mart_location_performance_total_pickups ........... [RUN]
+[0m15:01:48  91 of 91 START test unique_mart_location_performance_pickup_location_id ........ [RUN]
+[0m15:01:48  89 of 91 PASS not_null_mart_location_performance_pickup_location_id ............ [[32mPASS[0m in 0.04s]
+[0m15:01:48  90 of 91 PASS not_null_mart_location_performance_total_pickups ................. [[32mPASS[0m in 0.05s]
+[0m15:01:48  91 of 91 PASS unique_mart_location_performance_pickup_location_id .............. [[32mPASS[0m in 0.05s]
+[0m15:01:48  
+[0m15:01:48  Finished running 1 incremental model, 3 seeds, 7 table models, 74 data tests, 6 view models in 0 hours 0 minutes and 5.45 seconds (5.45s).
+[0m15:01:48  
+[0m15:01:48  [32mCompleted successfully[0m
+[0m15:01:48  
+[0m15:01:48  Done. PASS=91 WARN=0 ERROR=0 SKIP=0 NO-OP=0 TOTAL=91
+dbt build complete.
+make[1]: Leaving directory 'C:/docker_projects/real_time_data_engineering/pipelines/12-cdc-debezium-pipeline'
+
+============================================================
+  BENCHMARK COMPLETE
+  Total elapsed: 114s
+============================================================
+Results saved to benchmark_results/latest.json
+docker compose --profile loader --profile dbt down -v
+ Container p12-postgres-source  Stopping
+ Container p12-flink-taskmanager  Stopping
+ Container p12-kafka-connect  Stopping
+ Container p12-flink-taskmanager  Stopped
+ Container p12-flink-taskmanager  Removing
+ Container p12-flink-taskmanager  Removed
+ Container p12-flink-jobmanager  Stopping
+ Container p12-postgres-source  Stopped
+ Container p12-postgres-source  Removing
+ Container p12-postgres-source  Removed
+ Container p12-flink-jobmanager  Stopped
+ Container p12-flink-jobmanager  Removing
+ Container p12-flink-jobmanager  Removed
+ Container p12-mc-init  Stopping
+ Container p12-mc-init  Stopped
+ Container p12-mc-init  Removing
+ Container p12-mc-init  Removed
+ Container p12-minio  Stopping
+ Container p12-minio  Stopped
+ Container p12-minio  Removing
+ Container p12-minio  Removed
+ Container p12-kafka-connect  Stopped
+ Container p12-kafka-connect  Removing
+ Container p12-kafka-connect  Removed
+ Container p12-kafka  Stopping
+ Container p12-kafka  Stopped
+ Container p12-kafka  Removing
+ Container p12-kafka  Removed
+ Volume 12-cdc-debezium-pipeline_minio-data  Removing
+ Volume 12-cdc-debezium-pipeline_flink-checkpoints  Removing
+ Network p12-pipeline-net  Removing
+ Volume 12-cdc-debezium-pipeline_postgres-data  Removing
+ Volume 12-cdc-debezium-pipeline_flink-checkpoints  Removed
+ Volume 12-cdc-debezium-pipeline_minio-data  Removed
+ Volume 12-cdc-debezium-pipeline_postgres-data  Removed
+ Network p12-pipeline-net  Removed
+Pipeline 12 stopped and volumes removed.
+docker compose --profile loader --profile dbt down -v --remove-orphans
+docker network rm p12-pipeline-net 2>/dev/null || true
+Pipeline 12 fully cleaned.
