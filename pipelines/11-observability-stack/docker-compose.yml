@@ -216,6 +216,7 @@ services:
     container_name: p11-soda
     volumes:
       - ./soda:/soda:ro
+      - ./dbt_project:/dbt
     environment:
       AWS_ACCESS_KEY_ID: minioadmin
       AWS_SECRET_ACCESS_KEY: minioadmin

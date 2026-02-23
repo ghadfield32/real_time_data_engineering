@@ -10,7 +10,7 @@ nyc_taxi_pipeline_11:
   outputs:
     dev:
       type: duckdb
-      path: /tmp/p11_dbt.duckdb
+      path: /dbt/warehouse.duckdb
       schema: main
       threads: 4
       extensions:

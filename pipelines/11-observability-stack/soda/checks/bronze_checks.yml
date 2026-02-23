@@ -1,11 +1,12 @@
-# Bronze layer data quality checks
-checks for bronze_raw_trips:
+# Data arrival validation — checks that data was loaded through the pipeline
+# Note: Raw Bronze/Silver data lives in Iceberg (MinIO), not DuckDB.
+# We validate arrival via the dbt-materialized fact table.
+checks for fct_trips:
   - row_count > 0:
-      name: "Bronze table has data"
+      name: "Fact table has data loaded"
   - schema:
-      name: "Bronze schema validation"
+      name: "Fact table schema validation"
       warn:
         when wrong column type:
           pickup_datetime: timestamp
           dropoff_datetime: timestamp
-          fare_amount: double

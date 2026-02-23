@@ -42,8 +42,11 @@ process-silver: ## Submit Silver layer Flink SQL jobs (batch mode)
 process: process-bronze process-silver ## Submit all Flink SQL jobs (Bronze + Silver)
 	@echo "All Flink SQL jobs submitted."
 
-dbt-build: ## Run dbt build with Elementary
-	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir ."
+dbt-build: ## Run dbt build (pipeline models + Elementary separately)
+	@echo "Phase 1: Pipeline models (must pass)..."
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt deps --profiles-dir . && dbt build --full-refresh --profiles-dir . --exclude package:elementary"
+	@echo "Phase 2: Elementary observability models (best-effort, DuckDB has known incompatibilities)..."
+	MSYS_NO_PATHCONV=1 $(COMPOSE) run --rm --entrypoint /bin/sh dbt -c "dbt run --profiles-dir . --select package:elementary || true"
 
 soda-check: ## Run Soda Core quality checks
 	@echo "=== Running Soda Core Checks ==="

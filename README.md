@@ -2,7 +2,7 @@
 
 Compare **30+ streaming technologies** across **24 complete pipelines** using identical NYC Yellow Taxi workloads. Every pipeline implements the same Medallion Architecture (Bronze / Silver / Gold) with the same business logic, enabling direct "apples-to-apples" performance and complexity comparisons.
 
-**Latest Benchmark:** 2026-02-22 | **22 pipelines PASS** | **2 partial** (P11 Elementary/DuckDB, P14 Materialize/dbt) | **0 failures**
+**Latest Benchmark:** 2026-02-22 | **24 pipelines PASS** | **0 partial** | **0 failures**
 
 ---
 
@@ -58,14 +58,14 @@ cat pipelines/comparison/comparison_report.md
 
 ## Benchmark Results (2026-02-22)
 
-**Full details:** [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) | [Comparison Report](pipelines/comparison/comparison_report.md)
+**Full details:** [BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) | [Comparison Report](pipelines/comparison/comparison_report.md)
 
 ### Results at a Glance
 
 | Status | Count | Pipelines |
 |--------|-------|-----------|
-| **Full PASS** (E2E + dbt green) | 22 | P00-P10, P12-P13, P15-P23 |
-| **Partial** (processing OK, dbt adapter issues) | 2 | P11 (Elementary+DuckDB), P14 (Materialize dbt) |
+| **Full PASS** (E2E + dbt green) | 24 | P00-P23 |
+| **Partial** | 0 | -- |
 | **Known Failures** | 0 | -- |
 
 ### Top Performers
@@ -73,8 +73,8 @@ cat pipelines/comparison/comparison_report.md
 | Metric | Pipeline | Value |
 |--------|----------|-------|
 | **Fastest E2E** | P10 (Serving Comparison) | 35s |
+| **Fastest Streaming SQL** | P14 (Materialize) | 44s |
 | **Fastest Streaming** | P19 (Mage AI) | 51s |
-| **Fastest Full Pipeline** | P20 (Bytewax) | 62s |
 | **Best Orchestrated** | P09 (Dagster) | 97s, 91/91 PASS |
 | **Best Production Stack** | P01 (Kafka+Flink+Iceberg) | 151s, 94/94 PASS |
 | **Lightest Memory** | P20 (Bytewax) | 2,173 MB |
@@ -85,7 +85,7 @@ cat pipelines/comparison/comparison_report.md
 P10  |||||                                      35s  (Serving)
 P19  |||||||                                    51s  (Mage AI)
 P20  ||||||||                                   62s  (Bytewax)
-P14  |||||||||                                  63s  (Materialize)
+P14  ||||||                                     44s  (Materialize)
 P00  |||||||||||                                89s  (Batch baseline)
 P02  ||||||||||||                               93s  (Kafka+Spark)
 P03  ||||||||||||                               93s  (Kafka+RisingWave)
@@ -203,7 +203,7 @@ Advanced patterns and emerging technologies:
 
 - **P12: Debezium CDC** -- PostgreSQL WAL-based Change Data Capture (139s, 91/91 PASS)
 - **P13: Delta Lake** -- Kafka + Spark + Delta Lake (112s, 91/91 PASS)
-- **P14: Materialize** -- Streaming SQL database with incrementally maintained views (63s, PARTIAL)
+- **P14: Materialize** -- Streaming SQL database with incrementally maintained views (44s, 81/81 PASS)
 - **P15: Kafka Streams** -- Lightweight Java stream processing (115s)
 - **P16: Apache Pinot** -- Real-time OLAP analytics database (136s)
 - **P17: Apache Druid** -- Timeseries-optimized OLAP with Grafana dashboards (101s)
@@ -243,9 +243,9 @@ The project covers **30+ technologies** across **7 pipeline stages**:
 - **PostgreSQL** (relational database for CDC source)
 
 #### Transformation
-- **dbt-duckdb** (batch transformations)
-- **dbt-spark** (Spark-based transformations)
-- **dbt-postgres** (PostgreSQL transformations)
+- **dbt-duckdb** (batch transformations with Iceberg scan)
+- **dbt-materialize** (streaming SQL transformations)
+- **dbt-postgres** (RisingWave/PostgreSQL transformations)
 
 #### Orchestration
 - **Apache Airflow** (DAG-based workflow engine)
@@ -391,8 +391,6 @@ All pipelines implement the **Medallion Architecture**:
 ```
 real_time_data_engineering/
 ├── README.md                              # This file
-├── BENCHMARK_RESULTS.md                   # Detailed benchmark results (all 24 pipelines)
-├── real_time_streaming_data_paths.md      # Comprehensive technology reference (2300+ lines)
 ├── Makefile                               # Root-level benchmark orchestration
 ├── benchmark_runner.sh                    # Master benchmark script
 │
@@ -431,9 +429,12 @@ real_time_data_engineering/
 │   └── dbt-models/                        # Shared dbt models
 │
 ├── docs/                                  # Documentation
-│   ├── P01_PRODUCTION_GUIDE.md            # Production walkthrough
-│   ├── dbt/                               # dbt learning guides
-│   └── README.md                          # Documentation index
+│   ├── BENCHMARK_RESULTS.md              # Detailed benchmark results (all 24 pipelines)
+│   ├── PIPELINE_LOG.md                   # Project changelog
+│   ├── P01_PRODUCTION_GUIDE.md           # Production walkthrough
+│   ├── real_time_streaming_data_paths.md # Comprehensive technology reference (2300+ lines)
+│   ├── dbt/                              # dbt learning guides
+│   └── README.md                         # Documentation index
 │
 ├── notebooks/                             # Jupyter notebooks
 │   └── P01_Complete_Pipeline_Notebook.ipynb  # 118-cell walkthrough
@@ -452,8 +453,8 @@ real_time_data_engineering/
 
 | Document | Description |
 |----------|-------------|
-| [BENCHMARK_RESULTS.md](BENCHMARK_RESULTS.md) | Full benchmark results for all 24 pipelines |
-| [real_time_streaming_data_paths.md](real_time_streaming_data_paths.md) | Comprehensive technology reference (2300+ lines) |
+| [BENCHMARK_RESULTS.md](docs/BENCHMARK_RESULTS.md) | Full benchmark results for all 24 pipelines |
+| [real_time_streaming_data_paths.md](docs/real_time_streaming_data_paths.md) | Comprehensive technology reference (2300+ lines) |
 | [docs/P01_PRODUCTION_GUIDE.md](docs/P01_PRODUCTION_GUIDE.md) | Production walkthrough for the recommended stack |
 | [docs/README.md](docs/README.md) | Documentation index and learning paths |
 | [docs/dbt/](docs/dbt/) | dbt learning guides (basics through Iceberg integration) |

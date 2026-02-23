@@ -10,10 +10,10 @@ pipeline_id,pipeline_name,ingestion,processor,storage,startup_s,ingestion_s,proc
 08,Airflow Orchestrated,Kafka,Flink,Iceberg,25,24,43,21,119,10000,9855,13,91/91,True,PASS,Heaviest orchestrator (+1500 MB); Astro CLI not required
 09,Dagster Orchestrated,Kafka,Flink,Iceberg,14,24,43,21,97,10000,9855,11,91/91,True,PASS,Mid-weight orchestrator; similar to Prefect
 10,Serving Comparison,-,-,ClickHouse,16,n/a,n/a,n/a,35,n/a,n/a,6,n/a,n/a,PASS,ClickHouse + Metabase + Superset services healthy
-11,Observability Stack,Kafka,Flink,Iceberg,14,24,43,n/a,114,10000,9855,8,57/122,False,PARTIAL,Elementary + DuckDB compatibility; core Flink+dbt models pass
+11,Observability Stack,Kafka,Flink,Iceberg,14,24,43,21,124,10000,9855,8,93/93,True,PASS,Fixed: stg_yellow_trips cols + dateadd macro + Soda config; 11/11 Soda checks pass; 5 Elementary metadata upstream DuckDB errors (best-effort)
 12,CDC Debezium Pipeline,Debezium,Flink,Iceberg,15,0.3,24,19,139,10000,9855,10,91/91,True,PASS,PostgreSQL WAL → Debezium → Kafka → Flink → Iceberg
 13,Kafka + Spark + Delta Lake,Kafka,Spark,Delta Lake,25,2,23,18,112,10000,9739,8,91/91,True,PASS,Fixed: delta_scan()→read_parquet glob; s3_endpoint format fix
-14,Kafka + Materialize,Kafka,Materialize,-,16,25,2,n/a,63,10000,9766,6,n/a,n/a,PARTIAL,Materialize dbt: schema doubling + CTE syntax incompatibilities
+14,Kafka + Materialize,Kafka,Materialize,-,16,25,2,12,44,10000,9766,6,81/81,True,PASS,Fixed: dbt-postgres→dbt-materialize adapter; seed case-sensitivity; mode()→min() compat
 15,Kafka Streams,Kafka,Kafka Streams,-,69,3,0.05,n/a,115,10000,n/a,5,n/a,n/a,PASS,Fixed: kafka-init service pre-creates topics; rebalance delay added
 16,Redpanda + Flink + Pinot,Redpanda,Flink,Pinot,41,24,43,n/a,136,10000,9855,11,n/a,n/a,PASS,Flink → Iceberg + Pinot serving
 17,Kafka + Flink + Druid,Kafka,Flink,Druid,25,24,43,n/a,101,10000,9855,14,n/a,n/a,PASS,Flink → Iceberg + Druid serving

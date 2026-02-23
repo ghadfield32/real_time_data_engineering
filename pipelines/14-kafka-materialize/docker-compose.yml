@@ -92,7 +92,7 @@ services:
       context: .
       dockerfile: ../../shared/docker/dbt.Dockerfile
       args:
-        DBT_ADAPTER: dbt-postgres
+        DBT_ADAPTER: dbt-materialize
         DBT_ADAPTER_VERSION: ">=1.8"
     container_name: p14-dbt
     volumes:

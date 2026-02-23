@@ -14,6 +14,10 @@ clean-targets: ["target", "dbt_packages"]
 dispatch:
   - macro_namespace: nyc_taxi_dbt
     search_order: [nyc_taxi_pipeline_11, nyc_taxi_dbt]
+  - macro_namespace: dbt
+    search_order: [nyc_taxi_pipeline_11, dbt]
+  - macro_namespace: elementary
+    search_order: [nyc_taxi_pipeline_11, elementary]
 
 models:
   nyc_taxi_pipeline_11:

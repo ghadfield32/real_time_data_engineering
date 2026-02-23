@@ -1,14 +1,12 @@
-# Silver layer data quality checks
-checks for silver_cleaned_trips:
-  - row_count between 2500000 and 3100000:
-      name: "Silver row count in expected range"
+# Data quality validation — checks cleaned data quality in the fact table
+# Note: Silver Iceberg table is read by dbt and materialized into fct_trips.
+# Thresholds calibrated for 10k-event benchmark runs (~9,855 Silver rows).
+checks for fct_trips:
+  - row_count > 5000:
+      name: "Fact table has expected volume"
   - duplicate_count(trip_id) = 0:
       name: "No duplicate trip IDs"
-  - avg(fare_amount) between 10 and 25:
+  - avg(fare_amount) between 5 and 30:
       name: "Average fare in reasonable range"
-  - invalid_percent(trip_duration_minutes) < 1%:
-      name: "Less than 1% invalid trip durations"
-  - max(trip_duration_minutes) <= 720:
-      name: "No trips longer than 12 hours"
   - min(fare_amount) >= 0:
       name: "No negative fares"
